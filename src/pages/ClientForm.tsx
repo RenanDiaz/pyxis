@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useClient, useCreateClient, useUpdateClient } from '@/hooks/useClients'
 import { useStates } from '@/hooks/useStates'
 import clientFormConfig from '@/data/client_form.json'
+import { getStateByAreaCode } from '@/lib/areaCodeMap'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -32,6 +33,8 @@ export default function ClientForm() {
 
   const [formData, setFormData] = useState<FormData>({})
   const [status, setStatus] = useState<ClientStatus>('nuevo')
+  const stateManuallySet = useRef(false)
+  const [stateAutoDetected, setStateAutoDetected] = useState(false)
 
   useEffect(() => {
     if (existingClient) {
@@ -42,11 +45,34 @@ export default function ClientForm() {
       }
       setFormData(data)
       setStatus(existingClient.status)
+      if (data.state) stateManuallySet.current = true
     }
   }, [existingClient])
 
   const handleChange = (fieldId: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [fieldId]: value }))
+    setFormData((prev) => {
+      const next = { ...prev, [fieldId]: value }
+
+      if (fieldId === 'phone' && !stateManuallySet.current) {
+        const detected = getStateByAreaCode(value)
+        if (detected) {
+          next.state = detected
+          setStateAutoDetected(true)
+        } else {
+          if (stateAutoDetected) {
+            next.state = ''
+            setStateAutoDetected(false)
+          }
+        }
+      }
+
+      if (fieldId === 'state') {
+        stateManuallySet.current = true
+        setStateAutoDetected(false)
+      }
+
+      return next
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,21 +145,28 @@ export default function ClientForm() {
                     {field.required && <span className="text-destructive ml-1">*</span>}
                   </Label>
                   {field.type === 'select' && field.id === 'state' ? (
-                    <Select
-                      value={formData[field.id] || ''}
-                      onValueChange={(v) => handleChange(field.id, v)}
-                    >
-                      <SelectTrigger className="mt-1.5">
-                        <SelectValue placeholder="Selecciona un estado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {states?.map((s) => (
-                          <SelectItem key={s.abbreviation} value={s.abbreviation}>
-                            {s.name} ({s.abbreviation})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <>
+                      <Select
+                        value={formData[field.id] || ''}
+                        onValueChange={(v) => handleChange(field.id, v)}
+                      >
+                        <SelectTrigger className="mt-1.5">
+                          <SelectValue placeholder="Selecciona un estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {states?.map((s) => (
+                            <SelectItem key={s.abbreviation} value={s.abbreviation}>
+                              {s.name} ({s.abbreviation})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {stateAutoDetected && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Detectado por código de área
+                        </p>
+                      )}
+                    </>
                   ) : field.type === 'textarea' ? (
                     <Textarea
                       id={field.id}
