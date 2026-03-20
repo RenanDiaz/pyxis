@@ -35,8 +35,8 @@ Los JSON también sirven como fallback local si Firestore no responde.
 - **`states`** — 50 docs (doc ID = abbreviation). Precio, fees, días de proceso, annual report, disolución, amendments, business purpose, link de name check.
 - **`trades`** — 25 docs (oficios). Categoría, nombre EN/ES, descripción.
 - **`glossary`** — Términos de negocio/legales/fiscales. Término, nombre completo, traducción, definición, categoría.
-- **`clients`** — Prospectos/clientes con datos de LLC, contacto, status y notas.
-- **`calls`** — Historial y agenda de llamadas vinculadas a clientes.
+- **`users/{uid}/clients`** — Prospectos/clientes con datos de LLC, contacto, status y notas. Aislados por usuario.
+- **`users/{uid}/calls`** — Historial y agenda de llamadas vinculadas a clientes. Aislados por usuario.
 - **`config/clientForm`** — Configuración del formulario de clientes.
 
 Ver los esquemas completos en los archivos `src/data/*.json` y los types en el código.
@@ -71,62 +71,117 @@ Ver los esquemas completos en los archivos `src/data/*.json` y los types en el c
 - La info de estados debe ser fácil de escanear durante una llamada
 - Mobile-friendly
 
-# Nuevo feature - Separación de clientes y llamadas por usuario
-Corrige el modelo de datos para que cada usuario solo vea sus propios
-clientes y llamadas. Actualmente todas las colecciones son compartidas
-entre usuarios, lo que es un error de seguridad y privacidad.
+# Feature completado — Separación de datos por usuario
+Clientes y llamadas ahora usan subcolecciones por usuario:
+`/users/{uid}/clients` y `/users/{uid}/calls`.
+Hooks (`useClients.ts`, `useCalls.ts`) y `firestore.ts` ya usan el `uid`
+del usuario autenticado. Colecciones estáticas (`states`, `trades`,
+`glossary`) siguen compartidas. Reglas de Firestore deben actualizarse
+en la consola para restringir acceso por `uid`.
 
-## Causa del problema
-Las colecciones `clients` y `calls` están en la raíz de Firestore,
-accesibles para cualquier usuario autenticado.
+# Nuevo feature - Procesos a contratar
+Agrega el concepto de "proceso" a los clientes. Un proceso representa
+el servicio que el cliente quiere contratar.
 
-## Solución: subcolecciones por usuario
-Migrar a una estructura donde cada documento raíz es el UID del usuario
-y los clientes/llamadas son subcolecciones dentro de él.
+## 1. Modelo de datos
 
-### Estructura actual (incorrecta)
-/clients/{clientId}
-/calls/{callId}
+Agregar el campo `process` al tipo `Client`:
 
-### Estructura nueva (correcta)
-/users/{uid}/clients/{clientId}
-/users/{uid}/calls/{callId}
+process: "registration" | "annual_report" | "dissolution" | "amendment" | null
 
-## Cambios requeridos
-
-### 1. Hooks de datos
-Actualizar `useClients.ts` y `useCalls.ts` para que todas las queries,
-inserciones, actualizaciones y eliminaciones usen la ruta
-`users/{uid}/clients` y `users/{uid}/calls` respectivamente.
-Obtener el `uid` del usuario autenticado via `useAuth`.
-
-### 2. Reglas de Firestore
-Actualizar las reglas en Firebase Console para reflejar la nueva
-estructura y garantizar que cada usuario solo pueda leer y escribir
-sus propios documentos:
-
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null
-                         && request.auth.uid == uid;
-    }
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
+Actualizar `client_form.json` agregando el campo:
+{
+  "id": "process",
+  "label": "Proceso",
+  "type": "select",
+  "required": false
 }
 
-### 3. Colecciones estáticas
-Las colecciones `states`, `trades` y `glossary` son de solo lectura y
-compartidas para todos los usuarios — no cambiar su estructura.
+## 2. Definición de procesos
+Crear el archivo `src/data/processes.ts`:
 
-### 4. Datos existentes
-Si hay datos de prueba en las colecciones raíz antiguas, ignorarlos.
-No es necesario migrarlos.
+export const PROCESSES = [
+  {
+    id: "registration",
+    label: "Registro de LLC",
+    fields: [
+      { key: "sale_price",        label: "Precio de venta" },
+      { key: "state_fee",         label: "Fee del estado" },
+      { key: "processing_days",   label: "Días de proceso" }
+    ]
+  },
+  {
+    id: "annual_report",
+    label: "Annual Report",
+    fields: [
+      { key: "annual_report.fee",      label: "Fee" },
+      { key: "annual_report.due_date", label: "Fecha de vencimiento" }
+    ]
+  },
+  {
+    id: "dissolution",
+    label: "Dissolution",
+    fields: [
+      { key: "dissolution.fee",             label: "Fee" },
+      { key: "dissolution.processing_days", label: "Días de proceso" }
+    ]
+  },
+  {
+    id: "amendment",
+    label: "Amendment",
+    fields: [
+      { key: "amendments.fee",       label: "Fee" },
+      { key: "amendments.available", label: "Disponible" }
+    ]
+  }
+]
 
-## Resultado esperado
-Cada usuario autenticado ve únicamente sus propios clientes y llamadas.
-Dos usuarios distintos con sesiones abiertas al mismo tiempo no
-comparten ningún dato entre sí.
+Los `fields` definen qué datos del estado se muestran para cada proceso,
+mapeando directamente a las keys del objeto de estado en Firestore.
+Los fields con notación de punto (ej. `annual_report.fee`) acceden a
+campos anidados. Crear un helper `getFieldValue(state, key)` en
+`src/lib/processUtils.ts` que resuelva tanto keys simples como anidadas
+con dot notation.
+
+## 3. Formulario de cliente (nuevo y editar)
+
+Agregar un dropdown "Proceso" después del campo "Estado" con estas
+opciones en orden:
+- (vacío) Sin proceso asignado
+- Registro de LLC
+- Annual Report
+- Dissolution
+- Amendment
+
+### Panel informativo flotante
+Cuando el usuario tenga seleccionado tanto un Estado como un Proceso,
+mostrar un card a la derecha del formulario (o debajo en mobile) con
+la información relevante del proceso para ese estado.
+
+Comportamiento:
+- Si no hay estado o proceso seleccionado: no mostrar el card
+- Si hay ambos: mostrar el card con los fields definidos en PROCESSES
+- El card se actualiza en tiempo real al cambiar estado o proceso
+- Los datos se leen desde Firestore (colección `states`) usando el
+  estado seleccionado
+
+Diseño del card:
+- Título: nombre del proceso + nombre del estado
+- Cada field en una fila: label a la izquierda, valor destacado a la derecha
+- Borde o acento visual que lo diferencie del formulario
+- En desktop: posicionado a la derecha del formulario (layout de 2 columnas)
+- En mobile: debajo del formulario
+
+## 4. Vista de detalle del cliente
+
+Agregar una sección "Proceso contratado" visible solo si el cliente
+tiene `process` y `state` asignados. Debe mostrar:
+- Nombre del proceso y nombre del estado
+- Los fields del proceso con el mismo diseño que el card del formulario
+
+Ubicación: después de la información principal del cliente, antes
+del historial de llamadas.
+
+## 5. Firestore
+No se requieren cambios en la estructura de Firestore. El campo
+`process` se guarda como string en `users/{uid}/clients/{clientId}`.

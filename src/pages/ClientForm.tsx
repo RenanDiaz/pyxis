@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useClient, useCreateClient, useUpdateClient } from '@/hooks/useClients'
 import { useStates } from '@/hooks/useStates'
 import clientFormConfig from '@/data/client_form.json'
+import { PROCESSES } from '@/data/processes'
+import { getFieldValue } from '@/lib/processUtils'
 import { getStateByAreaCode } from '@/lib/areaCodeMap'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -116,6 +118,9 @@ export default function ClientForm() {
     return <p className="text-muted-foreground">Cargando...</p>
   }
 
+  const selectedState = states?.find((s) => s.abbreviation === formData.state)
+  const selectedProcess = PROCESSES.find((p) => p.id === formData.process)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -129,97 +134,139 @@ export default function ClientForm() {
         </h1>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            {clientFormConfig.description}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              {clientFormConfig.fields.map((field) => (
-                <div key={field.id} className={field.type === 'textarea' ? 'sm:col-span-2' : ''}>
-                  <Label htmlFor={field.id}>
-                    {field.label}
-                    {field.required && <span className="text-destructive ml-1">*</span>}
-                  </Label>
-                  {field.type === 'select' && field.id === 'state' ? (
-                    <>
+      <div className="grid gap-6 md:grid-cols-[1fr_320px]">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {clientFormConfig.description}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {clientFormConfig.fields.map((field) => (
+                  <div key={field.id} className={field.type === 'textarea' ? 'sm:col-span-2' : ''}>
+                    <Label htmlFor={field.id}>
+                      {field.label}
+                      {field.required && <span className="text-destructive ml-1">*</span>}
+                    </Label>
+                    {field.type === 'select' && field.id === 'state' ? (
+                      <>
+                        <Select
+                          value={formData[field.id] || ''}
+                          onValueChange={(v) => handleChange(field.id, v)}
+                        >
+                          <SelectTrigger className="mt-1.5">
+                            <SelectValue placeholder="Selecciona un estado" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {states?.map((s) => (
+                              <SelectItem key={s.abbreviation} value={s.abbreviation}>
+                                {s.name} ({s.abbreviation})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {stateAutoDetected && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Detectado por código de área
+                          </p>
+                        )}
+                      </>
+                    ) : field.type === 'select' && field.id === 'process' ? (
                       <Select
-                        value={formData[field.id] || ''}
-                        onValueChange={(v) => handleChange(field.id, v)}
+                        value={formData[field.id] || '_none'}
+                        onValueChange={(v) => handleChange(field.id, v === '_none' ? '' : v)}
                       >
                         <SelectTrigger className="mt-1.5">
-                          <SelectValue placeholder="Selecciona un estado" />
+                          <SelectValue placeholder="Sin proceso asignado" />
                         </SelectTrigger>
                         <SelectContent>
-                          {states?.map((s) => (
-                            <SelectItem key={s.abbreviation} value={s.abbreviation}>
-                              {s.name} ({s.abbreviation})
+                          <SelectItem value="_none">Sin proceso asignado</SelectItem>
+                          {PROCESSES.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      {stateAutoDetected && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Detectado por código de área
-                        </p>
-                      )}
-                    </>
-                  ) : field.type === 'textarea' ? (
-                    <Textarea
-                      id={field.id}
-                      value={formData[field.id] || ''}
-                      onChange={(e) => handleChange(field.id, e.target.value)}
-                      className="mt-1.5"
-                      rows={3}
-                    />
-                  ) : (
-                    <Input
-                      id={field.id}
-                      type={field.type === 'phone' ? 'tel' : field.type === 'email' ? 'email' : 'text'}
-                      value={formData[field.id] || ''}
-                      onChange={(e) => handleChange(field.id, e.target.value)}
-                      className="mt-1.5"
-                      autoComplete={('sensitive' in field && field.sensitive) ? 'off' : undefined}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {!isEditing && (
-              <div>
-                <Label>Status inicial</Label>
-                <Select value={status} onValueChange={(v) => setStatus(v as ClientStatus)}>
-                  <SelectTrigger className="mt-1.5 w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="nuevo">Nuevo</SelectItem>
-                    <SelectItem value="contactado">Contactado</SelectItem>
-                    <SelectItem value="en_proceso">En proceso</SelectItem>
-                  </SelectContent>
-                </Select>
+                    ) : field.type === 'textarea' ? (
+                      <Textarea
+                        id={field.id}
+                        value={formData[field.id] || ''}
+                        onChange={(e) => handleChange(field.id, e.target.value)}
+                        className="mt-1.5"
+                        rows={3}
+                      />
+                    ) : (
+                      <Input
+                        id={field.id}
+                        type={field.type === 'phone' ? 'tel' : field.type === 'email' ? 'email' : 'text'}
+                        value={formData[field.id] || ''}
+                        onChange={(e) => handleChange(field.id, e.target.value)}
+                        className="mt-1.5"
+                        autoComplete={('sensitive' in field && field.sensitive) ? 'off' : undefined}
+                      />
+                    )}
+                  </div>
+                ))}
               </div>
-            )}
 
-            <div className="flex gap-3 pt-4">
-              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                {createMutation.isPending || updateMutation.isPending
-                  ? 'Guardando...'
-                  : isEditing
-                    ? 'Actualizar'
-                    : 'Crear cliente'}
-              </Button>
-              <Button type="button" variant="outline" asChild>
-                <Link to={isEditing ? `/clientes/${id}` : '/clientes'}>Cancelar</Link>
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+              {!isEditing && (
+                <div>
+                  <Label>Status inicial</Label>
+                  <Select value={status} onValueChange={(v) => setStatus(v as ClientStatus)}>
+                    <SelectTrigger className="mt-1.5 w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="nuevo">Nuevo</SelectItem>
+                      <SelectItem value="contactado">Contactado</SelectItem>
+                      <SelectItem value="en_proceso">En proceso</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                  {createMutation.isPending || updateMutation.isPending
+                    ? 'Guardando...'
+                    : isEditing
+                      ? 'Actualizar'
+                      : 'Crear cliente'}
+                </Button>
+                <Button type="button" variant="outline" asChild>
+                  <Link to={isEditing ? `/clientes/${id}` : '/clientes'}>Cancelar</Link>
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {selectedState && selectedProcess && (
+          <Card className="h-fit md:sticky md:top-6">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">
+                {selectedProcess.label}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {selectedState.name} ({selectedState.abbreviation})
+              </p>
+            </CardHeader>
+            <CardContent>
+              <dl className="space-y-3">
+                {selectedProcess.fields.map((f) => (
+                  <div key={f.key} className="flex items-center justify-between text-sm">
+                    <dt className="text-muted-foreground">{f.label}</dt>
+                    <dd className="font-semibold">{getFieldValue(selectedState, f.key)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }

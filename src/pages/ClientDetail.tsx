@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients'
 import { useCalls } from '@/hooks/useCalls'
+import { useStates } from '@/hooks/useStates'
+import { PROCESSES } from '@/data/processes'
+import { getFieldValue } from '@/lib/processUtils'
 import StatusSelect from '@/components/clients/StatusSelect'
 import OutcomeBadge from '@/components/calls/OutcomeBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,6 +21,7 @@ export default function ClientDetail() {
   const navigate = useNavigate()
   const { data: client, isLoading } = useClient(id)
   const { data: calls } = useCalls({ clientId: id })
+  const { data: states } = useStates()
   const updateMutation = useUpdateClient()
   const deleteMutation = useDeleteClient()
   const [notes, setNotes] = useState<string | null>(null)
@@ -166,6 +170,34 @@ export default function ClientDetail() {
           </CardContent>
         </Card>
       </div>
+
+      {client.process && client.state && (() => {
+        const process = PROCESSES.find((p) => p.id === client.process)
+        const state = states?.find((s) => s.abbreviation === client.state)
+        if (!process || !state) return null
+        return (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Proceso contratado
+              </CardTitle>
+              <p className="text-sm font-medium">
+                {process.label} — {state.name} ({state.abbreviation})
+              </p>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid gap-3 sm:grid-cols-2">
+                {process.fields.map((f) => (
+                  <div key={f.key} className="flex items-center justify-between text-sm">
+                    <dt className="text-muted-foreground">{f.label}</dt>
+                    <dd className="font-semibold">{getFieldValue(state, f.key)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       <Card>
         <CardHeader className="pb-3">
