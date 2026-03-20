@@ -8,6 +8,8 @@ import { getFieldValue } from '@/lib/processUtils'
 import StatusSelect from '@/components/clients/StatusSelect'
 import OutcomeBadge from '@/components/calls/OutcomeBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import StateClock from '@/components/states/StateClock'
+import { getStateTimezone } from '@/lib/timezones'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
@@ -185,7 +187,8 @@ export default function ClientDetail() {
                 {process.label} — {state.name} ({state.abbreviation})
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <StateClock timezone={getStateTimezone(state.abbreviation)} />
               <dl className="grid gap-3 sm:grid-cols-2">
                 {process.fields.map((f) => (
                   <div key={f.key} className="flex items-center justify-between text-sm">
