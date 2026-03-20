@@ -103,7 +103,17 @@ export default function ClientDetail() {
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-muted-foreground">Teléfono</p>
-                <p className="font-medium">{client.phone}</p>
+                {client.phone ? (
+                  <a
+                    href={`tel:${client.phone}`}
+                    className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline"
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                    {client.phone}
+                  </a>
+                ) : (
+                  <p className="font-medium">—</p>
+                )}
               </div>
               <div>
                 <p className="text-muted-foreground">Estado</p>
