@@ -5,8 +5,9 @@ import StatusBadge from '@/components/clients/StatusBadge'
 import OutcomeBadge from '@/components/calls/OutcomeBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Phone, Clock } from 'lucide-react'
-import StateClock from '@/components/states/StateClock'
-import { getStateTimezone } from '@/lib/timezones'
+import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
+import { formatInTimeZone } from 'date-fns-tz'
+import { es } from 'date-fns/locale'
 
 export default function Home() {
   const { data: clients } = useClients()
@@ -92,11 +93,19 @@ export default function Home() {
                             timeStyle: 'short',
                           }) ?? 'Sin fecha'}
                         </p>
-                        {client?.state && (
-                          <div className="mt-0.5">
-                            <StateClock timezone={getStateTimezone(client.state)} />
-                          </div>
-                        )}
+                        {(() => {
+                          const scheduledDate = call.scheduled_at?.toDate?.()
+                          if (!client?.state || !scheduledDate) return null
+                          const tz = getStateTimezone(client.state)
+                          const clientTime = formatInTimeZone(scheduledDate, tz, 'h:mm a', { locale: es })
+                          const label = getTimezoneLabel(tz)
+                          return (
+                            <p className="text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {clientTime} ({label})
+                            </p>
+                          )
+                        })()}
                       </div>
                       <OutcomeBadge outcome={call.outcome} />
                     </div>

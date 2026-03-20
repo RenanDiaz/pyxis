@@ -24,7 +24,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Phone } from 'lucide-react'
 import StateClock from '@/components/states/StateClock'
-import { getStateTimezone } from '@/lib/timezones'
+import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
+import { formatInTimeZone } from 'date-fns-tz'
+import { es } from 'date-fns/locale'
+import { Clock } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import type { CallOutcome } from '@/types'
 import { startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns'
@@ -165,6 +168,20 @@ export default function Schedule() {
                   />
                 </div>
               </div>
+              {(() => {
+                const selectedClient = clients?.find((c) => c.id === newCallClientId)
+                if (!selectedClient?.state || !newCallDate || !newCallTime) return null
+                const tz = getStateTimezone(selectedClient.state)
+                const scheduledDate = new Date(`${newCallDate}T${newCallTime}`)
+                const clientTime = formatInTimeZone(scheduledDate, tz, 'h:mm a', { locale: es })
+                const label = getTimezoneLabel(tz)
+                return (
+                  <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
+                    Hora del cliente: {clientTime} ({label})
+                  </p>
+                )
+              })()}
               <div>
                 <Label>Notas</Label>
                 <Textarea
@@ -223,11 +240,16 @@ export default function Schedule() {
                   </p>
                   {(() => {
                     const client = clients?.find((c) => c.id === call.client_id)
-                    if (!client?.state) return null
+                    const scheduledDate = call.scheduled_at?.toDate?.()
+                    if (!client?.state || !scheduledDate) return null
+                    const tz = getStateTimezone(client.state)
+                    const clientTime = formatInTimeZone(scheduledDate, tz, 'h:mm a', { locale: es })
+                    const label = getTimezoneLabel(tz)
                     return (
-                      <div className="mt-1">
-                        <StateClock timezone={getStateTimezone(client.state)} />
-                      </div>
+                      <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        {clientTime} ({label}) — hora del cliente
+                      </p>
                     )
                   })()}
                   {call.notes && (
