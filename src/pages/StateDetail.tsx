@@ -158,22 +158,39 @@ export default function StateDetail() {
         {/* Codes */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Códigos</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Códigos de referencia</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Código postal (ZIP)</p>
-                <p className="text-lg font-semibold">{state.zip_code_range}</p>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Códigos postales (ZIP codes)</p>
+              <p className="text-lg font-semibold font-mono">
+                {state.zip_code_range.split(',').map((range, i) => {
+                  const trimmed = range.trim()
+                  const [start, end] = trimmed.split('-')
+                  return (
+                    <span key={i}>
+                      {i > 0 && <span className="text-muted-foreground">, </span>}
+                      {start.padEnd(5, '0')}–{end.padEnd(5, '9')}
+                    </span>
+                  )
+                })}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Los ZIP codes de este estado empiezan con estos números
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Códigos de área telefónicos</p>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {state.area_codes.map((code) => (
+                  <Badge key={code} variant="outline" className="font-mono text-sm px-2.5 py-0.5">
+                    ({code})
+                  </Badge>
+                ))}
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Código telefónico (área)</p>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {state.area_codes.map((code) => (
-                    <Badge key={code} variant="outline">{code}</Badge>
-                  ))}
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Ej: <span className="font-mono">+1 ({state.area_codes[0]}) 555-1234</span> — los 3 dígitos después del +1
+              </p>
             </div>
           </CardContent>
         </Card>
