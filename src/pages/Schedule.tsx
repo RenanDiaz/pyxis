@@ -93,7 +93,10 @@ export default function Schedule() {
 
   const getClientName = (clientId: string) => {
     const client = clients?.find((c) => c.id === clientId)
-    return client ? `${client.first_name} ${client.last_name}` : 'Cliente desconocido'
+    if (!client) return 'Cliente desconocido'
+    return client.first_name || client.last_name
+      ? `${client.first_name || ''} ${client.last_name || ''}`.trim()
+      : client.phone
   }
 
   return (
@@ -121,7 +124,10 @@ export default function Schedule() {
                   <SelectContent>
                     {clients?.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.first_name} {c.last_name} — {c.llc_name}
+                        {c.first_name || c.last_name
+                          ? `${c.first_name || ''} ${c.last_name || ''}`.trim()
+                          : c.phone}
+                        {c.llc_name ? ` — ${c.llc_name}` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>

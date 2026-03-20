@@ -67,9 +67,14 @@ export default function ClientDetail() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              {client.first_name} {client.middle_name ? client.middle_name + ' ' : ''}{client.last_name}
+              {client.first_name || client.last_name
+                ? `${client.first_name || ''} ${client.middle_name ? client.middle_name + ' ' : ''}${client.last_name || ''}`.trim()
+                : client.phone}
             </h1>
-            <p className="text-muted-foreground">{client.llc_name}</p>
+            {client.llc_name && <p className="text-muted-foreground">{client.llc_name}</p>}
+            {!client.first_name && !client.last_name && (
+              <p className="text-muted-foreground text-sm">Sin nombre — agrega datos desde Editar</p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -97,30 +102,30 @@ export default function ClientDetail() {
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-muted-foreground">Estado</p>
-                <p className="font-medium">{client.state}</p>
-              </div>
-              <div>
                 <p className="text-muted-foreground">Teléfono</p>
                 <p className="font-medium">{client.phone}</p>
               </div>
               <div>
+                <p className="text-muted-foreground">Estado</p>
+                <p className="font-medium">{client.state || '—'}</p>
+              </div>
+              <div>
                 <p className="text-muted-foreground">Email</p>
-                <p className="font-medium">{client.email}</p>
+                <p className="font-medium">{client.email || '—'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">SSN/ITIN</p>
-                <p className="font-medium">••••{client.ssn_itin?.slice(-4)}</p>
+                <p className="font-medium">{client.ssn_itin ? `••••${client.ssn_itin.slice(-4)}` : '—'}</p>
               </div>
             </div>
             <Separator />
             <div className="text-sm">
               <p className="text-muted-foreground">Dirección comercial</p>
-              <p className="font-medium">{client.business_address}</p>
+              <p className="font-medium">{client.business_address || '—'}</p>
             </div>
             <div className="text-sm">
               <p className="text-muted-foreground">Propósito del negocio</p>
-              <p className="font-medium">{client.business_purpose}</p>
+              <p className="font-medium">{client.business_purpose || '—'}</p>
             </div>
           </CardContent>
         </Card>

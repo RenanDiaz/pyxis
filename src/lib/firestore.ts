@@ -36,10 +36,11 @@ export async function getClients(filters?: ClientFilters): Promise<Client[]> {
     const s = filters.search.toLowerCase()
     clients = clients.filter(
       (c) =>
-        c.first_name.toLowerCase().includes(s) ||
-        c.last_name.toLowerCase().includes(s) ||
-        c.llc_name.toLowerCase().includes(s) ||
-        c.state.toLowerCase().includes(s)
+        (c.first_name || '').toLowerCase().includes(s) ||
+        (c.last_name || '').toLowerCase().includes(s) ||
+        (c.llc_name || '').toLowerCase().includes(s) ||
+        (c.state || '').toLowerCase().includes(s) ||
+        c.phone.toLowerCase().includes(s)
     )
   }
   return clients

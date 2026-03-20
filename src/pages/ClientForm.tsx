@@ -53,26 +53,22 @@ export default function ClientForm() {
     e.preventDefault()
 
     // Validate required fields
-    for (const field of clientFormConfig.fields) {
-      if (field.required && !formData[field.id]?.trim()) {
-        toast.error(`El campo "${field.label}" es requerido`)
-        return
-      }
+    if (!formData.phone?.trim()) {
+      toast.error('El número telefónico es requerido')
+      return
     }
 
-    const clientData = {
-      llc_name: formData.llc_name || '',
-      state: formData.state || '',
-      first_name: formData.first_name || '',
-      middle_name: formData.middle_name || '',
-      last_name: formData.last_name || '',
-      ssn_itin: formData.ssn_itin || '',
-      phone: formData.phone || '',
-      email: formData.email || '',
-      business_address: formData.business_address || '',
-      business_purpose: formData.business_purpose || '',
+    const clientData: Record<string, string> = {
+      phone: formData.phone.trim(),
       status,
-      notes: '',
+      notes: isEditing ? (existingClient?.notes || '') : '',
+    }
+
+    // Only include non-empty optional fields
+    for (const field of clientFormConfig.fields) {
+      if (field.id !== 'phone' && formData[field.id]?.trim()) {
+        clientData[field.id] = formData[field.id].trim()
+      }
     }
 
     try {

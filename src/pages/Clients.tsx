@@ -56,7 +56,7 @@ export default function Clients() {
         <div className="relative flex-1 sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nombre, LLC o estado..."
+            placeholder="Buscar por nombre, teléfono, LLC o estado..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -90,7 +90,7 @@ export default function Clients() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
+                <TableHead>Nombre / Teléfono</TableHead>
                 <TableHead>LLC</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Status</TableHead>
@@ -101,11 +101,13 @@ export default function Clients() {
                 <TableRow key={client.id} className="cursor-pointer">
                   <TableCell>
                     <Link to={`/clientes/${client.id}`} className="font-medium hover:underline">
-                      {client.first_name} {client.last_name}
+                      {client.first_name || client.last_name
+                        ? `${client.first_name || ''} ${client.last_name || ''}`.trim()
+                        : client.phone}
                     </Link>
                   </TableCell>
-                  <TableCell>{client.llc_name}</TableCell>
-                  <TableCell>{client.state}</TableCell>
+                  <TableCell>{client.llc_name || '—'}</TableCell>
+                  <TableCell>{client.state || '—'}</TableCell>
                   <TableCell>
                     <StatusBadge status={client.status} />
                   </TableCell>

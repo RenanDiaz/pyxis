@@ -40,16 +40,16 @@ export type ClientStatus = 'nuevo' | 'contactado' | 'en_proceso' | 'cerrado' | '
 
 export interface Client {
   id: string
-  llc_name: string
-  state: string
-  first_name: string
-  middle_name?: string
-  last_name: string
-  ssn_itin: string
   phone: string
-  email: string
-  business_address: string
-  business_purpose: string
+  llc_name?: string
+  state?: string
+  first_name?: string
+  middle_name?: string
+  last_name?: string
+  ssn_itin?: string
+  email?: string
+  business_address?: string
+  business_purpose?: string
   status: ClientStatus
   notes: string
   created_at: Timestamp
