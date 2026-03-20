@@ -4,7 +4,7 @@ import { useClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients'
 import { useCalls } from '@/hooks/useCalls'
 import { useStates } from '@/hooks/useStates'
 import { PROCESSES } from '@/data/processes'
-import { getFieldValue } from '@/lib/processUtils'
+import { getFieldValue, formatFieldValue } from '@/lib/processUtils'
 import StatusSelect from '@/components/clients/StatusSelect'
 import OutcomeBadge from '@/components/calls/OutcomeBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -193,7 +193,7 @@ export default function ClientDetail() {
                 {process.fields.map((f) => (
                   <div key={f.key} className="flex items-center justify-between text-sm">
                     <dt className="text-muted-foreground">{f.label}</dt>
-                    <dd className="font-semibold">{getFieldValue(state, f.key)}</dd>
+                    <dd className="font-semibold">{formatFieldValue(getFieldValue(state, f.key), f.format)}</dd>
                   </div>
                 ))}
               </dl>
