@@ -23,6 +23,8 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Phone } from 'lucide-react'
+import StateClock from '@/components/states/StateClock'
+import { getStateTimezone } from '@/lib/timezones'
 import { Timestamp } from 'firebase/firestore'
 import type { CallOutcome } from '@/types'
 import { startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns'
@@ -133,6 +135,16 @@ export default function Schedule() {
                   </SelectContent>
                 </Select>
               </div>
+              {(() => {
+                const selectedClient = clients?.find((c) => c.id === newCallClientId)
+                if (!selectedClient?.state) return null
+                return (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Hora del cliente:</span>
+                    <StateClock timezone={getStateTimezone(selectedClient.state)} />
+                  </div>
+                )
+              })()}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Fecha</Label>
@@ -209,6 +221,15 @@ export default function Schedule() {
                       timeStyle: 'short',
                     }) ?? 'Sin fecha'}
                   </p>
+                  {(() => {
+                    const client = clients?.find((c) => c.id === call.client_id)
+                    if (!client?.state) return null
+                    return (
+                      <div className="mt-1">
+                        <StateClock timezone={getStateTimezone(client.state)} />
+                      </div>
+                    )
+                  })()}
                   {call.notes && (
                     <p className="text-sm text-muted-foreground mt-1">{call.notes}</p>
                   )}
