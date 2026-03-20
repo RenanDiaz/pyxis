@@ -68,6 +68,14 @@ export interface Call {
   created_at: Timestamp
 }
 
+export interface GlossaryTerm {
+  term: string
+  full_name: string
+  translation: string
+  definition: string
+  category: 'business_structure' | 'tax' | 'legal' | 'compliance'
+}
+
 export interface ClientFormField {
   id: string
   label: string

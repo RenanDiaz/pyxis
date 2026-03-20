@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Map, Briefcase, Users, Calendar } from 'lucide-react'
+import { Home, Map, Briefcase, Users, Calendar, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { to: '/oficios', label: 'Oficios', icon: Briefcase },
   { to: '/clientes', label: 'Clientes', icon: Users },
   { to: '/agenda', label: 'Agenda', icon: Calendar },
+  { to: '/glosario', label: 'Glosario', icon: BookOpen },
 ]
 
 function PyxisLogo({ className }: { className?: string }) {

@@ -43,6 +43,9 @@ const tradesData = JSON.parse(
 const clientFormData = JSON.parse(
   readFileSync(resolve(__dirname, '../src/data/client_form.json'), 'utf-8')
 )
+const glossaryData = JSON.parse(
+  readFileSync(resolve(__dirname, '../src/data/glossary.json'), 'utf-8')
+)
 
 async function seedStates() {
   console.log('📍 Seeding states...')
@@ -72,11 +75,23 @@ async function seedClientForm() {
   console.log('   ✅ Configuración del formulario creada')
 }
 
+async function seedGlossary() {
+  console.log('📖 Seeding glossary...')
+  const batch = db.batch()
+  for (const term of glossaryData) {
+    const ref = db.collection('glossary').doc(term.term)
+    batch.set(ref, term)
+  }
+  await batch.commit()
+  console.log(`   ✅ ${glossaryData.length} términos creados`)
+}
+
 async function main() {
   console.log('🚀 Iniciando seed de Firestore...\n')
   await seedStates()
   await seedTrades()
   await seedClientForm()
+  await seedGlossary()
   console.log('\n✅ Seed completado exitosamente')
 }
 

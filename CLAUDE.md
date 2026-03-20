@@ -288,3 +288,45 @@ src/
     client_form.json
   scripts/
     seed.ts
+
+## Nuevo feature - Glosario
+
+Agrega un módulo de Glosario a la app.
+
+### Ruta
+`/glosario`
+
+### Datos
+Crea el archivo `src/data/glossary.json` con los siguientes términos como punto
+de partida. Claude Code puede expandir la lista con términos relevantes adicionales.
+
+Estructura de cada término:
+{
+  "term": "LLC",
+  "full_name": "Limited Liability Company",
+  "translation": "Sociedad de Responsabilidad Limitada",
+  "definition": "Estructura empresarial que protege los bienes personales del dueño de las deudas del negocio.",
+  "category": "business_structure"
+}
+
+Términos iniciales: LLC, EIN, IRS, SSN, ITIN, DBA, S-Corp, C-Corp, Sole Proprietorship,
+Operating Agreement, Registered Agent, Articles of Organization, Annual Report,
+Business License, FEIN, W-9, 1099, Dissolution, Amendment, Good Standing.
+
+### Categorías
+- `business_structure` — tipos de empresa
+- `tax` — impuestos e identificación fiscal
+- `legal` — documentos y términos legales
+- `compliance` — obligaciones y reportes
+
+### UI
+- Buscador por término, nombre completo o traducción
+- Filtro por categoría (tabs o pills)
+- Cards con: término destacado (grande), nombre completo, traducción en español,
+  definición
+- Diseño tipo flashcard, consistente con el módulo de Oficios
+- Agregar "Glosario" al sidebar en la navegación principal
+
+### Seed
+Agregar la colección `glossary` al script `scripts/seed.ts` existente,
+leyendo desde `src/data/glossary.json`.
