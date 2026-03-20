@@ -1,0 +1,196 @@
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useClient, useCreateClient, useUpdateClient } from '@/hooks/useClients'
+import { useStates } from '@/hooks/useStates'
+import clientFormConfig from '@/data/client_form.json'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ArrowLeft } from 'lucide-react'
+import type { ClientStatus } from '@/types'
+import { toast } from 'sonner'
+
+type FormData = Record<string, string>
+
+export default function ClientForm() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const isEditing = !!id
+  const { data: existingClient, isLoading: clientLoading } = useClient(id)
+  const { data: states } = useStates()
+  const createMutation = useCreateClient()
+  const updateMutation = useUpdateClient()
+
+  const [formData, setFormData] = useState<FormData>({})
+  const [status, setStatus] = useState<ClientStatus>('nuevo')
+
+  useEffect(() => {
+    if (existingClient) {
+      const data: FormData = {}
+      for (const field of clientFormConfig.fields) {
+        const value = existingClient[field.id as keyof typeof existingClient]
+        data[field.id] = typeof value === 'string' ? value : ''
+      }
+      setFormData(data)
+      setStatus(existingClient.status)
+    }
+  }, [existingClient])
+
+  const handleChange = (fieldId: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [fieldId]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // Validate required fields
+    for (const field of clientFormConfig.fields) {
+      if (field.required && !formData[field.id]?.trim()) {
+        toast.error(`El campo "${field.label}" es requerido`)
+        return
+      }
+    }
+
+    const clientData = {
+      llc_name: formData.llc_name || '',
+      state: formData.state || '',
+      first_name: formData.first_name || '',
+      middle_name: formData.middle_name || '',
+      last_name: formData.last_name || '',
+      ssn_itin: formData.ssn_itin || '',
+      phone: formData.phone || '',
+      email: formData.email || '',
+      business_address: formData.business_address || '',
+      business_purpose: formData.business_purpose || '',
+      status,
+      notes: '',
+    }
+
+    try {
+      if (isEditing && id) {
+        await updateMutation.mutateAsync({ id, data: clientData })
+        toast.success('Cliente actualizado')
+        navigate(`/clientes/${id}`)
+      } else {
+        const newId = await createMutation.mutateAsync(clientData)
+        toast.success('Cliente creado')
+        navigate(`/clientes/${newId}`)
+      }
+    } catch {
+      toast.error('Error al guardar el cliente')
+    }
+  }
+
+  if (isEditing && clientLoading) {
+    return <p className="text-muted-foreground">Cargando...</p>
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Link to={isEditing ? `/clientes/${id}` : '/clientes'}>
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {isEditing ? 'Editar cliente' : 'Nuevo cliente'}
+        </h1>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            {clientFormConfig.description}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {clientFormConfig.fields.map((field) => (
+                <div key={field.id} className={field.type === 'textarea' ? 'sm:col-span-2' : ''}>
+                  <Label htmlFor={field.id}>
+                    {field.label}
+                    {field.required && <span className="text-destructive ml-1">*</span>}
+                  </Label>
+                  {field.type === 'select' && field.id === 'state' ? (
+                    <Select
+                      value={formData[field.id] || ''}
+                      onValueChange={(v) => handleChange(field.id, v)}
+                    >
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue placeholder="Selecciona un estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {states?.map((s) => (
+                          <SelectItem key={s.abbreviation} value={s.abbreviation}>
+                            {s.name} ({s.abbreviation})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : field.type === 'textarea' ? (
+                    <Textarea
+                      id={field.id}
+                      value={formData[field.id] || ''}
+                      onChange={(e) => handleChange(field.id, e.target.value)}
+                      className="mt-1.5"
+                      rows={3}
+                    />
+                  ) : (
+                    <Input
+                      id={field.id}
+                      type={field.type === 'phone' ? 'tel' : field.type === 'email' ? 'email' : 'text'}
+                      value={formData[field.id] || ''}
+                      onChange={(e) => handleChange(field.id, e.target.value)}
+                      className="mt-1.5"
+                      autoComplete={('sensitive' in field && field.sensitive) ? 'off' : undefined}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {!isEditing && (
+              <div>
+                <Label>Status inicial</Label>
+                <Select value={status} onValueChange={(v) => setStatus(v as ClientStatus)}>
+                  <SelectTrigger className="mt-1.5 w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nuevo">Nuevo</SelectItem>
+                    <SelectItem value="contactado">Contactado</SelectItem>
+                    <SelectItem value="en_proceso">En proceso</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-4">
+              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                {createMutation.isPending || updateMutation.isPending
+                  ? 'Guardando...'
+                  : isEditing
+                    ? 'Actualizar'
+                    : 'Crear cliente'}
+              </Button>
+              <Button type="button" variant="outline" asChild>
+                <Link to={isEditing ? `/clientes/${id}` : '/clientes'}>Cancelar</Link>
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

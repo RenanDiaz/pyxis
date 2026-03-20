@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // States — read only for authenticated users
+    match /states/{stateId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Trades — read only for authenticated users
+    match /trades/{tradeId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Config — read only for authenticated users
+    match /config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Clients — full CRUD for authenticated users
+    match /clients/{clientId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Calls — full CRUD for authenticated users
+    match /calls/{callId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
