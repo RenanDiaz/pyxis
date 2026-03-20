@@ -1,4 +1,5 @@
-import { Menu, LogOut } from 'lucide-react'
+import { Menu, LogOut, Sun, Moon, Monitor } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,6 +16,7 @@ interface HeaderProps {
 
 export default function Header({ onMenuToggle }: HeaderProps) {
   const { user, signOut } = useAuth()
+  const { setTheme, theme } = useTheme()
 
   const initials = user?.displayName
     ? user.displayName
@@ -37,6 +39,33 @@ export default function Header({ onMenuToggle }: HeaderProps) {
       </Button>
 
       <div className="flex-1" />
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Sun className="h-4 w-4 rotate-0 scale-100 transition-transform dark:rotate-90 dark:scale-0" />
+            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Cambiar tema</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setTheme('light')}>
+            <Sun className="mr-2 h-4 w-4" />
+            Claro
+            {theme === 'light' && <span className="ml-auto text-primary">&#10003;</span>}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setTheme('dark')}>
+            <Moon className="mr-2 h-4 w-4" />
+            Oscuro
+            {theme === 'dark' && <span className="ml-auto text-primary">&#10003;</span>}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setTheme('system')}>
+            <Monitor className="mr-2 h-4 w-4" />
+            Sistema
+            {theme === 'system' && <span className="ml-auto text-primary">&#10003;</span>}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

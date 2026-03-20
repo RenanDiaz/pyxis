@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ThemeProvider } from 'next-themes'
 import { AuthProvider } from '@/contexts/AuthContext'
 import PrivateRoute from '@/components/layout/PrivateRoute'
 import AppLayout from '@/components/layout/AppLayout'
@@ -25,32 +26,34 @@ const queryClient = new QueryClient({
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              element={
-                <PrivateRoute>
-                  <AppLayout />
-                </PrivateRoute>
-              }
-            >
-              <Route index element={<Home />} />
-              <Route path="estados" element={<States />} />
-              <Route path="estados/:abbreviation" element={<StateDetail />} />
-              <Route path="oficios" element={<Trades />} />
-              <Route path="clientes" element={<Clients />} />
-              <Route path="clientes/nuevo" element={<ClientForm />} />
-              <Route path="clientes/:id" element={<ClientDetail />} />
-              <Route path="clientes/:id/editar" element={<ClientForm />} />
-              <Route path="agenda" element={<Schedule />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-        <Toaster position="top-right" richColors />
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" storageKey="pyxis-theme">
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                element={
+                  <PrivateRoute>
+                    <AppLayout />
+                  </PrivateRoute>
+                }
+              >
+                <Route index element={<Home />} />
+                <Route path="estados" element={<States />} />
+                <Route path="estados/:abbreviation" element={<StateDetail />} />
+                <Route path="oficios" element={<Trades />} />
+                <Route path="clientes" element={<Clients />} />
+                <Route path="clientes/nuevo" element={<ClientForm />} />
+                <Route path="clientes/:id" element={<ClientDetail />} />
+                <Route path="clientes/:id/editar" element={<ClientForm />} />
+                <Route path="agenda" element={<Schedule />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+          <Toaster position="top-right" richColors />
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   )
 }

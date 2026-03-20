@@ -10,7 +10,7 @@ export default function AppLayout() {
   return (
     <div className="flex h-screen">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex lg:w-64 lg:flex-col border-r bg-card">
+      <aside className="hidden lg:flex lg:w-64 lg:flex-col border-r bg-sidebar text-sidebar-foreground">
         <Sidebar />
       </aside>
 
