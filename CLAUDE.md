@@ -70,3 +70,44 @@ Ver los esquemas completos en los archivos `src/data/*.json` y los types en el c
 - Colores semafóricos para status de clientes: nuevo (azul), contactado (amarillo), en_proceso (naranja), cerrado (verde), perdido (rojo/gris)
 - La info de estados debe ser fácil de escanear durante una llamada
 - Mobile-friendly
+
+# Nuevo feature - Exportar formulario de registro
+Agrega la funcionalidad de exportar el formulario de registro de cliente
+como archivo .docx.
+
+## Librería
+npm install docx file-saver
+npm install -D @types/file-saver
+
+## Dónde aparece
+En la vista de detalle de un cliente (`/clientes/:id`), agregar un botón
+"Exportar .docx" junto a los demás botones de acción.
+
+## Estructura del documento generado
+El archivo debe replicar la plantilla en `src/data/client_form.json` y
+rellenarse con los datos del cliente seleccionado. Formato:
+
+- Título: nombre de la LLC en mayúsculas
+- Sección "INFORMACIÓN REGISTRADA:" con los siguientes campos:
+  - NOMBRE DE LA LLC
+  - ESTADO
+  - PRIMER NOMBRE
+  - SEGUNDO NOMBRE
+  - APELLIDOS
+  - SSN O ITIN
+  - NÚMERO TELEFÓNICO
+  - CORREO ELECTRÓNICO
+  - DIRECCIÓN COMERCIAL DE LA EMPRESA
+  - PROPÓSITO DE LA EMPRESA
+
+Cada campo con formato: etiqueta en negrita seguida del valor.
+Puedes encontrar la plantilla original en `resources/[NOMBRE DE LA COMPAÑIA], LLC.docx`
+
+## Nombre del archivo generado
+`[LLC NAME].docx`
+Ejemplo: `GARCIA SERVICES, LLC.docx`
+
+## Implementación
+Crear el helper `src/lib/exportClientDoc.ts` con la función
+`exportClientDoc(client: Client): void` que genera y descarga el archivo.
+Importarlo en el componente de detalle del cliente.
