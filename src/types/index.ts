@@ -38,11 +38,14 @@ export interface Trade {
 
 export type ClientStatus = 'nuevo' | 'contactado' | 'en_proceso' | 'cerrado' | 'perdido'
 
+export type ProcessType = 'registration' | 'annual_report' | 'dissolution' | 'amendment'
+
 export interface Client {
   id: string
   phone: string
   llc_name?: string
   state?: string
+  process?: ProcessType
   first_name?: string
   middle_name?: string
   last_name?: string
