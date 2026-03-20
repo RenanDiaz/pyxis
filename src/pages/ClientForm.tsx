@@ -114,7 +114,9 @@ export default function ClientForm() {
     }
   }
 
-  if (isEditing && clientLoading) {
+  const formReady = !isEditing || (!!existingClient && Object.keys(formData).length > 0)
+
+  if (isEditing && (clientLoading || !formReady)) {
     return <p className="text-muted-foreground">Cargando...</p>
   }
 
