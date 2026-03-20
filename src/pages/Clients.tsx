@@ -4,6 +4,7 @@ import { useClients } from '@/hooks/useClients'
 import StatusBadge from '@/components/clients/StatusBadge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -11,15 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Search, Plus } from 'lucide-react'
+import { Search, Plus, Phone, Building2, MapPin, ChevronRight, Users } from 'lucide-react'
 import type { ClientStatus } from '@/types'
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
@@ -30,6 +23,12 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'cerrado', label: 'Cerrado' },
   { value: 'perdido', label: 'Perdido' },
 ]
+
+function getInitials(firstName?: string, lastName?: string): string {
+  const f = firstName?.charAt(0)?.toUpperCase() || ''
+  const l = lastName?.charAt(0)?.toUpperCase() || ''
+  return f + l || '?'
+}
 
 export default function Clients() {
   const [search, setSearch] = useState('')
@@ -77,44 +76,90 @@ export default function Clients() {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Cargando clientes...</p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-muted" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-24 rounded bg-muted" />
+                    <div className="h-3 w-16 rounded bg-muted" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : !clients || clients.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>No hay clientes aún.</p>
-          <Button asChild variant="link" className="mt-2">
-            <Link to="/clientes/nuevo">Crear el primero</Link>
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <Users className="h-12 w-12 mb-4 opacity-40" />
+          <p className="text-lg font-medium">No hay clientes aún</p>
+          <p className="text-sm mt-1">Comienza agregando tu primer cliente</p>
+          <Button asChild variant="outline" className="mt-4">
+            <Link to="/clientes/nuevo">
+              <Plus className="mr-2 h-4 w-4" />
+              Crear el primero
+            </Link>
           </Button>
         </div>
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre / Teléfono</TableHead>
-                <TableHead>LLC</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clients.map((client) => (
-                <TableRow key={client.id} className="cursor-pointer">
-                  <TableCell>
-                    <Link to={`/clientes/${client.id}`} className="font-medium hover:underline">
-                      {client.first_name || client.last_name
-                        ? `${client.first_name || ''} ${client.last_name || ''}`.trim()
-                        : client.phone}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{client.llc_name || '—'}</TableCell>
-                  <TableCell>{client.state || '—'}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={client.status} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {clients.map((client) => {
+            const displayName =
+              client.first_name || client.last_name
+                ? `${client.first_name || ''} ${client.last_name || ''}`.trim()
+                : null
+
+            return (
+              <Link key={client.id} to={`/clientes/${client.id}`} className="group">
+                <Card className="transition-all hover:shadow-md hover:border-primary/30 group-focus-visible:ring-2 group-focus-visible:ring-ring">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                        {getInitials(client.first_name, client.last_name)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold truncate leading-tight">
+                              {displayName || 'Sin nombre'}
+                            </p>
+                            {client.llc_name && (
+                              <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+                                <Building2 className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{client.llc_name}</span>
+                              </div>
+                            )}
+                          </div>
+                          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 group-hover:text-primary transition-colors mt-0.5" />
+                        </div>
+
+                        <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2">
+                          {client.phone && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Phone className="h-3 w-3" />
+                              <span>{client.phone}</span>
+                            </div>
+                          )}
+                          {client.state && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3" />
+                              <span>{client.state}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-2">
+                          <StatusBadge status={client.status} />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            )
+          })}
         </div>
       )}
     </div>
