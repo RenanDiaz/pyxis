@@ -7,6 +7,7 @@ import {
   updateClient,
   deleteClient,
 } from '@/lib/firestore'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface ClientFilters {
   status?: ClientStatus
@@ -14,24 +15,29 @@ interface ClientFilters {
 }
 
 export function useClients(filters?: ClientFilters) {
+  const { user } = useAuth()
   return useQuery<Client[]>({
-    queryKey: ['clients', filters],
-    queryFn: () => getClients(filters),
+    queryKey: ['clients', user?.uid, filters],
+    queryFn: () => getClients(user!.uid, filters),
+    enabled: !!user,
   })
 }
 
 export function useClient(id: string | undefined) {
+  const { user } = useAuth()
   return useQuery<Client | null>({
-    queryKey: ['clients', id],
-    queryFn: () => getClientById(id!),
-    enabled: !!id,
+    queryKey: ['clients', user?.uid, id],
+    queryFn: () => getClientById(user!.uid, id!),
+    enabled: !!id && !!user,
   })
 }
 
 export function useCreateClient() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: createClient,
+    mutationFn: (data: Omit<Client, 'id' | 'created_at' | 'updated_at'>) =>
+      createClient(user!.uid, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
@@ -39,10 +45,11 @@ export function useCreateClient() {
 }
 
 export function useUpdateClient() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) =>
-      updateClient(id, data),
+      updateClient(user!.uid, id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
@@ -50,9 +57,10 @@ export function useUpdateClient() {
 }
 
 export function useDeleteClient() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: deleteClient,
+    mutationFn: (id: string) => deleteClient(user!.uid, id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },

@@ -6,6 +6,7 @@ import {
   createCall,
   updateCall,
 } from '@/lib/firestore'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface CallFilters {
   clientId?: string
@@ -15,23 +16,29 @@ interface CallFilters {
 }
 
 export function useCalls(filters?: CallFilters) {
+  const { user } = useAuth()
   return useQuery<Call[]>({
-    queryKey: ['calls', filters],
-    queryFn: () => getCalls(filters),
+    queryKey: ['calls', user?.uid, filters],
+    queryFn: () => getCalls(user!.uid, filters),
+    enabled: !!user,
   })
 }
 
 export function useUpcomingCalls(max: number = 5) {
+  const { user } = useAuth()
   return useQuery<Call[]>({
-    queryKey: ['calls', 'upcoming', max],
-    queryFn: () => getUpcomingCalls(max),
+    queryKey: ['calls', 'upcoming', user?.uid, max],
+    queryFn: () => getUpcomingCalls(user!.uid, max),
+    enabled: !!user,
   })
 }
 
 export function useCreateCall() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: createCall,
+    mutationFn: (data: Omit<Call, 'id' | 'created_at'>) =>
+      createCall(user!.uid, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calls'] })
     },
@@ -39,10 +46,11 @@ export function useCreateCall() {
 }
 
 export function useUpdateCall() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Call> }) =>
-      updateCall(id, data),
+      updateCall(user!.uid, id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calls'] })
     },
