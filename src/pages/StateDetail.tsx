@@ -155,6 +155,29 @@ export default function StateDetail() {
           </CardContent>
         </Card>
 
+        {/* Codes */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Códigos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-sm text-muted-foreground">Código postal (ZIP)</p>
+                <p className="text-lg font-semibold">{state.zip_code_range}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Código telefónico (área)</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {state.area_codes.map((code) => (
+                    <Badge key={code} variant="outline">{code}</Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Name Check */}
         <Card>
           <CardHeader className="pb-3">
