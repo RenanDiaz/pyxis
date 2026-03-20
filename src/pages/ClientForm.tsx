@@ -4,7 +4,7 @@ import { useClient, useCreateClient, useUpdateClient } from '@/hooks/useClients'
 import { useStates } from '@/hooks/useStates'
 import clientFormConfig from '@/data/client_form.json'
 import { PROCESSES } from '@/data/processes'
-import { getFieldValue } from '@/lib/processUtils'
+import { getFieldValue, formatFieldValue } from '@/lib/processUtils'
 import { getStateByAreaCode } from '@/lib/areaCodeMap'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -265,7 +265,7 @@ export default function ClientForm() {
                 {selectedProcess.fields.map((f) => (
                   <div key={f.key} className="flex items-center justify-between text-sm">
                     <dt className="text-muted-foreground">{f.label}</dt>
-                    <dd className="font-semibold">{getFieldValue(selectedState, f.key)}</dd>
+                    <dd className="font-semibold">{formatFieldValue(getFieldValue(selectedState, f.key), f.format)}</dd>
                   </div>
                 ))}
               </dl>
