@@ -140,3 +140,6 @@ vite.config.ts.timestamp-*
 
 # Firebase service account key
 scripts/serviceAccountKey.json
+
+# Claude Code local config
+.claude/
