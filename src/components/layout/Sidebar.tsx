@@ -6,9 +6,9 @@ const navItems = [
   { to: '/', label: 'Inicio', icon: Home },
   { to: '/estados', label: 'Estados', icon: Map },
   { to: '/oficios', label: 'Oficios', icon: Briefcase },
+  { to: '/glosario', label: 'Glosario', icon: BookOpen },
   { to: '/clientes', label: 'Clientes', icon: Users },
   { to: '/agenda', label: 'Agenda', icon: Calendar },
-  { to: '/glosario', label: 'Glosario', icon: BookOpen },
 ]
 
 function PyxisLogo({ className }: { className?: string }) {
