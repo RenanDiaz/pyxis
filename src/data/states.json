@@ -21,7 +21,15 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "http://arc-sos.state.al.us/CGI/CORPNAME.MBR/INPUT"
+    "name_check_link": "http://arc-sos.state.al.us/CGI/CORPNAME.MBR/INPUT",
+    "zip_code_range": "350-369",
+    "area_codes": [
+      "205",
+      "251",
+      "256",
+      "334",
+      "938"
+    ]
   },
   {
     "abbreviation": "AK",
@@ -45,7 +53,11 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://www.commerce.alaska.gov/cbp/main/search/entities"
+    "name_check_link": "https://www.commerce.alaska.gov/cbp/main/search/entities",
+    "zip_code_range": "995-999",
+    "area_codes": [
+      "907"
+    ]
   },
   {
     "abbreviation": "AZ",
@@ -69,7 +81,15 @@
       "specific": "SI",
       "general": "NO"
     },
-    "name_check_link": "https://ecorp.azcc.gov/AzAccount?sessionExpired=False"
+    "name_check_link": "https://ecorp.azcc.gov/AzAccount?sessionExpired=False",
+    "zip_code_range": "850-865",
+    "area_codes": [
+      "480",
+      "520",
+      "602",
+      "623",
+      "928"
+    ]
   },
   {
     "abbreviation": "AR",
@@ -93,7 +113,13 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "http://www.sosweb.state.ar.us/corps/search_all.php"
+    "name_check_link": "http://www.sosweb.state.ar.us/corps/search_all.php",
+    "zip_code_range": "716-729",
+    "area_codes": [
+      "479",
+      "501",
+      "870"
+    ]
   },
   {
     "abbreviation": "CA",
@@ -117,7 +143,42 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://bizfileonline.sos.ca.gov/search/business"
+    "name_check_link": "https://bizfileonline.sos.ca.gov/search/business",
+    "zip_code_range": "900-961",
+    "area_codes": [
+      "209",
+      "213",
+      "310",
+      "323",
+      "408",
+      "415",
+      "424",
+      "442",
+      "510",
+      "530",
+      "559",
+      "562",
+      "619",
+      "626",
+      "628",
+      "650",
+      "657",
+      "661",
+      "669",
+      "707",
+      "714",
+      "747",
+      "760",
+      "805",
+      "818",
+      "831",
+      "858",
+      "909",
+      "916",
+      "925",
+      "949",
+      "951"
+    ]
   },
   {
     "abbreviation": "CO",
@@ -141,7 +202,14 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "http://www.sos.state.co.us/biz/BusinessEntityCriteriaExt.do"
+    "name_check_link": "http://www.sos.state.co.us/biz/BusinessEntityCriteriaExt.do",
+    "zip_code_range": "800-816",
+    "area_codes": [
+      "303",
+      "719",
+      "720",
+      "970"
+    ]
   },
   {
     "abbreviation": "CT",
@@ -165,7 +233,14 @@
       "specific": "SI",
       "general": "NO"
     },
-    "name_check_link": "https://service.ct.gov/business/s/onlinebusinesssearch?language=en_US"
+    "name_check_link": "https://service.ct.gov/business/s/onlinebusinesssearch?language=en_US",
+    "zip_code_range": "060-069",
+    "area_codes": [
+      "203",
+      "475",
+      "860",
+      "959"
+    ]
   },
   {
     "abbreviation": "DE",
@@ -189,7 +264,11 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://icis.corp.delaware.gov/eCorp/EntitySearch/NameSearch.aspx"
+    "name_check_link": "https://icis.corp.delaware.gov/eCorp/EntitySearch/NameSearch.aspx",
+    "zip_code_range": "197-199",
+    "area_codes": [
+      "302"
+    ]
   },
   {
     "abbreviation": "D.C.",
@@ -213,7 +292,11 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://corponline.dcra.dc.gov/Home.aspx"
+    "name_check_link": "https://corponline.dcra.dc.gov/Home.aspx",
+    "zip_code_range": "200-205",
+    "area_codes": [
+      "202"
+    ]
   },
   {
     "abbreviation": "FL",
@@ -237,7 +320,27 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "http://search.sunbiz.org/Inquiry/CorporationSearch/ByName"
+    "name_check_link": "http://search.sunbiz.org/Inquiry/CorporationSearch/ByName",
+    "zip_code_range": "320-349",
+    "area_codes": [
+      "239",
+      "305",
+      "321",
+      "352",
+      "386",
+      "407",
+      "561",
+      "727",
+      "754",
+      "772",
+      "786",
+      "813",
+      "850",
+      "863",
+      "904",
+      "941",
+      "954"
+    ]
   },
   {
     "abbreviation": "GA",
@@ -261,7 +364,19 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://ecorp.sos.ga.gov/BusinessSearch"
+    "name_check_link": "https://ecorp.sos.ga.gov/BusinessSearch",
+    "zip_code_range": "300-319",
+    "area_codes": [
+      "229",
+      "404",
+      "470",
+      "478",
+      "678",
+      "706",
+      "762",
+      "770",
+      "912"
+    ]
   },
   {
     "abbreviation": "ID",
@@ -285,7 +400,12 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://sosbiz.idaho.gov/search/business"
+    "name_check_link": "https://sosbiz.idaho.gov/search/business",
+    "zip_code_range": "832-838",
+    "area_codes": [
+      "208",
+      "986"
+    ]
   },
   {
     "abbreviation": "IL",
@@ -309,7 +429,23 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://apps.ilsos.gov/corporatellc/"
+    "name_check_link": "https://apps.ilsos.gov/corporatellc/",
+    "zip_code_range": "600-629",
+    "area_codes": [
+      "217",
+      "224",
+      "309",
+      "312",
+      "331",
+      "618",
+      "630",
+      "708",
+      "773",
+      "779",
+      "815",
+      "847",
+      "872"
+    ]
   },
   {
     "abbreviation": "IN",
@@ -333,7 +469,18 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://bsd.sos.in.gov/publicbusinesssearch"
+    "name_check_link": "https://bsd.sos.in.gov/publicbusinesssearch",
+    "zip_code_range": "460-479",
+    "area_codes": [
+      "219",
+      "260",
+      "317",
+      "463",
+      "574",
+      "765",
+      "812",
+      "930"
+    ]
   },
   {
     "abbreviation": "IA",
@@ -357,7 +504,15 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "http://sos.iowa.gov/search/business/(S(51bevq45fxbs4e55c3ipwc3j))/search.aspx"
+    "name_check_link": "http://sos.iowa.gov/search/business/(S(51bevq45fxbs4e55c3ipwc3j))/search.aspx",
+    "zip_code_range": "500-528",
+    "area_codes": [
+      "319",
+      "515",
+      "563",
+      "641",
+      "712"
+    ]
   },
   {
     "abbreviation": "KS",
@@ -381,7 +536,14 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://www.sos.ks.gov/eforms/BusinessEntity/Search.aspx"
+    "name_check_link": "https://www.sos.ks.gov/eforms/BusinessEntity/Search.aspx",
+    "zip_code_range": "660-679",
+    "area_codes": [
+      "316",
+      "620",
+      "785",
+      "913"
+    ]
   },
   {
     "abbreviation": "KY",
@@ -405,7 +567,15 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "http://web.sos.ky.gov/ftsearch/"
+    "name_check_link": "http://web.sos.ky.gov/ftsearch/",
+    "zip_code_range": "400-427",
+    "area_codes": [
+      "270",
+      "364",
+      "502",
+      "606",
+      "859"
+    ]
   },
   {
     "abbreviation": "LA",
@@ -429,7 +599,15 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://coraweb.sos.la.gov/CommercialSearch/CommercialSearch.aspx"
+    "name_check_link": "https://coraweb.sos.la.gov/CommercialSearch/CommercialSearch.aspx",
+    "zip_code_range": "700-714",
+    "area_codes": [
+      "225",
+      "318",
+      "337",
+      "504",
+      "985"
+    ]
   },
   {
     "abbreviation": "ME",
@@ -453,7 +631,11 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "http://icrs.informe.org/nei-sos-"
+    "name_check_link": "http://icrs.informe.org/nei-sos-",
+    "zip_code_range": "039-049",
+    "area_codes": [
+      "207"
+    ]
   },
   {
     "abbreviation": "MD",
@@ -477,7 +659,15 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://egov.maryland.gov/BusinessExpress/EntitySearch"
+    "name_check_link": "https://egov.maryland.gov/BusinessExpress/EntitySearch",
+    "zip_code_range": "206-219",
+    "area_codes": [
+      "240",
+      "301",
+      "410",
+      "443",
+      "667"
+    ]
   },
   {
     "abbreviation": "MA",
@@ -501,7 +691,19 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "http://corp.sec.state.ma.us/corpweb/corpsearch/CorpSearch.aspx"
+    "name_check_link": "http://corp.sec.state.ma.us/corpweb/corpsearch/CorpSearch.aspx",
+    "zip_code_range": "010-027",
+    "area_codes": [
+      "339",
+      "351",
+      "413",
+      "508",
+      "617",
+      "774",
+      "781",
+      "857",
+      "978"
+    ]
   },
   {
     "abbreviation": "MI",
@@ -525,7 +727,22 @@
       "specific": "SI",
       "general": "NO"
     },
-    "name_check_link": "https://cofs.lara.state.mi.us/corpweb/CorpSearch/CorpSearch.aspx"
+    "name_check_link": "https://cofs.lara.state.mi.us/corpweb/CorpSearch/CorpSearch.aspx",
+    "zip_code_range": "480-499",
+    "area_codes": [
+      "231",
+      "248",
+      "269",
+      "313",
+      "517",
+      "586",
+      "616",
+      "734",
+      "810",
+      "906",
+      "947",
+      "989"
+    ]
   },
   {
     "abbreviation": "MN",
@@ -549,7 +766,17 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://mblsportal.sos.state.mn.us/Business/Search"
+    "name_check_link": "https://mblsportal.sos.state.mn.us/Business/Search",
+    "zip_code_range": "550-567",
+    "area_codes": [
+      "218",
+      "320",
+      "507",
+      "612",
+      "651",
+      "763",
+      "952"
+    ]
   },
   {
     "abbreviation": "MS",
@@ -573,7 +800,14 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://corp.sos.ms.gov/corp/portal/c/page/corpBusinessIdSearch/portal.aspx#clear=1"
+    "name_check_link": "https://corp.sos.ms.gov/corp/portal/c/page/corpBusinessIdSearch/portal.aspx#clear=1",
+    "zip_code_range": "386-397",
+    "area_codes": [
+      "228",
+      "601",
+      "662",
+      "769"
+    ]
   },
   {
     "abbreviation": "MO",
@@ -597,7 +831,16 @@
       "specific": "SI",
       "general": "NO"
     },
-    "name_check_link": "https://bsd.sos.mo.gov/BusinessEntity/BESearch.aspx?SearchType=2"
+    "name_check_link": "https://bsd.sos.mo.gov/BusinessEntity/BESearch.aspx?SearchType=2",
+    "zip_code_range": "630-658",
+    "area_codes": [
+      "314",
+      "417",
+      "573",
+      "636",
+      "660",
+      "816"
+    ]
   },
   {
     "abbreviation": "MT",
@@ -621,7 +864,11 @@
       "specific": "SI",
       "general": "NO"
     },
-    "name_check_link": "http://sos.mt.gov/business"
+    "name_check_link": "http://sos.mt.gov/business",
+    "zip_code_range": "590-599",
+    "area_codes": [
+      "406"
+    ]
   },
   {
     "abbreviation": "NE",
@@ -645,7 +892,13 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://www.nebraska.gov/sos/corp/corpsearch.cgi?nav=search"
+    "name_check_link": "https://www.nebraska.gov/sos/corp/corpsearch.cgi?nav=search",
+    "zip_code_range": "680-693",
+    "area_codes": [
+      "308",
+      "402",
+      "531"
+    ]
   },
   {
     "abbreviation": "NV",
@@ -669,7 +922,13 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://esos.nv.gov/EntitySearch/OnlineEntitySearch"
+    "name_check_link": "https://esos.nv.gov/EntitySearch/OnlineEntitySearch",
+    "zip_code_range": "889-898",
+    "area_codes": [
+      "702",
+      "725",
+      "775"
+    ]
   },
   {
     "abbreviation": "NH",
@@ -693,7 +952,11 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://www.sos.nh.gov/corporate/soskb/csearch.asp"
+    "name_check_link": "https://www.sos.nh.gov/corporate/soskb/csearch.asp",
+    "zip_code_range": "030-038",
+    "area_codes": [
+      "603"
+    ]
   },
   {
     "abbreviation": "NJ",
@@ -717,7 +980,19 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://www.njportal.com/DOR/BusinessNameSearch/Search/Availability"
+    "name_check_link": "https://www.njportal.com/DOR/BusinessNameSearch/Search/Availability",
+    "zip_code_range": "070-089",
+    "area_codes": [
+      "201",
+      "551",
+      "609",
+      "732",
+      "848",
+      "856",
+      "862",
+      "908",
+      "973"
+    ]
   },
   {
     "abbreviation": "NM",
@@ -741,7 +1016,12 @@
       "specific": "SI",
       "general": "NO"
     },
-    "name_check_link": "https://enterprise.sos.nm.gov/search/business"
+    "name_check_link": "https://enterprise.sos.nm.gov/search/business",
+    "zip_code_range": "870-884",
+    "area_codes": [
+      "505",
+      "575"
+    ]
   },
   {
     "abbreviation": "NY",
@@ -765,7 +1045,29 @@
       "specific": "SI",
       "general": "NO"
     },
-    "name_check_link": "https://apps.dos.ny.gov/publicInquiry/"
+    "name_check_link": "https://apps.dos.ny.gov/publicInquiry/",
+    "zip_code_range": "100-149",
+    "area_codes": [
+      "212",
+      "315",
+      "332",
+      "347",
+      "516",
+      "518",
+      "585",
+      "607",
+      "631",
+      "646",
+      "680",
+      "716",
+      "718",
+      "838",
+      "845",
+      "914",
+      "917",
+      "929",
+      "934"
+    ]
   },
   {
     "abbreviation": "NC",
@@ -789,7 +1091,19 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://sosnc.gov/online_services/search/by_title/search_Business_Registration"
+    "name_check_link": "https://sosnc.gov/online_services/search/by_title/search_Business_Registration",
+    "zip_code_range": "270-289",
+    "area_codes": [
+      "252",
+      "336",
+      "704",
+      "743",
+      "828",
+      "910",
+      "919",
+      "980",
+      "984"
+    ]
   },
   {
     "abbreviation": "ND",
@@ -813,7 +1127,11 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://secure.apps.state.nd.us/sc/busnsrch/busnSearch.htm"
+    "name_check_link": "https://secure.apps.state.nd.us/sc/busnsrch/busnSearch.htm",
+    "zip_code_range": "580-588",
+    "area_codes": [
+      "701"
+    ]
   },
   {
     "abbreviation": "OH",
@@ -837,7 +1155,22 @@
       "specific": "SI",
       "general": "NO"
     },
-    "name_check_link": "https://businesssearch.ohiosos.gov/"
+    "name_check_link": "https://businesssearch.ohiosos.gov/",
+    "zip_code_range": "430-458",
+    "area_codes": [
+      "216",
+      "220",
+      "234",
+      "330",
+      "380",
+      "419",
+      "440",
+      "513",
+      "567",
+      "614",
+      "740",
+      "937"
+    ]
   },
   {
     "abbreviation": "OK",
@@ -861,7 +1194,14 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://www.sos.ok.gov/corp/corpInquiryFind.aspx"
+    "name_check_link": "https://www.sos.ok.gov/corp/corpInquiryFind.aspx",
+    "zip_code_range": "730-749",
+    "area_codes": [
+      "405",
+      "539",
+      "580",
+      "918"
+    ]
   },
   {
     "abbreviation": "OR",
@@ -885,7 +1225,14 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "http://egov.sos.state.or.us/br/pkg_web_name_srch_inq.login"
+    "name_check_link": "http://egov.sos.state.or.us/br/pkg_web_name_srch_inq.login",
+    "zip_code_range": "970-979",
+    "area_codes": [
+      "458",
+      "503",
+      "541",
+      "971"
+    ]
   },
   {
     "abbreviation": "PA",
@@ -909,7 +1256,21 @@
       "specific": "SI",
       "general": "NO"
     },
-    "name_check_link": "https://file.dos.pa.gov/search/business"
+    "name_check_link": "https://file.dos.pa.gov/search/business",
+    "zip_code_range": "150-196",
+    "area_codes": [
+      "215",
+      "267",
+      "272",
+      "412",
+      "484",
+      "570",
+      "610",
+      "717",
+      "724",
+      "814",
+      "878"
+    ]
   },
   {
     "abbreviation": "RI",
@@ -933,7 +1294,11 @@
       "specific": "SI",
       "general": "NO"
     },
-    "name_check_link": "https://business.sos.ri.gov/CorpWeb/CorpSearch/CorpSearch.aspx"
+    "name_check_link": "https://business.sos.ri.gov/CorpWeb/CorpSearch/CorpSearch.aspx",
+    "zip_code_range": "028-029",
+    "area_codes": [
+      "401"
+    ]
   },
   {
     "abbreviation": "SC",
@@ -957,7 +1322,14 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://businessfilings.sc.gov/BusinessFiling/Entity/Search"
+    "name_check_link": "https://businessfilings.sc.gov/BusinessFiling/Entity/Search",
+    "zip_code_range": "290-299",
+    "area_codes": [
+      "803",
+      "843",
+      "854",
+      "864"
+    ]
   },
   {
     "abbreviation": "SD",
@@ -981,7 +1353,11 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://sosenterprise.sd.gov/BusinessServices/Business/NameAvailability.aspx"
+    "name_check_link": "https://sosenterprise.sd.gov/BusinessServices/Business/NameAvailability.aspx",
+    "zip_code_range": "570-577",
+    "area_codes": [
+      "605"
+    ]
   },
   {
     "abbreviation": "TN",
@@ -1005,7 +1381,17 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://tncab.tnsos.gov/business-entity-search"
+    "name_check_link": "https://tncab.tnsos.gov/business-entity-search",
+    "zip_code_range": "370-385",
+    "area_codes": [
+      "423",
+      "615",
+      "629",
+      "731",
+      "865",
+      "901",
+      "931"
+    ]
   },
   {
     "abbreviation": "TX",
@@ -1029,7 +1415,37 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://mycpa.cpa.state.tx.us/coa/Index.html"
+    "name_check_link": "https://mycpa.cpa.state.tx.us/coa/Index.html",
+    "zip_code_range": "750-799",
+    "area_codes": [
+      "210",
+      "214",
+      "254",
+      "281",
+      "325",
+      "346",
+      "361",
+      "409",
+      "430",
+      "432",
+      "469",
+      "512",
+      "682",
+      "713",
+      "726",
+      "737",
+      "806",
+      "817",
+      "830",
+      "832",
+      "903",
+      "915",
+      "936",
+      "940",
+      "956",
+      "972",
+      "979"
+    ]
   },
   {
     "abbreviation": "UT",
@@ -1053,7 +1469,13 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://businessregistration.utah.gov/EntitySearch/OnlineEntitySearch"
+    "name_check_link": "https://businessregistration.utah.gov/EntitySearch/OnlineEntitySearch",
+    "zip_code_range": "840-847",
+    "area_codes": [
+      "385",
+      "435",
+      "801"
+    ]
   },
   {
     "abbreviation": "VT",
@@ -1077,7 +1499,11 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://www.vtsosonline.com/online/BusinessInquire/"
+    "name_check_link": "https://www.vtsosonline.com/online/BusinessInquire/",
+    "zip_code_range": "050-059",
+    "area_codes": [
+      "802"
+    ]
   },
   {
     "abbreviation": "VA",
@@ -1101,7 +1527,17 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://cis.scc.virginia.gov"
+    "name_check_link": "https://cis.scc.virginia.gov",
+    "zip_code_range": "220-246",
+    "area_codes": [
+      "276",
+      "434",
+      "540",
+      "571",
+      "703",
+      "757",
+      "804"
+    ]
   },
   {
     "abbreviation": "WA",
@@ -1125,7 +1561,16 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://ccfs.sos.wa.gov/#/"
+    "name_check_link": "https://ccfs.sos.wa.gov/#/",
+    "zip_code_range": "980-994",
+    "area_codes": [
+      "206",
+      "253",
+      "360",
+      "425",
+      "509",
+      "564"
+    ]
   },
   {
     "abbreviation": "WV",
@@ -1149,7 +1594,12 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "http://apps.sos.wv.gov/business/corporations/"
+    "name_check_link": "http://apps.sos.wv.gov/business/corporations/",
+    "zip_code_range": "247-268",
+    "area_codes": [
+      "304",
+      "681"
+    ]
   },
   {
     "abbreviation": "WI",
@@ -1173,7 +1623,16 @@
       "specific": "SI",
       "general": "NO"
     },
-    "name_check_link": "https://onestop.wi.gov/DFIAnnualReports/SearchBusiness"
+    "name_check_link": "https://onestop.wi.gov/DFIAnnualReports/SearchBusiness",
+    "zip_code_range": "530-549",
+    "area_codes": [
+      "262",
+      "414",
+      "534",
+      "608",
+      "715",
+      "920"
+    ]
   },
   {
     "abbreviation": "WY",
@@ -1197,6 +1656,10 @@
       "specific": "NO",
       "general": "SI"
     },
-    "name_check_link": "https://wyobiz.wy.gov/Business/FilingSearch.aspx"
+    "name_check_link": "https://wyobiz.wy.gov/Business/FilingSearch.aspx",
+    "zip_code_range": "820-831",
+    "area_codes": [
+      "307"
+    ]
   }
 ]

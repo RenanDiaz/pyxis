@@ -23,6 +23,8 @@ export interface StateInfo {
     general: string
   }
   name_check_link: string
+  zip_code_range: string
+  area_codes: string[]
 }
 
 export interface Trade {
