@@ -5,6 +5,8 @@ import StatusBadge from '@/components/clients/StatusBadge'
 import OutcomeBadge from '@/components/calls/OutcomeBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Phone, Clock } from 'lucide-react'
+import StateClock from '@/components/states/StateClock'
+import { getStateTimezone } from '@/lib/timezones'
 
 export default function Home() {
   const { data: clients } = useClients()
@@ -73,22 +75,33 @@ export default function Home() {
               <p className="text-sm text-muted-foreground">No hay llamadas pendientes</p>
             ) : (
               <div className="space-y-3">
-                {upcomingCalls.map((call) => (
-                  <div key={call.id} className="flex items-center justify-between border-b pb-2 last:border-0">
-                    <div className="text-sm">
-                      <Link to={`/clientes/${call.client_id}`} className="font-medium hover:underline">
-                        Cliente
-                      </Link>
-                      <p className="text-muted-foreground">
-                        {call.scheduled_at?.toDate?.()?.toLocaleString('es-MX', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        }) ?? 'Sin fecha'}
-                      </p>
+                {upcomingCalls.map((call) => {
+                  const client = clients?.find((c) => c.id === call.client_id)
+                  const clientName = client?.first_name || client?.last_name
+                    ? `${client.first_name || ''} ${client.last_name || ''}`.trim()
+                    : client?.phone ?? 'Cliente'
+                  return (
+                    <div key={call.id} className="flex items-center justify-between border-b pb-2 last:border-0">
+                      <div className="text-sm">
+                        <Link to={`/clientes/${call.client_id}`} className="font-medium hover:underline">
+                          {clientName}
+                        </Link>
+                        <p className="text-muted-foreground">
+                          {call.scheduled_at?.toDate?.()?.toLocaleString('es-MX', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          }) ?? 'Sin fecha'}
+                        </p>
+                        {client?.state && (
+                          <div className="mt-0.5">
+                            <StateClock timezone={getStateTimezone(client.state)} />
+                          </div>
+                        )}
+                      </div>
+                      <OutcomeBadge outcome={call.outcome} />
                     </div>
-                    <OutcomeBadge outcome={call.outcome} />
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </CardContent>
