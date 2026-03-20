@@ -13,6 +13,7 @@ import Clients from '@/pages/Clients'
 import ClientDetail from '@/pages/ClientDetail'
 import ClientForm from '@/pages/ClientForm'
 import Schedule from '@/pages/Schedule'
+import Glossary from '@/pages/Glossary'
 import { Toaster } from '@/components/ui/sonner'
 
 const queryClient = new QueryClient({
@@ -48,6 +49,7 @@ export default function App() {
                 <Route path="clientes/:id" element={<ClientDetail />} />
                 <Route path="clientes/:id/editar" element={<ClientForm />} />
                 <Route path="agenda" element={<Schedule />} />
+                <Route path="glosario" element={<Glossary />} />
               </Route>
             </Routes>
           </BrowserRouter>

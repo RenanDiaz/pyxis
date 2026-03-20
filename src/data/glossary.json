@@ -1,0 +1,142 @@
+[
+  {
+    "term": "LLC",
+    "full_name": "Limited Liability Company",
+    "translation": "Sociedad de Responsabilidad Limitada",
+    "definition": "Estructura empresarial que protege los bienes personales del dueño de las deudas del negocio.",
+    "category": "business_structure"
+  },
+  {
+    "term": "S-Corp",
+    "full_name": "S Corporation",
+    "translation": "Corporación S",
+    "definition": "Tipo de corporación que permite pasar ingresos directamente a los accionistas, evitando la doble tributación.",
+    "category": "business_structure"
+  },
+  {
+    "term": "C-Corp",
+    "full_name": "C Corporation",
+    "translation": "Corporación C",
+    "definition": "Corporación estándar donde la empresa paga impuestos por separado de sus dueños. Sujeta a doble tributación.",
+    "category": "business_structure"
+  },
+  {
+    "term": "Sole Proprietorship",
+    "full_name": "Sole Proprietorship",
+    "translation": "Empresa Individual",
+    "definition": "Negocio sin estructura legal separada del dueño. El propietario es personalmente responsable de todas las deudas.",
+    "category": "business_structure"
+  },
+  {
+    "term": "DBA",
+    "full_name": "Doing Business As",
+    "translation": "Haciendo Negocios Como",
+    "definition": "Nombre comercial registrado que permite operar bajo un nombre diferente al legal de la empresa o persona.",
+    "category": "business_structure"
+  },
+  {
+    "term": "EIN",
+    "full_name": "Employer Identification Number",
+    "translation": "Número de Identificación del Empleador",
+    "definition": "Número de 9 dígitos asignado por el IRS para identificar a una empresa para fines fiscales.",
+    "category": "tax"
+  },
+  {
+    "term": "FEIN",
+    "full_name": "Federal Employer Identification Number",
+    "translation": "Número Federal de Identificación del Empleador",
+    "definition": "Sinónimo del EIN. Número asignado por el IRS para identificar fiscalmente a un negocio a nivel federal.",
+    "category": "tax"
+  },
+  {
+    "term": "IRS",
+    "full_name": "Internal Revenue Service",
+    "translation": "Servicio de Impuestos Internos",
+    "definition": "Agencia federal del gobierno de EE.UU. encargada de recaudar impuestos y hacer cumplir las leyes fiscales.",
+    "category": "tax"
+  },
+  {
+    "term": "SSN",
+    "full_name": "Social Security Number",
+    "translation": "Número de Seguro Social",
+    "definition": "Número de 9 dígitos emitido a ciudadanos y residentes permanentes para rastreo fiscal y beneficios sociales.",
+    "category": "tax"
+  },
+  {
+    "term": "ITIN",
+    "full_name": "Individual Taxpayer Identification Number",
+    "translation": "Número de Identificación Personal del Contribuyente",
+    "definition": "Número fiscal emitido por el IRS a personas que necesitan declarar impuestos pero no califican para un SSN.",
+    "category": "tax"
+  },
+  {
+    "term": "W-9",
+    "full_name": "Request for Taxpayer Identification Number and Certification",
+    "translation": "Solicitud de Número de Identificación del Contribuyente",
+    "definition": "Formulario del IRS usado para proporcionar el número de identificación fiscal a quien paga por servicios.",
+    "category": "tax"
+  },
+  {
+    "term": "1099",
+    "full_name": "1099 Tax Form",
+    "translation": "Formulario Fiscal 1099",
+    "definition": "Formulario que reporta ingresos recibidos fuera de un empleo tradicional, como trabajo independiente o freelance.",
+    "category": "tax"
+  },
+  {
+    "term": "Operating Agreement",
+    "full_name": "Operating Agreement",
+    "translation": "Acuerdo Operativo",
+    "definition": "Documento legal que establece las reglas de operación, derechos y responsabilidades de los miembros de una LLC.",
+    "category": "legal"
+  },
+  {
+    "term": "Registered Agent",
+    "full_name": "Registered Agent",
+    "translation": "Agente Registrado",
+    "definition": "Persona o empresa designada para recibir documentos legales y notificaciones oficiales en nombre de la LLC.",
+    "category": "legal"
+  },
+  {
+    "term": "Articles of Organization",
+    "full_name": "Articles of Organization",
+    "translation": "Artículos de Organización",
+    "definition": "Documento presentado ante el estado para crear oficialmente una LLC. Incluye nombre, dirección y agente registrado.",
+    "category": "legal"
+  },
+  {
+    "term": "Business License",
+    "full_name": "Business License",
+    "translation": "Licencia Comercial",
+    "definition": "Permiso emitido por el gobierno local o estatal que autoriza a una empresa a operar en una jurisdicción específica.",
+    "category": "legal"
+  },
+  {
+    "term": "Dissolution",
+    "full_name": "Dissolution",
+    "translation": "Disolución",
+    "definition": "Proceso legal para cerrar formalmente una LLC o corporación ante el estado donde fue registrada.",
+    "category": "legal"
+  },
+  {
+    "term": "Amendment",
+    "full_name": "Amendment",
+    "translation": "Enmienda",
+    "definition": "Cambio formal a los documentos de formación de una empresa, como nombre, dirección o miembros.",
+    "category": "legal"
+  },
+  {
+    "term": "Annual Report",
+    "full_name": "Annual Report",
+    "translation": "Reporte Anual",
+    "definition": "Documento obligatorio que se presenta ante el estado cada año con la información actualizada de la empresa.",
+    "category": "compliance"
+  },
+  {
+    "term": "Good Standing",
+    "full_name": "Certificate of Good Standing",
+    "translation": "Certificado de Buen Estado",
+    "definition": "Documento emitido por el estado que certifica que una empresa está al día con sus obligaciones legales y fiscales.",
+    "category": "compliance"
+  }
+]
