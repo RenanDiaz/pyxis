@@ -1,0 +1,66 @@
+{
+  "description": "Campos requeridos para registrar una LLC nueva",
+  "fields": [
+    {
+      "id": "llc_name",
+      "label": "Nombre de la LLC",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "state",
+      "label": "Estado",
+      "type": "select",
+      "required": true
+    },
+    {
+      "id": "first_name",
+      "label": "Primer nombre",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "middle_name",
+      "label": "Segundo nombre",
+      "type": "text",
+      "required": false
+    },
+    {
+      "id": "last_name",
+      "label": "Apellidos",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "ssn_itin",
+      "label": "SSN o ITIN",
+      "type": "text",
+      "required": true,
+      "sensitive": true
+    },
+    {
+      "id": "phone",
+      "label": "Número telefónico",
+      "type": "phone",
+      "required": true
+    },
+    {
+      "id": "email",
+      "label": "Correo electrónico",
+      "type": "email",
+      "required": true
+    },
+    {
+      "id": "business_address",
+      "label": "Dirección comercial de la empresa",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "business_purpose",
+      "label": "Propósito de la empresa",
+      "type": "textarea",
+      "required": true
+    }
+  ]
+}

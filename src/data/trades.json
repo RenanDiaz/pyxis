@@ -1,0 +1,202 @@
+[
+  {
+    "id": 1,
+    "category": "construction",
+    "category_es": "Construcción",
+    "en": "Roofing",
+    "es": "Techado",
+    "description_es": "Personas que instalan o reparan techos en casas o edificios comerciales."
+  },
+  {
+    "id": 2,
+    "category": "construction",
+    "category_es": "Construcción",
+    "en": "Siding",
+    "es": "Revestimiento exterior",
+    "description_es": "Personas que instalan el revestimiento exterior de las casas (vinilo, madera, cemento, etc.)."
+  },
+  {
+    "id": 3,
+    "category": "construction",
+    "category_es": "Construcción",
+    "en": "Framing",
+    "es": "Estructura/Armado",
+    "description_es": "Personas que construyen la estructura de madera o metal de una casa."
+  },
+  {
+    "id": 4,
+    "category": "construction",
+    "category_es": "Construcción",
+    "en": "Drywall",
+    "es": "Tabla roca / Yeso",
+    "description_es": "Personas que instalan y reparan paneles de yeso (paredes interiores)."
+  },
+  {
+    "id": 5,
+    "category": "construction",
+    "category_es": "Construcción",
+    "en": "Painting",
+    "es": "Pintura",
+    "description_es": "Personas que pintan casas o edificios por dentro o por fuera."
+  },
+  {
+    "id": 6,
+    "category": "construction",
+    "category_es": "Construcción",
+    "en": "Flooring",
+    "es": "Pisos",
+    "description_es": "Personas que instalan pisos (madera, vinilo, tile, laminado, etc.)."
+  },
+  {
+    "id": 7,
+    "category": "construction",
+    "category_es": "Construcción",
+    "en": "Tile Installation",
+    "es": "Instalación de cerámica",
+    "description_es": "Personas que instalan cerámica o azulejos en baños, cocinas y pisos."
+  },
+  {
+    "id": 8,
+    "category": "construction",
+    "category_es": "Construcción",
+    "en": "Concrete Work",
+    "es": "Trabajo de concreto",
+    "description_es": "Personas que trabajan con cemento para hacer patios, entradas, aceras o cimientos."
+  },
+  {
+    "id": 9,
+    "category": "construction",
+    "category_es": "Construcción",
+    "en": "Masonry",
+    "es": "Albañilería",
+    "description_es": "Personas que trabajan con ladrillo, piedra o bloques."
+  },
+  {
+    "id": 10,
+    "category": "construction",
+    "category_es": "Construcción",
+    "en": "Demolition",
+    "es": "Demolición",
+    "description_es": "Personas que derriban o desmontan estructuras antes de construir o remodelar."
+  },
+  {
+    "id": 11,
+    "category": "construction",
+    "category_es": "Construcción",
+    "en": "Handyman",
+    "es": "Mantenimiento general",
+    "description_es": "Persona que hace reparaciones pequeñas o mantenimiento en casas o negocios."
+  },
+  {
+    "id": 12,
+    "category": "home_services",
+    "category_es": "Servicios para Casas",
+    "en": "House Cleaning",
+    "es": "Limpieza de casas",
+    "description_es": "Personas que limpian casas o departamentos."
+  },
+  {
+    "id": 13,
+    "category": "home_services",
+    "category_es": "Servicios para Casas",
+    "en": "Auto Detailing",
+    "es": "Detallado de autos",
+    "description_es": "Personas que limpian, pulen y restauran autos."
+  },
+  {
+    "id": 14,
+    "category": "home_services",
+    "category_es": "Servicios para Casas",
+    "en": "Commercial Cleaning / Janitorial",
+    "es": "Limpieza comercial / Conserje",
+    "description_es": "Personas que limpian oficinas, edificios o negocios."
+  },
+  {
+    "id": 15,
+    "category": "home_services",
+    "category_es": "Servicios para Casas",
+    "en": "Pressure Washing",
+    "es": "Lavado a presión",
+    "description_es": "Personas que lavan con máquinas de alta presión casas, patios, techos o entradas."
+  },
+  {
+    "id": 16,
+    "category": "home_services",
+    "category_es": "Servicios para Casas",
+    "en": "Window Cleaning",
+    "es": "Limpieza de ventanas",
+    "description_es": "Personas que limpian ventanas de casas o edificios."
+  },
+  {
+    "id": 17,
+    "category": "home_services",
+    "category_es": "Servicios para Casas",
+    "en": "Carpet Cleaning",
+    "es": "Limpieza de alfombras",
+    "description_es": "Personas que limpian alfombras con máquinas especiales."
+  },
+  {
+    "id": 18,
+    "category": "exterior",
+    "category_es": "Exterior",
+    "en": "Landscaping",
+    "es": "Jardinería / Paisajismo",
+    "description_es": "Personas que cortan césped, cuidan jardines y mantienen áreas verdes."
+  },
+  {
+    "id": 19,
+    "category": "exterior",
+    "category_es": "Exterior",
+    "en": "Tree Service",
+    "es": "Servicio de árboles",
+    "description_es": "Personas que cortan o podan árboles."
+  },
+  {
+    "id": 20,
+    "category": "exterior",
+    "category_es": "Exterior",
+    "en": "Fence Installation",
+    "es": "Instalación de cercas",
+    "description_es": "Personas que instalan cercas o vallas en propiedades."
+  },
+  {
+    "id": 21,
+    "category": "exterior",
+    "category_es": "Exterior",
+    "en": "Deck Builder",
+    "es": "Constructor de terrazas",
+    "description_es": "Personas que construyen terrazas de madera o composite en patios."
+  },
+  {
+    "id": 22,
+    "category": "technical",
+    "category_es": "Técnicos",
+    "en": "Plumbing",
+    "es": "Plomería",
+    "description_es": "Personas que instalan o reparan tuberías de agua y drenaje."
+  },
+  {
+    "id": 23,
+    "category": "technical",
+    "category_es": "Técnicos",
+    "en": "Electrical",
+    "es": "Electricidad",
+    "description_es": "Personas que instalan o reparan sistemas eléctricos en casas o negocios."
+  },
+  {
+    "id": 24,
+    "category": "technical",
+    "category_es": "Técnicos",
+    "en": "HVAC",
+    "es": "Aire acondicionado y calefacción",
+    "description_es": "Personas que instalan o reparan aire acondicionado, calefacción y ventilación."
+  },
+  {
+    "id": 25,
+    "category": "technical",
+    "category_es": "Técnicos",
+    "en": "Appliance Repair",
+    "es": "Reparación de electrodomésticos",
+    "description_es": "Personas que reparan electrodomésticos (refrigerador, lavadora, etc.)."
+  }
+]

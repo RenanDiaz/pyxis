@@ -1,0 +1,1202 @@
+[
+  {
+    "abbreviation": "AL",
+    "name": "Alabama",
+    "sale_price": "$699",
+    "state_fee": "$245",
+    "processing_days": "10",
+    "annual_report": {
+      "fee": "149",
+      "due_date": "Columna3"
+    },
+    "dissolution": {
+      "fee": "300",
+      "processing_days": "7"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "325"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "http://arc-sos.state.al.us/CGI/CORPNAME.MBR/INPUT"
+  },
+  {
+    "abbreviation": "AK",
+    "name": "Alaska",
+    "sale_price": "699.0",
+    "state_fee": "250.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "249.0",
+      "due_date": "Biennial, January 2nd"
+    },
+    "dissolution": {
+      "fee": "225.0",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "225.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://www.commerce.alaska.gov/cbp/main/search/entities"
+  },
+  {
+    "abbreviation": "AZ",
+    "name": "Arizona",
+    "sale_price": "549.0",
+    "state_fee": "85.0",
+    "processing_days": "20.0",
+    "annual_report": {
+      "fee": "149.0",
+      "due_date": "No annual fee + no report due"
+    },
+    "dissolution": {
+      "fee": "235.0",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "260.0"
+    },
+    "business_purpose": {
+      "specific": "SI",
+      "general": "NO"
+    },
+    "name_check_link": "https://ecorp.azcc.gov/AzAccount?sessionExpired=False"
+  },
+  {
+    "abbreviation": "AR",
+    "name": "Arkansas",
+    "sale_price": "499.0",
+    "state_fee": "50.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "299.0",
+      "due_date": "Annual, May 1st"
+    },
+    "dissolution": {
+      "fee": "245.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "225.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "http://www.sosweb.state.ar.us/corps/search_all.php"
+  },
+  {
+    "abbreviation": "CA",
+    "name": "California",
+    "sale_price": "549.0",
+    "state_fee": "75.0",
+    "processing_days": "15.0",
+    "annual_report": {
+      "fee": "969.0",
+      "due_date": "Various"
+    },
+    "dissolution": {
+      "fee": "205.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "230.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://bizfileonline.sos.ca.gov/search/business"
+  },
+  {
+    "abbreviation": "CO",
+    "name": "Colorado",
+    "sale_price": "499.0",
+    "state_fee": "50.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "159.0",
+      "due_date": "Annual, End of Inc Month"
+    },
+    "dissolution": {
+      "fee": "210.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "225.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "http://www.sos.state.co.us/biz/BusinessEntityCriteriaExt.do"
+  },
+  {
+    "abbreviation": "CT",
+    "name": "Connecticut",
+    "sale_price": "569.0",
+    "state_fee": "120.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "229.0",
+      "due_date": "Annual, March 31"
+    },
+    "dissolution": {
+      "fee": "200.0",
+      "processing_days": "60.0"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "320.0"
+    },
+    "business_purpose": {
+      "specific": "SI",
+      "general": "NO"
+    },
+    "name_check_link": "https://service.ct.gov/business/s/onlinebusinesssearch?language=en_US"
+  },
+  {
+    "abbreviation": "DE",
+    "name": "Delaware",
+    "sale_price": "589.0",
+    "state_fee": "140.0",
+    "processing_days": "20.0",
+    "annual_report": {
+      "fee": "449.0",
+      "due_date": "Annual, June 1st"
+    },
+    "dissolution": {
+      "fee": "NO",
+      "processing_days": "NO"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "500.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://icis.corp.delaware.gov/eCorp/EntitySearch/NameSearch.aspx"
+  },
+  {
+    "abbreviation": "D.C.",
+    "name": "D.C.",
+    "sale_price": "669.0",
+    "state_fee": "220.0",
+    "processing_days": "10.0",
+    "annual_report": {
+      "fee": "449.0",
+      "due_date": "Annual, June 1st"
+    },
+    "dissolution": {
+      "fee": "420.0",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "420.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://corponline.dcra.dc.gov/Home.aspx"
+  },
+  {
+    "abbreviation": "FL",
+    "name": "Florida",
+    "sale_price": "579.0",
+    "state_fee": "125.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "287.75",
+      "due_date": "Annual, May 1st"
+    },
+    "dissolution": {
+      "fee": "225.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "235.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "http://search.sunbiz.org/Inquiry/CorporationSearch/ByName"
+  },
+  {
+    "abbreviation": "GA",
+    "name": "Georgia",
+    "sale_price": "549.0",
+    "state_fee": "100.0",
+    "processing_days": "15.0",
+    "annual_report": {
+      "fee": "199.0",
+      "due_date": "Annual, April 1st"
+    },
+    "dissolution": {
+      "fee": "200.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "220.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://ecorp.sos.ga.gov/BusinessSearch"
+  },
+  {
+    "abbreviation": "ID",
+    "name": "Idaho",
+    "sale_price": "549.0",
+    "state_fee": "101.0",
+    "processing_days": "10.0",
+    "annual_report": {
+      "fee": "149.0",
+      "due_date": "Annual, INC Date"
+    },
+    "dissolution": {
+      "fee": "200.0",
+      "processing_days": "20.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "230.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://sosbiz.idaho.gov/search/business"
+  },
+  {
+    "abbreviation": "IL",
+    "name": "Illinois",
+    "sale_price": "599.0",
+    "state_fee": "155.88",
+    "processing_days": "15.0",
+    "annual_report": {
+      "fee": "224.0",
+      "due_date": "Prior to the first day of the registration anniversary month."
+    },
+    "dissolution": {
+      "fee": "205.0",
+      "processing_days": "45.0"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "250.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://apps.ilsos.gov/corporatellc/"
+  },
+  {
+    "abbreviation": "IN",
+    "name": "Indiana",
+    "sale_price": "549.0",
+    "state_fee": "97.14",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "199.0",
+      "due_date": "Biennial, INC Date"
+    },
+    "dissolution": {
+      "fee": "221.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "225.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://bsd.sos.in.gov/publicbusinesssearch"
+  },
+  {
+    "abbreviation": "IA",
+    "name": "Iowa",
+    "sale_price": "499.0",
+    "state_fee": "50.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "209.0",
+      "due_date": "Biennial, April 1st of odd years"
+    },
+    "dissolution": {
+      "fee": "205.0",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "250.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "http://sos.iowa.gov/search/business/(S(51bevq45fxbs4e55c3ipwc3j))/search.aspx"
+  },
+  {
+    "abbreviation": "KS",
+    "name": "Kansas",
+    "sale_price": "649.0",
+    "state_fee": "166.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "199.0",
+      "due_date": "Annual, April 15th"
+    },
+    "dissolution": {
+      "fee": "235.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "235.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://www.sos.ks.gov/eforms/BusinessEntity/Search.aspx"
+  },
+  {
+    "abbreviation": "KY",
+    "name": "Kentucky",
+    "sale_price": "499.0",
+    "state_fee": "40.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "164.0",
+      "due_date": "Annual, June 30th"
+    },
+    "dissolution": {
+      "fee": "240.0",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "240.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "http://web.sos.ky.gov/ftsearch/"
+  },
+  {
+    "abbreviation": "LA",
+    "name": "Louisiana",
+    "sale_price": "559.0",
+    "state_fee": "105.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "184.0",
+      "due_date": "Annual, INC Date"
+    },
+    "dissolution": {
+      "fee": "305.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "300.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://coraweb.sos.la.gov/CommercialSearch/CommercialSearch.aspx"
+  },
+  {
+    "abbreviation": "ME",
+    "name": "Maine",
+    "sale_price": "649.0",
+    "state_fee": "177.0",
+    "processing_days": "20.0",
+    "annual_report": {
+      "fee": "234.0",
+      "due_date": "Annual, June 1st"
+    },
+    "dissolution": {
+      "fee": "275.0",
+      "processing_days": "60.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "250.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "http://icrs.informe.org/nei-sos-"
+  },
+  {
+    "abbreviation": "MD",
+    "name": "Maryland",
+    "sale_price": "699.0",
+    "state_fee": "247.0",
+    "processing_days": "20.0",
+    "annual_report": {
+      "fee": "449.0",
+      "due_date": "Annual, April 15th"
+    },
+    "dissolution": {
+      "fee": "251.5",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "355.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://egov.maryland.gov/BusinessExpress/EntitySearch"
+  },
+  {
+    "abbreviation": "MA",
+    "name": "Massachusetts",
+    "sale_price": "979.0",
+    "state_fee": "525.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "649.0",
+      "due_date": "Annual, INC Date"
+    },
+    "dissolution": {
+      "fee": "300.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "310.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "http://corp.sec.state.ma.us/corpweb/corpsearch/CorpSearch.aspx"
+  },
+  {
+    "abbreviation": "MI",
+    "name": "Michigan",
+    "sale_price": "499.0",
+    "state_fee": "50.0",
+    "processing_days": "10.0",
+    "annual_report": {
+      "fee": "174.0",
+      "due_date": "Annual, February 15th"
+    },
+    "dissolution": {
+      "fee": "210.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "225.0"
+    },
+    "business_purpose": {
+      "specific": "SI",
+      "general": "NO"
+    },
+    "name_check_link": "https://cofs.lara.state.mi.us/corpweb/CorpSearch/CorpSearch.aspx"
+  },
+  {
+    "abbreviation": "MN",
+    "name": "Minnesota",
+    "sale_price": "609.0",
+    "state_fee": "160.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "149.0",
+      "due_date": "Annual, December 31st"
+    },
+    "dissolution": {
+      "fee": "255.0",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "255.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://mblsportal.sos.state.mn.us/Business/Search"
+  },
+  {
+    "abbreviation": "MS",
+    "name": "Mississippi",
+    "sale_price": "499.0",
+    "state_fee": "53.14",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "149.0",
+      "due_date": "Annual, April 15th"
+    },
+    "dissolution": {
+      "fee": "253.14",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "255.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://corp.sos.ms.gov/corp/portal/c/page/corpBusinessIdSearch/portal.aspx#clear=1"
+  },
+  {
+    "abbreviation": "MO",
+    "name": "Missouri",
+    "sale_price": "499.0",
+    "state_fee": "51.75",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "149.0",
+      "due_date": "No annual fee + no report due"
+    },
+    "dissolution": {
+      "fee": "226.25",
+      "processing_days": "4 Months"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "230.0"
+    },
+    "business_purpose": {
+      "specific": "SI",
+      "general": "NO"
+    },
+    "name_check_link": "https://bsd.sos.mo.gov/BusinessEntity/BESearch.aspx?SearchType=2"
+  },
+  {
+    "abbreviation": "MT",
+    "name": "Montana",
+    "sale_price": "549.0",
+    "state_fee": "70.0",
+    "processing_days": "10.0",
+    "annual_report": {
+      "fee": "169.0",
+      "due_date": "Annual, April 15th"
+    },
+    "dissolution": {
+      "fee": "215.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "270.0"
+    },
+    "business_purpose": {
+      "specific": "SI",
+      "general": "NO"
+    },
+    "name_check_link": "http://sos.mt.gov/business"
+  },
+  {
+    "abbreviation": "NE",
+    "name": "Nebraska",
+    "sale_price": "549.0",
+    "state_fee": "103.0",
+    "processing_days": "10.0",
+    "annual_report": {
+      "fee": "159.0",
+      "due_date": "Biennial, April 1st of odd years"
+    },
+    "dissolution": {
+      "fee": "222.0",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "210.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://www.nebraska.gov/sos/corp/corpsearch.cgi?nav=search"
+  },
+  {
+    "abbreviation": "NV",
+    "name": "Nevada",
+    "sale_price": "879.0",
+    "state_fee": "425.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "499.0",
+      "due_date": "Annual, INC Date"
+    },
+    "dissolution": {
+      "fee": "300.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "375.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://esos.nv.gov/EntitySearch/OnlineEntitySearch"
+  },
+  {
+    "abbreviation": "NH",
+    "name": "New Hampshire",
+    "sale_price": "559.0",
+    "state_fee": "107.0",
+    "processing_days": "15.0",
+    "annual_report": {
+      "fee": "249.0",
+      "due_date": "Annual, April 1st"
+    },
+    "dissolution": {
+      "fee": "237.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "240.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://www.sos.nh.gov/corporate/soskb/csearch.asp"
+  },
+  {
+    "abbreviation": "NJ",
+    "name": "New Jersey",
+    "sale_price": "579.0",
+    "state_fee": "128.5",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "224.0",
+      "due_date": "Annual, anniversary month"
+    },
+    "dissolution": {
+      "fee": "328.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "305.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://www.njportal.com/DOR/BusinessNameSearch/Search/Availability"
+  },
+  {
+    "abbreviation": "NM",
+    "name": "New Mexico",
+    "sale_price": "499.0",
+    "state_fee": "51.95",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "149.0",
+      "due_date": "No annual fee + no report due"
+    },
+    "dissolution": {
+      "fee": "225.0",
+      "processing_days": "60.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "250.0"
+    },
+    "business_purpose": {
+      "specific": "SI",
+      "general": "NO"
+    },
+    "name_check_link": "https://enterprise.sos.nm.gov/search/business"
+  },
+  {
+    "abbreviation": "NY",
+    "name": "New York",
+    "sale_price": "659.0",
+    "state_fee": "210.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "158.0",
+      "due_date": "Biennial, anniversary month"
+    },
+    "dissolution": {
+      "fee": "290.0",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "290.0"
+    },
+    "business_purpose": {
+      "specific": "SI",
+      "general": "NO"
+    },
+    "name_check_link": "https://apps.dos.ny.gov/publicInquiry/"
+  },
+  {
+    "abbreviation": "NC",
+    "name": "North Carolina",
+    "sale_price": "579.0",
+    "state_fee": "128.0",
+    "processing_days": "10.0",
+    "annual_report": {
+      "fee": "349.0",
+      "due_date": "Annual, April 15th"
+    },
+    "dissolution": {
+      "fee": "233.0",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "255.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://sosnc.gov/online_services/search/by_title/search_Business_Registration"
+  },
+  {
+    "abbreviation": "ND",
+    "name": "North Dakota",
+    "sale_price": "599.0",
+    "state_fee": "135.0",
+    "processing_days": "10.0",
+    "annual_report": {
+      "fee": "199.0",
+      "due_date": "Annual, November 15th"
+    },
+    "dissolution": {
+      "fee": "210.0",
+      "processing_days": "20.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "250.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://secure.apps.state.nd.us/sc/busnsrch/busnSearch.htm"
+  },
+  {
+    "abbreviation": "OH",
+    "name": "Ohio",
+    "sale_price": "549.0",
+    "state_fee": "99.0",
+    "processing_days": "10.0",
+    "annual_report": {
+      "fee": "149.0",
+      "due_date": "No annual fee + no report due"
+    },
+    "dissolution": {
+      "fee": "250.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "250.0"
+    },
+    "business_purpose": {
+      "specific": "SI",
+      "general": "NO"
+    },
+    "name_check_link": "https://businesssearch.ohiosos.gov/"
+  },
+  {
+    "abbreviation": "OK",
+    "name": "Oklahoma",
+    "sale_price": "559.0",
+    "state_fee": "104.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "174.0",
+      "due_date": "Annual, INC Date"
+    },
+    "dissolution": {
+      "fee": "250.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "250.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://www.sos.ok.gov/corp/corpInquiryFind.aspx"
+  },
+  {
+    "abbreviation": "OR",
+    "name": "Oregon",
+    "sale_price": "549.0",
+    "state_fee": "100.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "249.0",
+      "due_date": "Annual, INC Date"
+    },
+    "dissolution": {
+      "fee": "300.0",
+      "processing_days": "60.0"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "300.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "http://egov.sos.state.or.us/br/pkg_web_name_srch_inq.login"
+  },
+  {
+    "abbreviation": "PA",
+    "name": "Pennsylvania",
+    "sale_price": "579.0",
+    "state_fee": "125.0",
+    "processing_days": "20.0",
+    "annual_report": {
+      "fee": "156.0",
+      "due_date": "ANNUAL BY SEPT"
+    },
+    "dissolution": {
+      "fee": "NO",
+      "processing_days": "NO"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "270.0"
+    },
+    "business_purpose": {
+      "specific": "SI",
+      "general": "NO"
+    },
+    "name_check_link": "https://file.dos.pa.gov/search/business"
+  },
+  {
+    "abbreviation": "RI",
+    "name": "Rhode Island",
+    "sale_price": "599.0",
+    "state_fee": "156.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "199.0",
+      "due_date": "Annual, September 1st - November 1st"
+    },
+    "dissolution": {
+      "fee": "250.0",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "255.0"
+    },
+    "business_purpose": {
+      "specific": "SI",
+      "general": "NO"
+    },
+    "name_check_link": "https://business.sos.ri.gov/CorpWeb/CorpSearch/CorpSearch.aspx"
+  },
+  {
+    "abbreviation": "SC",
+    "name": "South Carolina",
+    "sale_price": "579.0",
+    "state_fee": "131.5",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "149.0",
+      "due_date": "No report due unless you file taxes as an S-Corp"
+    },
+    "dissolution": {
+      "fee": "210.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "325.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://businessfilings.sc.gov/BusinessFiling/Entity/Search"
+  },
+  {
+    "abbreviation": "SD",
+    "name": "South Dakota",
+    "sale_price": "599.0",
+    "state_fee": "150.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "199.0",
+      "due_date": "Annual, INC Date"
+    },
+    "dissolution": {
+      "fee": "210.0",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "260.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://sosenterprise.sd.gov/BusinessServices/Business/NameAvailability.aspx"
+  },
+  {
+    "abbreviation": "TN",
+    "name": "Tennessee",
+    "sale_price": "759.0",
+    "state_fee": "308.25",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "449.0",
+      "due_date": "Annual, April 1st"
+    },
+    "dissolution": {
+      "fee": "NO",
+      "processing_days": "NO"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "220.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://tncab.tnsos.gov/business-entity-search"
+  },
+  {
+    "abbreviation": "TX",
+    "name": "Texas",
+    "sale_price": "759.0",
+    "state_fee": "310.0",
+    "processing_days": "10.0",
+    "annual_report": {
+      "fee": "149.0",
+      "due_date": "Annual, May 15th"
+    },
+    "dissolution": {
+      "fee": "NO",
+      "processing_days": "NO"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "355.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://mycpa.cpa.state.tx.us/coa/Index.html"
+  },
+  {
+    "abbreviation": "UT",
+    "name": "Utah",
+    "sale_price": "549.0",
+    "state_fee": "77.0",
+    "processing_days": "10.0",
+    "annual_report": {
+      "fee": "169.0",
+      "due_date": "Annual, INC Date"
+    },
+    "dissolution": {
+      "fee": "200.0",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "240.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://businessregistration.utah.gov/EntitySearch/OnlineEntitySearch"
+  },
+  {
+    "abbreviation": "VT",
+    "name": "Vermont",
+    "sale_price": "599.0",
+    "state_fee": "155.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "184.0",
+      "due_date": "Annual, March 15th"
+    },
+    "dissolution": {
+      "fee": "220.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "325.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://www.vtsosonline.com/online/BusinessInquire/"
+  },
+  {
+    "abbreviation": "VA",
+    "name": "Virginia",
+    "sale_price": "549.0",
+    "state_fee": "102.4",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "199.0",
+      "due_date": "Annual, INC Date"
+    },
+    "dissolution": {
+      "fee": "225.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "225.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://cis.scc.virginia.gov"
+  },
+  {
+    "abbreviation": "WA",
+    "name": "Washington",
+    "sale_price": "649.0",
+    "state_fee": "200.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "209.0",
+      "due_date": "Annual, INC Date"
+    },
+    "dissolution": {
+      "fee": "220.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "250.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://ccfs.sos.wa.gov/#/"
+  },
+  {
+    "abbreviation": "WV",
+    "name": "West Virginia",
+    "sale_price": "559.0",
+    "state_fee": "115.0",
+    "processing_days": "15.0",
+    "annual_report": {
+      "fee": "174.0",
+      "due_date": "Annual, July 1st"
+    },
+    "dissolution": {
+      "fee": "225.0",
+      "processing_days": "30.0"
+    },
+    "amendments": {
+      "available": "YES",
+      "fee": "225.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "http://apps.sos.wv.gov/business/corporations/"
+  },
+  {
+    "abbreviation": "WI",
+    "name": "Wisconsin",
+    "sale_price": "579.0",
+    "state_fee": "130.0",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "174.0",
+      "due_date": "Annual, anniversary quarter"
+    },
+    "dissolution": {
+      "fee": "220.0",
+      "processing_days": "7.0"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "240.0"
+    },
+    "business_purpose": {
+      "specific": "SI",
+      "general": "NO"
+    },
+    "name_check_link": "https://onestop.wi.gov/DFIAnnualReports/SearchBusiness"
+  },
+  {
+    "abbreviation": "WY",
+    "name": "Wyoming",
+    "sale_price": "559.0",
+    "state_fee": "109.2",
+    "processing_days": "7.0",
+    "annual_report": {
+      "fee": "209.0",
+      "due_date": "Annual, INC Date"
+    },
+    "dissolution": {
+      "fee": "250.0",
+      "processing_days": "60.0"
+    },
+    "amendments": {
+      "available": "NO",
+      "fee": "250.0"
+    },
+    "business_purpose": {
+      "specific": "NO",
+      "general": "SI"
+    },
+    "name_check_link": "https://wyobiz.wy.gov/Business/FilingSearch.aspx"
+  }
+]
