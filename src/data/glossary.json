@@ -35,6 +35,13 @@
     "category": "business_structure"
   },
   {
+    "term": "Nonprofit",
+    "full_name": "Nonprofit Organization",
+    "translation": "Organización Sin Fines de Lucro",
+    "definition": "Organización que opera con fines caritativos, educativos, religiosos o científicos y no distribuye ganancias a sus miembros o directores. Puede calificar para exención de impuestos federales bajo la sección 501(c)(3) del IRS.",
+    "category": "business_structure"
+  },
+  {
     "term": "EIN",
     "full_name": "Employer Identification Number",
     "translation": "Número de Identificación del Empleador",
