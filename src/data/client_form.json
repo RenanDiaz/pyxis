@@ -1,23 +1,23 @@
 {
-  "description": "Campos requeridos para registrar una LLC nueva",
+  "description": "Datos del cliente — solo el teléfono es obligatorio para crear un lead",
   "fields": [
     {
-      "id": "llc_name",
-      "label": "Nombre de la LLC",
-      "type": "text",
-      "required": true
-    },
-    {
-      "id": "state",
-      "label": "Estado",
-      "type": "select",
+      "id": "phone",
+      "label": "Número telefónico",
+      "type": "phone",
       "required": true
     },
     {
       "id": "first_name",
       "label": "Primer nombre",
       "type": "text",
-      "required": true
+      "required": false
+    },
+    {
+      "id": "last_name",
+      "label": "Apellidos",
+      "type": "text",
+      "required": false
     },
     {
       "id": "middle_name",
@@ -26,41 +26,41 @@
       "required": false
     },
     {
-      "id": "last_name",
-      "label": "Apellidos",
+      "id": "llc_name",
+      "label": "Nombre de la LLC",
       "type": "text",
-      "required": true
+      "required": false
+    },
+    {
+      "id": "state",
+      "label": "Estado",
+      "type": "select",
+      "required": false
     },
     {
       "id": "ssn_itin",
       "label": "SSN o ITIN",
       "type": "text",
-      "required": true,
+      "required": false,
       "sensitive": true
-    },
-    {
-      "id": "phone",
-      "label": "Número telefónico",
-      "type": "phone",
-      "required": true
     },
     {
       "id": "email",
       "label": "Correo electrónico",
       "type": "email",
-      "required": true
+      "required": false
     },
     {
       "id": "business_address",
       "label": "Dirección comercial de la empresa",
       "type": "text",
-      "required": true
+      "required": false
     },
     {
       "id": "business_purpose",
       "label": "Propósito de la empresa",
       "type": "textarea",
-      "required": true
+      "required": false
     }
   ]
 }

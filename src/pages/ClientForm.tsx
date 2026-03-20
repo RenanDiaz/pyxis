@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft } from 'lucide-react'
-import type { ClientStatus } from '@/types'
+import type { Client, ClientStatus } from '@/types'
 import { toast } from 'sonner'
 
 type FormData = Record<string, string>
@@ -53,35 +53,31 @@ export default function ClientForm() {
     e.preventDefault()
 
     // Validate required fields
-    for (const field of clientFormConfig.fields) {
-      if (field.required && !formData[field.id]?.trim()) {
-        toast.error(`El campo "${field.label}" es requerido`)
-        return
-      }
+    if (!formData.phone?.trim()) {
+      toast.error('El número telefónico es requerido')
+      return
     }
 
-    const clientData = {
-      llc_name: formData.llc_name || '',
-      state: formData.state || '',
-      first_name: formData.first_name || '',
-      middle_name: formData.middle_name || '',
-      last_name: formData.last_name || '',
-      ssn_itin: formData.ssn_itin || '',
-      phone: formData.phone || '',
-      email: formData.email || '',
-      business_address: formData.business_address || '',
-      business_purpose: formData.business_purpose || '',
+    const clientData: Record<string, string> = {
+      phone: formData.phone.trim(),
       status,
-      notes: '',
+      notes: isEditing ? (existingClient?.notes || '') : '',
+    }
+
+    // Only include non-empty optional fields
+    for (const field of clientFormConfig.fields) {
+      if (field.id !== 'phone' && formData[field.id]?.trim()) {
+        clientData[field.id] = formData[field.id].trim()
+      }
     }
 
     try {
       if (isEditing && id) {
-        await updateMutation.mutateAsync({ id, data: clientData })
+        await updateMutation.mutateAsync({ id, data: clientData as Partial<Client> })
         toast.success('Cliente actualizado')
         navigate(`/clientes/${id}`)
       } else {
-        const newId = await createMutation.mutateAsync(clientData)
+        const newId = await createMutation.mutateAsync(clientData as Omit<Client, 'id' | 'created_at' | 'updated_at'>)
         toast.success('Cliente creado')
         navigate(`/clientes/${newId}`)
       }

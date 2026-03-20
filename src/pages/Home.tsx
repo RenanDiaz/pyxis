@@ -108,9 +108,11 @@ export default function Home() {
                   <div key={client.id} className="flex items-center justify-between border-b pb-2 last:border-0">
                     <div className="text-sm">
                       <Link to={`/clientes/${client.id}`} className="font-medium hover:underline">
-                        {client.first_name} {client.last_name}
+                        {client.first_name || client.last_name
+                          ? `${client.first_name || ''} ${client.last_name || ''}`.trim()
+                          : client.phone}
                       </Link>
-                      <p className="text-muted-foreground">{client.llc_name}</p>
+                      {client.llc_name && <p className="text-muted-foreground">{client.llc_name}</p>}
                     </div>
                     <StatusBadge status={client.status} />
                   </div>
