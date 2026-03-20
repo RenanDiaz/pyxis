@@ -18,6 +18,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import StateClock from '@/components/states/StateClock'
+import { getStateTimezone } from '@/lib/timezones'
 import { ArrowLeft } from 'lucide-react'
 import type { Client, ClientStatus } from '@/types'
 import { toast } from 'sonner'
@@ -153,7 +155,7 @@ export default function ClientForm() {
                     {field.type === 'select' && field.id === 'state' ? (
                       <>
                         <Select
-                          value={formData[field.id] || ''}
+                          value={formData[field.id] || undefined}
                           onValueChange={(v) => handleChange(field.id, v)}
                         >
                           <SelectTrigger className="mt-1.5">
@@ -253,6 +255,7 @@ export default function ClientForm() {
               <p className="text-xs text-muted-foreground">
                 {selectedState.name} ({selectedState.abbreviation})
               </p>
+              <StateClock timezone={getStateTimezone(selectedState.abbreviation)} />
             </CardHeader>
             <CardContent>
               <dl className="space-y-3">
