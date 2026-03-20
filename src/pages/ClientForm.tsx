@@ -155,13 +155,14 @@ export default function ClientForm() {
                     {field.type === 'select' && field.id === 'state' ? (
                       <>
                         <Select
-                          value={formData[field.id] || undefined}
-                          onValueChange={(v) => handleChange(field.id, v)}
+                          value={formData[field.id] || '_none'}
+                          onValueChange={(v) => handleChange(field.id, v === '_none' ? '' : v)}
                         >
                           <SelectTrigger className="mt-1.5">
                             <SelectValue placeholder="Selecciona un estado" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="_none">Selecciona un estado</SelectItem>
                             {states?.map((s) => (
                               <SelectItem key={s.abbreviation} value={s.abbreviation}>
                                 {s.name} ({s.abbreviation})
