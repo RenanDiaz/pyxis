@@ -24,7 +24,7 @@ para gestionar prospectos.
 ### 1. Crear proyecto Firebase
 Instrucciones para el desarrollador antes de correr la app:
 1. Ir a https://console.firebase.google.com
-2. Crear nuevo proyecto llamado "pyxis-avanza"
+2. Crear nuevo proyecto llamado "pyxis-app"
 3. Activar Authentication → habilitar Google provider y Email/Password
 4. Crear Firestore Database en modo producción
 5. Crear archivo `.env.local` en la raíz con las variables:
