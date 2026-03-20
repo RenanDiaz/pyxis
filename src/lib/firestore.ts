@@ -23,13 +23,13 @@ interface ClientFilters {
   search?: string
 }
 
-export async function getClients(filters?: ClientFilters): Promise<Client[]> {
+export async function getClients(uid: string, filters?: ClientFilters): Promise<Client[]> {
   if (!isFirebaseConfigured || !db) return []
   const constraints: QueryConstraint[] = [orderBy('created_at', 'desc')]
   if (filters?.status) {
     constraints.unshift(where('status', '==', filters.status))
   }
-  const q = query(collection(db, 'clients'), ...constraints)
+  const q = query(collection(db, 'users', uid, 'clients'), ...constraints)
   const snapshot = await getDocs(q)
   let clients = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Client))
   if (filters?.search) {
@@ -46,19 +46,20 @@ export async function getClients(filters?: ClientFilters): Promise<Client[]> {
   return clients
 }
 
-export async function getClientById(id: string): Promise<Client | null> {
+export async function getClientById(uid: string, id: string): Promise<Client | null> {
   if (!isFirebaseConfigured || !db) return null
-  const snap = await getDoc(doc(db, 'clients', id))
+  const snap = await getDoc(doc(db, 'users', uid, 'clients', id))
   if (!snap.exists()) return null
   return { id: snap.id, ...snap.data() } as Client
 }
 
 export async function createClient(
+  uid: string,
   data: Omit<Client, 'id' | 'created_at' | 'updated_at'>
 ): Promise<string> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   const now = Timestamp.now()
-  const ref = await addDoc(collection(db, 'clients'), {
+  const ref = await addDoc(collection(db, 'users', uid, 'clients'), {
     ...data,
     created_at: now,
     updated_at: now,
@@ -67,19 +68,20 @@ export async function createClient(
 }
 
 export async function updateClient(
+  uid: string,
   id: string,
   data: Partial<Omit<Client, 'id' | 'created_at'>>
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  await updateDoc(doc(db, 'clients', id), {
+  await updateDoc(doc(db, 'users', uid, 'clients', id), {
     ...data,
     updated_at: Timestamp.now(),
   })
 }
 
-export async function deleteClient(id: string): Promise<void> {
+export async function deleteClient(uid: string, id: string): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  await deleteDoc(doc(db, 'clients', id))
+  await deleteDoc(doc(db, 'users', uid, 'clients', id))
 }
 
 // ── Calls ──
@@ -91,7 +93,7 @@ interface CallFilters {
   toDate?: Date
 }
 
-export async function getCalls(filters?: CallFilters): Promise<Call[]> {
+export async function getCalls(uid: string, filters?: CallFilters): Promise<Call[]> {
   if (!isFirebaseConfigured || !db) return []
   const constraints: QueryConstraint[] = [orderBy('scheduled_at', 'asc')]
   if (filters?.clientId) {
@@ -100,7 +102,7 @@ export async function getCalls(filters?: CallFilters): Promise<Call[]> {
   if (filters?.outcome) {
     constraints.unshift(where('outcome', '==', filters.outcome))
   }
-  const q = query(collection(db, 'calls'), ...constraints)
+  const q = query(collection(db, 'users', uid, 'calls'), ...constraints)
   const snapshot = await getDocs(q)
   let calls = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Call))
   if (filters?.fromDate) {
@@ -114,11 +116,11 @@ export async function getCalls(filters?: CallFilters): Promise<Call[]> {
   return calls
 }
 
-export async function getUpcomingCalls(max: number = 5): Promise<Call[]> {
+export async function getUpcomingCalls(uid: string, max: number = 5): Promise<Call[]> {
   if (!isFirebaseConfigured || !db) return []
   const now = Timestamp.now()
   const q = query(
-    collection(db, 'calls'),
+    collection(db, 'users', uid, 'calls'),
     where('outcome', '==', 'pendiente'),
     where('scheduled_at', '>=', now),
     orderBy('scheduled_at', 'asc'),
@@ -129,10 +131,11 @@ export async function getUpcomingCalls(max: number = 5): Promise<Call[]> {
 }
 
 export async function createCall(
+  uid: string,
   data: Omit<Call, 'id' | 'created_at'>
 ): Promise<string> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  const ref = await addDoc(collection(db, 'calls'), {
+  const ref = await addDoc(collection(db, 'users', uid, 'calls'), {
     ...data,
     created_at: Timestamp.now(),
   })
@@ -140,19 +143,20 @@ export async function createCall(
 }
 
 export async function updateCall(
+  uid: string,
   id: string,
   data: Partial<Omit<Call, 'id' | 'created_at'>>
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  await updateDoc(doc(db, 'calls', id), data)
+  await updateDoc(doc(db, 'users', uid, 'calls', id), data)
 }
 
 // ── Dashboard helpers ──
 
-export async function getRecentClients(max: number = 5): Promise<Client[]> {
+export async function getRecentClients(uid: string, max: number = 5): Promise<Client[]> {
   if (!isFirebaseConfigured || !db) return []
   const q = query(
-    collection(db, 'clients'),
+    collection(db, 'users', uid, 'clients'),
     orderBy('created_at', 'desc'),
     limit(max)
   )

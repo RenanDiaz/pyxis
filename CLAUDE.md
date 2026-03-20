@@ -51,7 +51,7 @@ Ver los esquemas completos en los archivos `src/data/*.json` y los types en el c
 | `/estados` | Estados | Referencia rápida por estado (la más importante). Lista + detalle con precios, fees, timezone en tiempo real |
 | `/oficios` | Oficios | Glosario de oficios con traducción EN/ES, filtro por categoría, diseño flashcard |
 | `/glosario` | Glosario | Términos de negocio, legales y fiscales con traducción y definición. Filtro por categoría, diseño flashcard |
-| `/clientes` | Clientes | CRM liviano: lista, detalle, formulario nuevo/editar, historial de llamadas |
+| `/clientes` | Clientes | CRM liviano: lista, detalle, formulario nuevo/editar, historial de llamadas, exportar registro como .docx |
 | `/agenda` | Agenda | Gestión de llamadas programadas con filtros y modal de creación |
 
 ### Autenticación
@@ -71,43 +71,62 @@ Ver los esquemas completos en los archivos `src/data/*.json` y los types en el c
 - La info de estados debe ser fácil de escanear durante una llamada
 - Mobile-friendly
 
-# Nuevo feature - Exportar formulario de registro
-Agrega la funcionalidad de exportar el formulario de registro de cliente
-como archivo .docx.
+# Nuevo feature - Separación de clientes y llamadas por usuario
+Corrige el modelo de datos para que cada usuario solo vea sus propios
+clientes y llamadas. Actualmente todas las colecciones son compartidas
+entre usuarios, lo que es un error de seguridad y privacidad.
 
-## Librería
-npm install docx file-saver
-npm install -D @types/file-saver
+## Causa del problema
+Las colecciones `clients` y `calls` están en la raíz de Firestore,
+accesibles para cualquier usuario autenticado.
 
-## Dónde aparece
-En la vista de detalle de un cliente (`/clientes/:id`), agregar un botón
-"Exportar .docx" junto a los demás botones de acción.
+## Solución: subcolecciones por usuario
+Migrar a una estructura donde cada documento raíz es el UID del usuario
+y los clientes/llamadas son subcolecciones dentro de él.
 
-## Estructura del documento generado
-El archivo debe replicar la plantilla en `src/data/client_form.json` y
-rellenarse con los datos del cliente seleccionado. Formato:
+### Estructura actual (incorrecta)
+/clients/{clientId}
+/calls/{callId}
 
-- Título: nombre de la LLC en mayúsculas
-- Sección "INFORMACIÓN REGISTRADA:" con los siguientes campos:
-  - NOMBRE DE LA LLC
-  - ESTADO
-  - PRIMER NOMBRE
-  - SEGUNDO NOMBRE
-  - APELLIDOS
-  - SSN O ITIN
-  - NÚMERO TELEFÓNICO
-  - CORREO ELECTRÓNICO
-  - DIRECCIÓN COMERCIAL DE LA EMPRESA
-  - PROPÓSITO DE LA EMPRESA
+### Estructura nueva (correcta)
+/users/{uid}/clients/{clientId}
+/users/{uid}/calls/{callId}
 
-Cada campo con formato: etiqueta en negrita seguida del valor.
-Puedes encontrar la plantilla original en `resources/[NOMBRE DE LA COMPAÑIA], LLC.docx`
+## Cambios requeridos
 
-## Nombre del archivo generado
-`[LLC NAME].docx`
-Ejemplo: `GARCIA SERVICES, LLC.docx`
+### 1. Hooks de datos
+Actualizar `useClients.ts` y `useCalls.ts` para que todas las queries,
+inserciones, actualizaciones y eliminaciones usen la ruta
+`users/{uid}/clients` y `users/{uid}/calls` respectivamente.
+Obtener el `uid` del usuario autenticado via `useAuth`.
 
-## Implementación
-Crear el helper `src/lib/exportClientDoc.ts` con la función
-`exportClientDoc(client: Client): void` que genera y descarga el archivo.
-Importarlo en el componente de detalle del cliente.
+### 2. Reglas de Firestore
+Actualizar las reglas en Firebase Console para reflejar la nueva
+estructura y garantizar que cada usuario solo pueda leer y escribir
+sus propios documentos:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == uid;
+    }
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+
+### 3. Colecciones estáticas
+Las colecciones `states`, `trades` y `glossary` son de solo lectura y
+compartidas para todos los usuarios — no cambiar su estructura.
+
+### 4. Datos existentes
+Si hay datos de prueba en las colecciones raíz antiguas, ignorarlos.
+No es necesario migrarlos.
+
+## Resultado esperado
+Cada usuario autenticado ve únicamente sus propios clientes y llamadas.
+Dos usuarios distintos con sesiones abiertas al mismo tiempo no
+comparten ningún dato entre sí.
