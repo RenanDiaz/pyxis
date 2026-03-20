@@ -8,9 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, Pencil, Trash2, Phone } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Phone, FileDown } from 'lucide-react'
 import type { ClientStatus } from '@/types'
 import { toast } from 'sonner'
+import { exportClientDoc } from '@/lib/exportClientDoc'
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>()
@@ -78,6 +79,10 @@ export default function ClientDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => exportClientDoc(client)}>
+            <FileDown className="mr-2 h-3 w-3" />
+            Exportar .docx
+          </Button>
           <Button asChild variant="outline" size="sm">
             <Link to={`/clientes/${client.id}/editar`}>
               <Pencil className="mr-2 h-3 w-3" />
