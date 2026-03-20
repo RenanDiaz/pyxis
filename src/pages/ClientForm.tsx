@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft } from 'lucide-react'
-import type { ClientStatus } from '@/types'
+import type { Client, ClientStatus } from '@/types'
 import { toast } from 'sonner'
 
 type FormData = Record<string, string>
@@ -73,11 +73,11 @@ export default function ClientForm() {
 
     try {
       if (isEditing && id) {
-        await updateMutation.mutateAsync({ id, data: clientData })
+        await updateMutation.mutateAsync({ id, data: clientData as Partial<Client> })
         toast.success('Cliente actualizado')
         navigate(`/clientes/${id}`)
       } else {
-        const newId = await createMutation.mutateAsync(clientData)
+        const newId = await createMutation.mutateAsync(clientData as Omit<Client, 'id' | 'created_at' | 'updated_at'>)
         toast.success('Cliente creado')
         navigate(`/clientes/${newId}`)
       }
