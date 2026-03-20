@@ -29,8 +29,8 @@ export default function Home() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="rounded-lg bg-blue-100 p-3">
-              <Users className="h-5 w-5 text-blue-700" />
+            <div className="rounded-lg bg-blue-100 dark:bg-blue-900/30 p-3">
+              <Users className="h-5 w-5 text-blue-700 dark:text-blue-300" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total clientes</p>
@@ -40,8 +40,8 @@ export default function Home() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="rounded-lg bg-green-100 p-3">
-              <Phone className="h-5 w-5 text-green-700" />
+            <div className="rounded-lg bg-green-100 dark:bg-green-900/30 p-3">
+              <Phone className="h-5 w-5 text-green-700 dark:text-green-300" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Llamadas hoy</p>
@@ -51,8 +51,8 @@ export default function Home() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="rounded-lg bg-orange-100 p-3">
-              <Clock className="h-5 w-5 text-orange-700" />
+            <div className="rounded-lg bg-orange-100 dark:bg-orange-900/30 p-3">
+              <Clock className="h-5 w-5 text-orange-700 dark:text-orange-300" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">En proceso</p>

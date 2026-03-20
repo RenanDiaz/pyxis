@@ -3,11 +3,11 @@ import { cn } from '@/lib/utils'
 import type { ClientStatus } from '@/types'
 
 const STATUS_CONFIG: Record<ClientStatus, { label: string; className: string }> = {
-  nuevo: { label: 'Nuevo', className: 'bg-blue-100 text-blue-800 hover:bg-blue-100' },
-  contactado: { label: 'Contactado', className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' },
-  en_proceso: { label: 'En proceso', className: 'bg-orange-100 text-orange-800 hover:bg-orange-100' },
-  cerrado: { label: 'Cerrado', className: 'bg-green-100 text-green-800 hover:bg-green-100' },
-  perdido: { label: 'Perdido', className: 'bg-gray-100 text-gray-600 hover:bg-gray-100' },
+  nuevo: { label: 'Nuevo', className: 'bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/30' },
+  contactado: { label: 'Contactado', className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/30' },
+  en_proceso: { label: 'En proceso', className: 'bg-orange-100 text-orange-800 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-300 dark:hover:bg-orange-900/30' },
+  cerrado: { label: 'Cerrado', className: 'bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/30' },
+  perdido: { label: 'Perdido', className: 'bg-gray-100 text-gray-600 hover:bg-gray-100 dark:bg-gray-800/30 dark:text-gray-400 dark:hover:bg-gray-800/30' },
 }
 
 export default function StatusBadge({ status }: { status: ClientStatus }) {
