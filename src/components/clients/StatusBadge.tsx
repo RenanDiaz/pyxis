@@ -12,6 +12,13 @@ const STATUS_CONFIG: Record<ClientStatus, { label: string; className: string }> 
 
 export default function StatusBadge({ status }: { status: ClientStatus }) {
   const config = STATUS_CONFIG[status]
+  if (!config) {
+    return (
+      <Badge variant="secondary" className="bg-gray-100 text-gray-500 dark:bg-gray-800/30 dark:text-gray-400">
+        Sin estado
+      </Badge>
+    )
+  }
   return (
     <Badge variant="secondary" className={cn(config.className)}>
       {config.label}
