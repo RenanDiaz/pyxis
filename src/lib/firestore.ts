@@ -3,6 +3,7 @@ import {
   doc,
   getDocs,
   getDoc,
+  setDoc,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -11,10 +12,50 @@ import {
   orderBy,
   limit,
   Timestamp,
+  serverTimestamp,
   type QueryConstraint,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '@/lib/firebase'
-import type { Client, ClientStatus, Call, CallOutcome } from '@/types'
+import type { Client, ClientStatus, Call, CallOutcome, UserProfile, UserRole } from '@/types'
+
+// ── User Profiles ──
+
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  if (!isFirebaseConfigured || !db) return null
+  const snap = await getDoc(doc(db, 'users', uid))
+  if (!snap.exists()) return null
+  return snap.data() as UserProfile
+}
+
+export async function createUserProfile(profile: {
+  uid: string
+  email: string
+  display_name: string
+}): Promise<void> {
+  if (!isFirebaseConfigured || !db) return
+  await setDoc(doc(db, 'users', profile.uid), {
+    uid: profile.uid,
+    email: profile.email,
+    display_name: profile.display_name,
+    role: 'agent' as UserRole,
+    team_id: null,
+    created_at: serverTimestamp(),
+  })
+}
+
+// ── Role-based query helpers ──
+
+interface RoleContext {
+  uid: string
+  role: UserRole
+  team_id: string | null
+}
+
+function addRoleConstraints(role: UserRole, uid: string, teamId: string | null): QueryConstraint[] {
+  if (role === 'admin') return []
+  if (role === 'supervisor' && teamId) return [where('team_id', '==', teamId)]
+  return [where('owner_uid', '==', uid)]
+}
 
 // ── Clients ──
 
@@ -23,13 +64,16 @@ interface ClientFilters {
   search?: string
 }
 
-export async function getClients(uid: string, filters?: ClientFilters): Promise<Client[]> {
+export async function getClients(ctx: RoleContext, filters?: ClientFilters): Promise<Client[]> {
   if (!isFirebaseConfigured || !db) return []
-  const constraints: QueryConstraint[] = [orderBy('created_at', 'desc')]
+  const constraints: QueryConstraint[] = [
+    ...addRoleConstraints(ctx.role, ctx.uid, ctx.team_id),
+    orderBy('created_at', 'desc'),
+  ]
   if (filters?.status) {
     constraints.unshift(where('status', '==', filters.status))
   }
-  const q = query(collection(db, 'users', uid, 'clients'), ...constraints)
+  const q = query(collection(db, 'clients'), ...constraints)
   const snapshot = await getDocs(q)
   let clients = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Client))
   if (filters?.search) {
@@ -46,21 +90,23 @@ export async function getClients(uid: string, filters?: ClientFilters): Promise<
   return clients
 }
 
-export async function getClientById(uid: string, id: string): Promise<Client | null> {
+export async function getClientById(id: string): Promise<Client | null> {
   if (!isFirebaseConfigured || !db) return null
-  const snap = await getDoc(doc(db, 'users', uid, 'clients', id))
+  const snap = await getDoc(doc(db, 'clients', id))
   if (!snap.exists()) return null
   return { id: snap.id, ...snap.data() } as Client
 }
 
 export async function createClient(
-  uid: string,
-  data: Omit<Client, 'id' | 'created_at' | 'updated_at'>
+  ctx: RoleContext,
+  data: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'owner_uid' | 'team_id'>
 ): Promise<string> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   const now = Timestamp.now()
-  const ref = await addDoc(collection(db, 'users', uid, 'clients'), {
+  const ref = await addDoc(collection(db, 'clients'), {
     ...data,
+    owner_uid: ctx.uid,
+    team_id: ctx.team_id,
     created_at: now,
     updated_at: now,
   })
@@ -68,20 +114,19 @@ export async function createClient(
 }
 
 export async function updateClient(
-  uid: string,
   id: string,
-  data: Partial<Omit<Client, 'id' | 'created_at'>>
+  data: Partial<Omit<Client, 'id' | 'created_at' | 'owner_uid'>>
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  await updateDoc(doc(db, 'users', uid, 'clients', id), {
+  await updateDoc(doc(db, 'clients', id), {
     ...data,
     updated_at: Timestamp.now(),
   })
 }
 
-export async function deleteClient(uid: string, id: string): Promise<void> {
+export async function deleteClient(id: string): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  await deleteDoc(doc(db, 'users', uid, 'clients', id))
+  await deleteDoc(doc(db, 'clients', id))
 }
 
 // ── Calls ──
@@ -93,16 +138,19 @@ interface CallFilters {
   toDate?: Date
 }
 
-export async function getCalls(uid: string, filters?: CallFilters): Promise<Call[]> {
+export async function getCalls(ctx: RoleContext, filters?: CallFilters): Promise<Call[]> {
   if (!isFirebaseConfigured || !db) return []
-  const constraints: QueryConstraint[] = [orderBy('scheduled_at', 'asc')]
+  const constraints: QueryConstraint[] = [
+    ...addRoleConstraints(ctx.role, ctx.uid, ctx.team_id),
+    orderBy('scheduled_at', 'asc'),
+  ]
   if (filters?.clientId) {
     constraints.unshift(where('client_id', '==', filters.clientId))
   }
   if (filters?.outcome) {
     constraints.unshift(where('outcome', '==', filters.outcome))
   }
-  const q = query(collection(db, 'users', uid, 'calls'), ...constraints)
+  const q = query(collection(db, 'calls'), ...constraints)
   const snapshot = await getDocs(q)
   let calls = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Call))
   if (filters?.fromDate) {
@@ -116,50 +164,53 @@ export async function getCalls(uid: string, filters?: CallFilters): Promise<Call
   return calls
 }
 
-export async function getUpcomingCalls(uid: string, max: number = 5): Promise<Call[]> {
+export async function getUpcomingCalls(ctx: RoleContext, max: number = 5): Promise<Call[]> {
   if (!isFirebaseConfigured || !db) return []
   const now = Timestamp.now()
-  const q = query(
-    collection(db, 'users', uid, 'calls'),
+  const constraints: QueryConstraint[] = [
+    ...addRoleConstraints(ctx.role, ctx.uid, ctx.team_id),
     where('outcome', '==', 'pendiente'),
     where('scheduled_at', '>=', now),
     orderBy('scheduled_at', 'asc'),
-    limit(max)
-  )
+    limit(max),
+  ]
+  const q = query(collection(db, 'calls'), ...constraints)
   const snapshot = await getDocs(q)
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Call))
 }
 
 export async function createCall(
-  uid: string,
-  data: Omit<Call, 'id' | 'created_at'>
+  ctx: RoleContext,
+  data: Omit<Call, 'id' | 'created_at' | 'owner_uid' | 'team_id'>
 ): Promise<string> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  const ref = await addDoc(collection(db, 'users', uid, 'calls'), {
+  const ref = await addDoc(collection(db, 'calls'), {
     ...data,
+    owner_uid: ctx.uid,
+    team_id: ctx.team_id,
     created_at: Timestamp.now(),
   })
   return ref.id
 }
 
 export async function updateCall(
-  uid: string,
   id: string,
-  data: Partial<Omit<Call, 'id' | 'created_at'>>
+  data: Partial<Omit<Call, 'id' | 'created_at' | 'owner_uid'>>
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  await updateDoc(doc(db, 'users', uid, 'calls', id), data)
+  await updateDoc(doc(db, 'calls', id), data)
 }
 
 // ── Dashboard helpers ──
 
-export async function getRecentClients(uid: string, max: number = 5): Promise<Client[]> {
+export async function getRecentClients(ctx: RoleContext, max: number = 5): Promise<Client[]> {
   if (!isFirebaseConfigured || !db) return []
-  const q = query(
-    collection(db, 'users', uid, 'clients'),
+  const constraints: QueryConstraint[] = [
+    ...addRoleConstraints(ctx.role, ctx.uid, ctx.team_id),
     orderBy('created_at', 'desc'),
-    limit(max)
-  )
+    limit(max),
+  ]
+  const q = query(collection(db, 'clients'), ...constraints)
   const snapshot = await getDocs(q)
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Client))
 }

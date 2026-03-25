@@ -71,13 +71,33 @@ Ver los esquemas completos en los archivos `src/data/*.json` y los types en el c
 - La info de estados debe ser fácil de escanear durante una llamada
 - Mobile-friendly
 
-# Feature completado — Separación de datos por usuario
-Clientes y llamadas ahora usan subcolecciones por usuario:
-`/users/{uid}/clients` y `/users/{uid}/calls`.
-Hooks (`useClients.ts`, `useCalls.ts`) y `firestore.ts` ya usan el `uid`
-del usuario autenticado. Colecciones estáticas (`states`, `trades`,
-`glossary`) siguen compartidas. Reglas de Firestore deben actualizarse
-en la consola para restringir acceso por `uid`.
+# Feature completado — Roles, equipos y colecciones raíz
+Clientes y llamadas ahora usan colecciones raíz (`/clients`, `/calls`)
+con campos `owner_uid` y `team_id` para ownership.
+
+### Colecciones
+- **`users/{uid}`** — Perfil de usuario con `role` (`agent` | `supervisor` | `admin`) y `team_id`.
+- **`teams/{teamId}`** — Equipos con `supervisor_uid`.
+- **`clients/{clientId}`** — Clientes con `owner_uid` y `team_id`.
+- **`calls/{callId}`** — Llamadas con `owner_uid` y `team_id`.
+
+### Queries por rol
+- `agent`: solo ve sus propios documentos (`owner_uid == uid`)
+- `supervisor`: ve documentos de su equipo (`team_id == team_id`)
+- `admin`: ve todos los documentos
+
+### Hooks clave
+- `useUserProfile()` — lee `users/{uid}` y expone `{ role, team_id, roleCtx }`.
+- `useClients()` / `useCalls()` — usan `roleCtx` para queries filtradas por rol.
+
+### Inicialización de perfil
+Al hacer login por primera vez, se crea automáticamente el documento
+`users/{uid}` con `role: "agent"` y `team_id: null`.
+
+### Migración
+El script `scripts/migrate.ts` copia datos de las antiguas subcolecciones
+(`/users/{uid}/clients`, `/users/{uid}/calls`) a las colecciones raíz,
+agregando `owner_uid` y `team_id: null`. No elimina los originales.
 
 # Nuevo feature - Procesos a contratar
 Agrega el concepto de "proceso" a los clientes. Un proceso representa

@@ -1,5 +1,23 @@
 import type { Timestamp } from 'firebase/firestore'
 
+export type UserRole = 'agent' | 'supervisor' | 'admin'
+
+export interface UserProfile {
+  uid: string
+  email: string
+  display_name: string
+  role: UserRole
+  team_id: string | null
+  created_at: Timestamp
+}
+
+export interface Team {
+  id: string
+  name: string
+  supervisor_uid: string
+  created_at: Timestamp
+}
+
 export interface StateInfo {
   abbreviation: string
   name: string
@@ -55,6 +73,8 @@ export interface Client {
   business_purpose?: string
   status: ClientStatus
   notes: string
+  owner_uid: string
+  team_id: string | null
   created_at: Timestamp
   updated_at: Timestamp
 }
@@ -68,6 +88,8 @@ export interface Call {
   duration_minutes?: number
   notes: string
   outcome: CallOutcome
+  owner_uid: string
+  team_id: string | null
   created_at: Timestamp
 }
 
