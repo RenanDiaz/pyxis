@@ -9,6 +9,7 @@ import {
   type User,
 } from 'firebase/auth'
 import { auth, isFirebaseConfigured } from '@/lib/firebase'
+import { getUserProfile, createUserProfile } from '@/lib/firestore'
 
 interface AuthContextType {
   user: User | null
@@ -30,14 +31,28 @@ const DEV_USER = {
   displayName: 'Usuario Dev',
 } as User
 
+async function ensureUserProfile(user: User): Promise<void> {
+  const existing = await getUserProfile(user.uid)
+  if (!existing) {
+    await createUserProfile({
+      uid: user.uid,
+      email: user.email || '',
+      display_name: user.displayName || user.email || '',
+    })
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(isFirebaseConfigured ? null : DEV_USER)
   const [loading, setLoading] = useState(isFirebaseConfigured)
 
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) return
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user)
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        await ensureUserProfile(firebaseUser)
+      }
+      setUser(firebaseUser)
       setLoading(false)
     })
     return unsubscribe

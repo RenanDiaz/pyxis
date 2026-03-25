@@ -7,7 +7,7 @@ import {
   updateClient,
   deleteClient,
 } from '@/lib/firestore'
-import { useAuth } from '@/contexts/AuthContext'
+import { useUserProfile } from '@/hooks/useUserProfile'
 
 interface ClientFilters {
   status?: ClientStatus
@@ -15,29 +15,28 @@ interface ClientFilters {
 }
 
 export function useClients(filters?: ClientFilters) {
-  const { user } = useAuth()
+  const { roleCtx } = useUserProfile()
   return useQuery<Client[]>({
-    queryKey: ['clients', user?.uid, filters],
-    queryFn: () => getClients(user!.uid, filters),
-    enabled: !!user,
+    queryKey: ['clients', roleCtx?.uid, roleCtx?.role, filters],
+    queryFn: () => getClients(roleCtx!, filters),
+    enabled: !!roleCtx,
   })
 }
 
 export function useClient(id: string | undefined) {
-  const { user } = useAuth()
   return useQuery<Client | null>({
-    queryKey: ['clients', user?.uid, id],
-    queryFn: () => getClientById(user!.uid, id!),
-    enabled: !!id && !!user,
+    queryKey: ['clients', id],
+    queryFn: () => getClientById(id!),
+    enabled: !!id,
   })
 }
 
 export function useCreateClient() {
-  const { user } = useAuth()
+  const { roleCtx } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: Omit<Client, 'id' | 'created_at' | 'updated_at'>) =>
-      createClient(user!.uid, data),
+    mutationFn: (data: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'owner_uid' | 'team_id'>) =>
+      createClient(roleCtx!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
@@ -45,11 +44,10 @@ export function useCreateClient() {
 }
 
 export function useUpdateClient() {
-  const { user } = useAuth()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) =>
-      updateClient(user!.uid, id, data),
+      updateClient(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
@@ -57,10 +55,9 @@ export function useUpdateClient() {
 }
 
 export function useDeleteClient() {
-  const { user } = useAuth()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => deleteClient(user!.uid, id),
+    mutationFn: (id: string) => deleteClient(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
