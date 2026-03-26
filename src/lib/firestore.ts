@@ -16,7 +16,7 @@ import {
   type QueryConstraint,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '@/lib/firebase'
-import type { Client, ClientStatus, Call, CallOutcome, UserProfile, UserRole } from '@/types'
+import type { Client, ClientStatus, Call, CallOutcome, UserProfile, UserRole, Team } from '@/types'
 
 // ── User Profiles ──
 
@@ -41,6 +41,56 @@ export async function createUserProfile(profile: {
     team_id: null,
     created_at: serverTimestamp(),
   })
+}
+
+// ── All Users ──
+
+export async function getAllUsers(): Promise<UserProfile[]> {
+  if (!isFirebaseConfigured || !db) return []
+  const q = query(collection(db, 'users'), orderBy('created_at', 'desc'))
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => d.data() as UserProfile)
+}
+
+export async function getTeamMembers(teamId: string): Promise<UserProfile[]> {
+  if (!isFirebaseConfigured || !db) return []
+  const q = query(collection(db, 'users'), where('team_id', '==', teamId))
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => d.data() as UserProfile)
+}
+
+export async function updateUserProfile(
+  uid: string,
+  data: Partial<Pick<UserProfile, 'role' | 'team_id'>>
+): Promise<void> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  await updateDoc(doc(db, 'users', uid), data)
+}
+
+// ── Teams ──
+
+export async function getTeams(): Promise<Team[]> {
+  if (!isFirebaseConfigured || !db) return []
+  const q = query(collection(db, 'teams'), orderBy('created_at', 'desc'))
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Team))
+}
+
+export async function createTeam(data: { name: string; supervisor_uid: string }): Promise<string> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  const ref = await addDoc(collection(db, 'teams'), {
+    ...data,
+    created_at: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function updateTeam(
+  id: string,
+  data: Partial<Pick<Team, 'name' | 'supervisor_uid'>>
+): Promise<void> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  await updateDoc(doc(db, 'teams', id), data)
 }
 
 // ── Role-based query helpers ──

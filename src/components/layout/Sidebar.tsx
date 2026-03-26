@@ -1,14 +1,44 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Map, Briefcase, Users, Calendar, BookOpen } from 'lucide-react'
+import {
+  Home,
+  Map,
+  Briefcase,
+  Users,
+  Calendar,
+  BookOpen,
+  UsersRound,
+  BarChart3,
+  Building2,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useUserProfile } from '@/hooks/useUserProfile'
 
-const navItems = [
+interface NavItem {
+  to: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+}
+
+const agentNavItems: NavItem[] = [
   { to: '/', label: 'Inicio', icon: Home },
   { to: '/estados', label: 'Estados', icon: Map },
   { to: '/oficios', label: 'Oficios', icon: Briefcase },
   { to: '/glosario', label: 'Glosario', icon: BookOpen },
   { to: '/clientes', label: 'Clientes', icon: Users },
   { to: '/agenda', label: 'Agenda', icon: Calendar },
+]
+
+const supervisorNavItems: NavItem[] = [
+  { to: '/equipo/clientes', label: 'Clientes del equipo', icon: Users },
+  { to: '/equipo/agenda', label: 'Agenda del equipo', icon: Calendar },
+  { to: '/equipo/metricas', label: 'Métricas', icon: BarChart3 },
+]
+
+const adminNavItems: NavItem[] = [
+  { to: '/admin/usuarios', label: 'Usuarios', icon: UsersRound },
+  { to: '/admin/equipos', label: 'Equipos', icon: Building2 },
+  { to: '/admin/clientes', label: 'Clientes', icon: Users },
+  { to: '/admin/agenda', label: 'Agenda', icon: Calendar },
 ]
 
 function PyxisLogo({ className }: { className?: string }) {
@@ -30,17 +60,16 @@ function PyxisLogo({ className }: { className?: string }) {
   )
 }
 
-export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+function NavSection({ title, items, onNavigate }: { title?: string; items: NavItem[]; onNavigate?: () => void }) {
   return (
-    <div className="flex h-full flex-col">
-      <div className="p-6">
-        <div className="flex items-center gap-2.5">
-          <PyxisLogo className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Pyxis</h1>
-        </div>
-      </div>
-      <nav className="flex-1 space-y-1 px-3">
-        {navItems.map(({ to, label, icon: Icon }) => (
+    <div>
+      {title && (
+        <p className="px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+          {title}
+        </p>
+      )}
+      <div className="space-y-1">
+        {items.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -59,6 +88,32 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             {label}
           </NavLink>
         ))}
+      </div>
+    </div>
+  )
+}
+
+export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const { role } = useUserProfile()
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="p-6">
+        <div className="flex items-center gap-2.5">
+          <PyxisLogo className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl font-bold tracking-tight">Pyxis</h1>
+        </div>
+      </div>
+      <nav className="flex-1 space-y-6 px-3">
+        <NavSection items={agentNavItems} onNavigate={onNavigate} />
+
+        {(role === 'supervisor' || role === 'admin') && (
+          <NavSection title="Mi Equipo" items={supervisorNavItems} onNavigate={onNavigate} />
+        )}
+
+        {role === 'admin' && (
+          <NavSection title="Administración" items={adminNavItems} onNavigate={onNavigate} />
+        )}
       </nav>
     </div>
   )
