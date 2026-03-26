@@ -24,7 +24,6 @@ if (isFirebaseConfigured) {
   auth = getAuth(app)
   db = initializeFirestore(app, {
     experimentalForceLongPolling: true,
-    useFetchStreams: false,
   })
   storage = getStorage(app)
 }
