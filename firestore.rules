@@ -3,20 +3,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
     function isAdmin() {
-      return getUserData().role == "admin";
+      return userExists() && getUserData().role == "admin";
     }
     function isSupervisor() {
-      return getUserData().role == "supervisor";
+      return userExists() && getUserData().role == "supervisor";
     }
     function isAgent() {
-      return getUserData().role == "agent";
+      return userExists() && getUserData().role == "agent";
     }
     function sameTeam(resourceTeamId) {
-      return getUserData().team_id == resourceTeamId;
+      return userExists() && getUserData().team_id == resourceTeamId;
     }
 
     match /users/{uid} {
