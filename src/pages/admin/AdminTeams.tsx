@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useTeams, useCreateTeam, useUpdateTeam } from '@/hooks/useTeams'
 import { useAllUsers, useUpdateUserProfile } from '@/hooks/useUsers'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,11 +35,6 @@ export default function AdminTeams() {
 
   const [editTeamId, setEditTeamId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
-
-  const supervisors = useMemo(
-    () => users?.filter((u) => u.role === 'supervisor' || u.role === 'admin') ?? [],
-    [users]
-  )
 
   const getMembersByTeam = (teamId: string) => {
     return users?.filter((u) => u.team_id === teamId) ?? []

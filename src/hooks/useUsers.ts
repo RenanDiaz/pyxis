@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { UserProfile, UserRole } from '@/types'
+import type { UserProfile } from '@/types'
 import { getAllUsers, getTeamMembers, updateUserProfile } from '@/lib/firestore'
 
 export function useAllUsers() {

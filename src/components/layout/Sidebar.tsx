@@ -8,12 +8,10 @@ import {
   BookOpen,
   UsersRound,
   BarChart3,
-  Shield,
   Building2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUserProfile } from '@/hooks/useUserProfile'
-import type { UserRole } from '@/types'
 
 interface NavItem {
   to: string

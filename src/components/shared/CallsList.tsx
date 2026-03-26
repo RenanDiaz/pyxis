@@ -9,7 +9,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Phone, Clock } from 'lucide-react'
-import StateClock from '@/components/states/StateClock'
 import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
 import { formatInTimeZone } from 'date-fns-tz'
 import { es } from 'date-fns/locale'
