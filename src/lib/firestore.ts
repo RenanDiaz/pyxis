@@ -134,7 +134,8 @@ export async function getClients(ctx: RoleContext, filters?: ClientFilters): Pro
         (c.last_name || '').toLowerCase().includes(s) ||
         (c.llc_name || '').toLowerCase().includes(s) ||
         (c.state || '').toLowerCase().includes(s) ||
-        c.phone.toLowerCase().includes(s)
+        c.phone.toLowerCase().includes(s) ||
+        (c.phones || []).some((p) => p.number.toLowerCase().includes(s))
     )
   }
   return clients

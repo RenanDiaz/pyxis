@@ -58,9 +58,18 @@ export type ClientStatus = 'nuevo' | 'contactado' | 'en_proceso' | 'cerrado' | '
 
 export type ProcessType = 'registration' | 'annual_report' | 'dissolution' | 'amendment'
 
+export type PhoneLabel = 'personal' | 'whatsapp' | 'trabajo' | 'otro'
+
+export interface ClientPhone {
+  number: string
+  label: PhoneLabel
+  is_primary: boolean
+}
+
 export interface Client {
   id: string
   phone: string
+  phones?: ClientPhone[]
   llc_name?: string
   state?: string
   process?: ProcessType

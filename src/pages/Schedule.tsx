@@ -30,6 +30,7 @@ import { es } from 'date-fns/locale'
 import { Clock } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import type { CallOutcome } from '@/types'
+import { getClientDisplayName } from '@/lib/clientUtils'
 import { startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
@@ -99,9 +100,7 @@ export default function Schedule() {
   const getClientName = (clientId: string) => {
     const client = clients?.find((c) => c.id === clientId)
     if (!client) return 'Cliente desconocido'
-    return client.first_name || client.last_name
-      ? `${client.first_name || ''} ${client.last_name || ''}`.trim()
-      : client.phone
+    return getClientDisplayName(client)
   }
 
   return (
@@ -129,9 +128,7 @@ export default function Schedule() {
                   <SelectContent>
                     {clients?.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.first_name || c.last_name
-                          ? `${c.first_name || ''} ${c.last_name || ''}`.trim()
-                          : c.phone}
+                        {getClientDisplayName(c)}
                         {c.llc_name ? ` — ${c.llc_name}` : ''}
                       </SelectItem>
                     ))}

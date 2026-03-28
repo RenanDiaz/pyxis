@@ -17,6 +17,7 @@ import { ArrowLeft, Pencil, Trash2, Phone, FileDown } from 'lucide-react'
 import type { ClientStatus } from '@/types'
 import { toast } from 'sonner'
 import { exportClientDoc } from '@/lib/exportClientDoc'
+import { getClientDisplayName, getAllPhones, PHONE_LABELS } from '@/lib/clientUtils'
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>()
@@ -76,7 +77,7 @@ export default function ClientDetail() {
             <h1 className="text-2xl font-bold tracking-tight">
               {client.first_name || client.last_name
                 ? `${client.first_name || ''} ${client.middle_name ? client.middle_name + ' ' : ''}${client.last_name || ''}`.trim()
-                : client.phone}
+                : getClientDisplayName(client)}
             </h1>
             {client.llc_name && <p className="text-muted-foreground">{client.llc_name}</p>}
             {!client.first_name && !client.last_name && (
@@ -112,19 +113,30 @@ export default function ClientDetail() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-muted-foreground">Teléfono</p>
-                {client.phone ? (
-                  <a
-                    href={`tel:${client.phone}`}
-                    className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline"
-                  >
-                    <Phone className="h-3.5 w-3.5" />
-                    {client.phone}
-                  </a>
-                ) : (
-                  <p className="font-medium">—</p>
-                )}
+              <div className="col-span-2">
+                <p className="text-muted-foreground mb-1">Teléfono(s)</p>
+                {(() => {
+                  const allPhones = getAllPhones(client)
+                  if (allPhones.length === 0) return <p className="font-medium">—</p>
+                  return (
+                    <div className="space-y-1">
+                      {allPhones.map((p, i) => (
+                        <a
+                          key={i}
+                          href={`tel:${p.number}`}
+                          className="flex items-center gap-1.5 font-medium text-primary hover:underline"
+                        >
+                          <Phone className="h-3.5 w-3.5" />
+                          {p.number}
+                          <span className="text-xs text-muted-foreground font-normal">
+                            ({PHONE_LABELS[p.label] || p.label})
+                            {p.is_primary && ' — principal'}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  )
+                })()}
               </div>
               <div>
                 <p className="text-muted-foreground">Estado</p>

@@ -1,6 +1,7 @@
 import { Document, Packer, Paragraph, TextRun, AlignmentType } from "docx"
 import { saveAs } from "file-saver"
 import type { Client } from "@/types"
+import { getPrimaryPhoneNumber } from "@/lib/clientUtils"
 
 const FONT = "Quattrocento Sans"
 const FONT_SIZE = 24 // half-points (12pt)
@@ -51,7 +52,7 @@ export function exportClientDoc(client: Client): void {
           field("● SEGUNDO NOMBRE", client.middle_name, true),
           field("● APELLIDOS", client.last_name, true),
           field("- SSN O ITIN", client.ssn_itin),
-          field("- NÚMERO TELEFÓNICO", client.phone),
+          field("- NÚMERO TELEFÓNICO", getPrimaryPhoneNumber(client)),
           field("- CORREO ELECTRÓNICO", client.email),
           field("- DIRECCIÓN COMERCIAL DE LA EMPRESA", client.business_address),
           field("- PROPÓSITO DE LA EMPRESA", client.business_purpose),
