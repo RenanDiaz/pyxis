@@ -66,29 +66,29 @@ export default function ClientDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link to="/clientes">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4 min-w-0">
+          <Link to="/clientes" className="shrink-0">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight truncate">
               {client.first_name || client.last_name
                 ? `${client.first_name || ''} ${client.middle_name ? client.middle_name + ' ' : ''}${client.last_name || ''}`.trim()
                 : getClientDisplayName(client)}
             </h1>
-            {client.llc_name && <p className="text-muted-foreground">{client.llc_name}</p>}
+            {client.llc_name && <p className="text-muted-foreground truncate">{client.llc_name}</p>}
             {!client.first_name && !client.last_name && (
               <p className="text-muted-foreground text-sm">Sin nombre — agrega datos desde Editar</p>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={() => exportClientDoc(client)}>
             <FileDown className="mr-2 h-3 w-3" />
-            Exportar .docx
+            <span className="hidden sm:inline">Exportar</span> .docx
           </Button>
           <Button asChild variant="outline" size="sm">
             <Link to={`/clientes/${client.id}/editar`}>
