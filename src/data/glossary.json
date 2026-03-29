@@ -145,5 +145,19 @@
     "translation": "Certificado de Buen Estado",
     "definition": "Documento emitido por el estado que certifica que una empresa está al día con sus obligaciones legales y fiscales.",
     "category": "compliance"
+  },
+  {
+    "term": "BOI Report",
+    "full_name": "Beneficial Ownership Information Report",
+    "translation": "Reporte de Información de Beneficiarios Reales",
+    "definition": "Reporte requerido por FinCEN donde las empresas deben declarar quiénes son sus dueños reales (beneficial owners). Aplica a la mayoría de LLCs y corporaciones registradas en EE.UU.",
+    "category": "compliance"
+  },
+  {
+    "term": "Secretary of State",
+    "full_name": "Secretary of State",
+    "translation": "Secretaría del Estado",
+    "definition": "Oficina estatal encargada de registrar y mantener los registros de las empresas formadas en ese estado. Es donde se presentan los Articles of Organization, Annual Reports y otros documentos corporativos.",
+    "category": "legal"
   }
 ]
