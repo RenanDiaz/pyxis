@@ -13,10 +13,23 @@ import {
   limit,
   Timestamp,
   serverTimestamp,
+  writeBatch,
+  arrayUnion,
+  arrayRemove,
   type QueryConstraint,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '@/lib/firebase'
-import type { Client, ClientStatus, Call, CallOutcome, UserProfile, UserRole, Team } from '@/types'
+import type {
+  Client,
+  ClientStatus,
+  Call,
+  CallOutcome,
+  UserProfile,
+  UserRole,
+  Team,
+  TeamRole,
+  TeamMembership,
+} from '@/types'
 
 // ── User Profiles ──
 
@@ -24,7 +37,12 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   if (!isFirebaseConfigured || !db) return null
   const snap = await getDoc(doc(db, 'users', uid))
   if (!snap.exists()) return null
-  return snap.data() as UserProfile
+  const data = snap.data()
+  // Backward compat: migrate old team_id to team_ids
+  if (data.team_id !== undefined && !data.team_ids) {
+    return { ...data, team_ids: data.team_id ? [data.team_id] : [] } as UserProfile
+  }
+  return data as UserProfile
 }
 
 export async function createUserProfile(profile: {
@@ -38,7 +56,7 @@ export async function createUserProfile(profile: {
     email: profile.email,
     display_name: profile.display_name,
     role: 'agent' as UserRole,
-    team_id: null,
+    team_ids: [],
     created_at: serverTimestamp(),
   })
 }
@@ -49,19 +67,25 @@ export async function getAllUsers(): Promise<UserProfile[]> {
   if (!isFirebaseConfigured || !db) return []
   const q = query(collection(db, 'users'), orderBy('created_at', 'desc'))
   const snapshot = await getDocs(q)
-  return snapshot.docs.map((d) => d.data() as UserProfile)
+  return snapshot.docs.map((d) => {
+    const data = d.data()
+    if (data.team_id !== undefined && !data.team_ids) {
+      return { ...data, team_ids: data.team_id ? [data.team_id] : [] } as UserProfile
+    }
+    return data as UserProfile
+  })
 }
 
 export async function getTeamMembers(teamId: string): Promise<UserProfile[]> {
   if (!isFirebaseConfigured || !db) return []
-  const q = query(collection(db, 'users'), where('team_id', '==', teamId))
+  const q = query(collection(db, 'users'), where('team_ids', 'array-contains', teamId))
   const snapshot = await getDocs(q)
   return snapshot.docs.map((d) => d.data() as UserProfile)
 }
 
 export async function updateUserProfile(
   uid: string,
-  data: Partial<Pick<UserProfile, 'role' | 'team_id'>>
+  data: Partial<Pick<UserProfile, 'role' | 'team_ids'>>
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   await updateDoc(doc(db, 'users', uid), data)
@@ -76,35 +100,143 @@ export async function getTeams(): Promise<Team[]> {
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Team))
 }
 
-export async function createTeam(data: { name: string; supervisor_uid: string }): Promise<string> {
+export async function getTeamsByIds(ids: string[]): Promise<Team[]> {
+  if (!isFirebaseConfigured || !db || ids.length === 0) return []
+  // Firestore 'in' supports up to 30 values
+  const q = query(collection(db, 'teams'), where('__name__', 'in', ids))
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Team))
+}
+
+export async function createTeam(data: {
+  name: string
+  creator_uid: string
+  creator_display_name: string
+  creator_email: string
+}): Promise<string> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  const ref = await addDoc(collection(db, 'teams'), {
-    ...data,
+  const batch = writeBatch(db)
+
+  // Create team doc
+  const teamRef = doc(collection(db, 'teams'))
+  batch.set(teamRef, {
+    name: data.name,
+    created_by: data.creator_uid,
     created_at: serverTimestamp(),
   })
-  return ref.id
+
+  // Create membership doc for creator as admin
+  const memberRef = doc(db, 'teams', teamRef.id, 'members', data.creator_uid)
+  batch.set(memberRef, {
+    uid: data.creator_uid,
+    team_id: teamRef.id,
+    role: 'admin' as TeamRole,
+    display_name: data.creator_display_name,
+    email: data.creator_email,
+    joined_at: serverTimestamp(),
+  })
+
+  // Add team to creator's team_ids
+  const userRef = doc(db, 'users', data.creator_uid)
+  batch.update(userRef, { team_ids: arrayUnion(teamRef.id) })
+
+  await batch.commit()
+  return teamRef.id
 }
 
 export async function updateTeam(
   id: string,
-  data: Partial<Pick<Team, 'name' | 'supervisor_uid'>>
+  data: Partial<Pick<Team, 'name'>>
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   await updateDoc(doc(db, 'teams', id), data)
 }
 
-// ── Role-based query helpers ──
+// ── Team Memberships ──
 
-interface RoleContext {
-  uid: string
-  role: UserRole
-  team_id: string | null
+export async function getTeamMemberships(teamId: string): Promise<TeamMembership[]> {
+  if (!isFirebaseConfigured || !db) return []
+  const q = query(collection(db, 'teams', teamId, 'members'), orderBy('joined_at', 'asc'))
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => d.data() as TeamMembership)
 }
 
-function addRoleConstraints(role: UserRole, uid: string, teamId: string | null): QueryConstraint[] {
-  if (role === 'admin') return []
-  if (role === 'supervisor' && teamId) return [where('team_id', '==', teamId)]
-  return [where('owner_uid', '==', uid)]
+export async function getUserTeamMembership(
+  teamId: string,
+  uid: string
+): Promise<TeamMembership | null> {
+  if (!isFirebaseConfigured || !db) return null
+  const snap = await getDoc(doc(db, 'teams', teamId, 'members', uid))
+  if (!snap.exists()) return null
+  return snap.data() as TeamMembership
+}
+
+export async function addTeamMember(
+  teamId: string,
+  user: { uid: string; display_name: string; email: string },
+  role: TeamRole = 'member'
+): Promise<void> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  const batch = writeBatch(db)
+
+  const memberRef = doc(db, 'teams', teamId, 'members', user.uid)
+  batch.set(memberRef, {
+    uid: user.uid,
+    team_id: teamId,
+    role,
+    display_name: user.display_name,
+    email: user.email,
+    joined_at: serverTimestamp(),
+  })
+
+  const userRef = doc(db, 'users', user.uid)
+  batch.update(userRef, { team_ids: arrayUnion(teamId) })
+
+  await batch.commit()
+}
+
+export async function removeTeamMember(teamId: string, uid: string): Promise<void> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  const batch = writeBatch(db)
+
+  batch.delete(doc(db, 'teams', teamId, 'members', uid))
+  const userRef = doc(db, 'users', uid)
+  batch.update(userRef, { team_ids: arrayRemove(teamId) })
+
+  await batch.commit()
+}
+
+export async function updateTeamMemberRole(
+  teamId: string,
+  uid: string,
+  role: TeamRole
+): Promise<void> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  await updateDoc(doc(db, 'teams', teamId, 'members', uid), { role })
+}
+
+// ── Role-based query helpers ──
+
+export interface RoleContext {
+  uid: string
+  globalRole: UserRole
+  activeTeamId: string | null
+  activeTeamRole: TeamRole | null
+}
+
+function addRoleConstraints(ctx: RoleContext): QueryConstraint[] {
+  // Platform admin sees everything
+  if (ctx.globalRole === 'admin') return []
+  // Team context active and user is team admin → see all team data
+  if (ctx.activeTeamId && ctx.activeTeamRole === 'admin') {
+    return [where('team_id', '==', ctx.activeTeamId)]
+  }
+  // Team context active but user is regular member → only own data within team
+  if (ctx.activeTeamId && ctx.activeTeamRole === 'member') {
+    return [where('owner_uid', '==', ctx.uid)]
+  }
+  // Independent mode → only own data
+  return [where('owner_uid', '==', ctx.uid)]
 }
 
 // ── Clients ──
@@ -117,7 +249,7 @@ interface ClientFilters {
 export async function getClients(ctx: RoleContext, filters?: ClientFilters): Promise<Client[]> {
   if (!isFirebaseConfigured || !db) return []
   const constraints: QueryConstraint[] = [
-    ...addRoleConstraints(ctx.role, ctx.uid, ctx.team_id),
+    ...addRoleConstraints(ctx),
     orderBy('created_at', 'desc'),
   ]
   if (filters?.status) {
@@ -157,7 +289,7 @@ export async function createClient(
   const ref = await addDoc(collection(db, 'clients'), {
     ...data,
     owner_uid: ctx.uid,
-    team_id: ctx.team_id,
+    team_id: ctx.activeTeamId,
     created_at: now,
     updated_at: now,
   })
@@ -192,7 +324,7 @@ interface CallFilters {
 export async function getCalls(ctx: RoleContext, filters?: CallFilters): Promise<Call[]> {
   if (!isFirebaseConfigured || !db) return []
   const constraints: QueryConstraint[] = [
-    ...addRoleConstraints(ctx.role, ctx.uid, ctx.team_id),
+    ...addRoleConstraints(ctx),
     orderBy('scheduled_at', 'asc'),
   ]
   if (filters?.clientId) {
@@ -219,7 +351,7 @@ export async function getUpcomingCalls(ctx: RoleContext, max: number = 5): Promi
   if (!isFirebaseConfigured || !db) return []
   const now = Timestamp.now()
   const constraints: QueryConstraint[] = [
-    ...addRoleConstraints(ctx.role, ctx.uid, ctx.team_id),
+    ...addRoleConstraints(ctx),
     where('outcome', '==', 'pendiente'),
     where('scheduled_at', '>=', now),
     orderBy('scheduled_at', 'asc'),
@@ -238,7 +370,7 @@ export async function createCall(
   const ref = await addDoc(collection(db, 'calls'), {
     ...data,
     owner_uid: ctx.uid,
-    team_id: ctx.team_id,
+    team_id: ctx.activeTeamId,
     created_at: Timestamp.now(),
   })
   return ref.id
@@ -257,7 +389,7 @@ export async function updateCall(
 export async function getRecentClients(ctx: RoleContext, max: number = 5): Promise<Client[]> {
   if (!isFirebaseConfigured || !db) return []
   const constraints: QueryConstraint[] = [
-    ...addRoleConstraints(ctx.role, ctx.uid, ctx.team_id),
+    ...addRoleConstraints(ctx),
     orderBy('created_at', 'desc'),
     limit(max),
   ]

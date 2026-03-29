@@ -1,21 +1,31 @@
 import type { Timestamp } from 'firebase/firestore'
 
 export type UserRole = 'agent' | 'supervisor' | 'admin'
+export type TeamRole = 'admin' | 'member'
 
 export interface UserProfile {
   uid: string
   email: string
   display_name: string
   role: UserRole
-  team_id: string | null
+  team_ids: string[]
   created_at: Timestamp
 }
 
 export interface Team {
   id: string
   name: string
-  supervisor_uid: string
+  created_by: string
   created_at: Timestamp
+}
+
+export interface TeamMembership {
+  uid: string
+  team_id: string
+  role: TeamRole
+  display_name: string
+  email: string
+  joined_at: Timestamp
 }
 
 export interface StateInfo {

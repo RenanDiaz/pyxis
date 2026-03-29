@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { TeamProviderWrapper } from '@/components/layout/TeamProviderWrapper'
 import PrivateRoute from '@/components/layout/PrivateRoute'
 import RoleRoute from '@/components/layout/RoleRoute'
 import AppLayout from '@/components/layout/AppLayout'
@@ -44,7 +45,9 @@ export default function App() {
               <Route
                 element={
                   <PrivateRoute>
-                    <AppLayout />
+                    <TeamProviderWrapper>
+                      <AppLayout />
+                    </TeamProviderWrapper>
                   </PrivateRoute>
                 }
               >
@@ -59,11 +62,11 @@ export default function App() {
                 <Route path="agenda" element={<Schedule />} />
                 <Route path="glosario" element={<Glossary />} />
 
-                {/* Supervisor routes */}
+                {/* Team routes — require team admin role */}
                 <Route
                   path="equipo/metricas"
                   element={
-                    <RoleRoute allowedRoles={['supervisor', 'admin']}>
+                    <RoleRoute requiredTeamRole="admin">
                       <TeamMetrics />
                     </RoleRoute>
                   }
@@ -71,7 +74,7 @@ export default function App() {
                 <Route
                   path="equipo/clientes"
                   element={
-                    <RoleRoute allowedRoles={['supervisor', 'admin']}>
+                    <RoleRoute requiredTeamRole="admin">
                       <TeamClients />
                     </RoleRoute>
                   }
@@ -79,7 +82,7 @@ export default function App() {
                 <Route
                   path="equipo/agenda"
                   element={
-                    <RoleRoute allowedRoles={['supervisor', 'admin']}>
+                    <RoleRoute requiredTeamRole="admin">
                       <TeamSchedule />
                     </RoleRoute>
                   }

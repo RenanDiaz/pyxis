@@ -18,7 +18,7 @@ interface CallFilters {
 export function useCalls(filters?: CallFilters) {
   const { roleCtx } = useUserProfile()
   return useQuery<Call[]>({
-    queryKey: ['calls', roleCtx?.uid, roleCtx?.role, filters],
+    queryKey: ['calls', roleCtx?.uid, roleCtx?.globalRole, roleCtx?.activeTeamId, roleCtx?.activeTeamRole, filters],
     queryFn: () => getCalls(roleCtx!, filters),
     enabled: !!roleCtx,
   })
@@ -27,7 +27,7 @@ export function useCalls(filters?: CallFilters) {
 export function useUpcomingCalls(max: number = 5) {
   const { roleCtx } = useUserProfile()
   return useQuery<Call[]>({
-    queryKey: ['calls', 'upcoming', roleCtx?.uid, roleCtx?.role, max],
+    queryKey: ['calls', 'upcoming', roleCtx?.uid, roleCtx?.globalRole, roleCtx?.activeTeamId, roleCtx?.activeTeamRole, max],
     queryFn: () => getUpcomingCalls(roleCtx!, max),
     enabled: !!roleCtx,
   })

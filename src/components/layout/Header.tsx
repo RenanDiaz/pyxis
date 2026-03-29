@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import TeamSelector from '@/components/layout/TeamSelector'
 
 interface HeaderProps {
   onMenuToggle: () => void
@@ -39,6 +40,8 @@ export default function Header({ onMenuToggle }: HeaderProps) {
       </Button>
 
       <div className="flex-1" />
+
+      <TeamSelector />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
