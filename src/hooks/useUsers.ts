@@ -20,7 +20,7 @@ export function useTeamMembers(teamId: string | null | undefined) {
 export function useUpdateUserProfile() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ uid, data }: { uid: string; data: Partial<Pick<UserProfile, 'role' | 'team_id'>> }) =>
+    mutationFn: ({ uid, data }: { uid: string; data: Partial<Pick<UserProfile, 'role' | 'team_ids'>> }) =>
       updateUserProfile(uid, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })

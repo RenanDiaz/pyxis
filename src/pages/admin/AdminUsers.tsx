@@ -9,13 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Search, UsersRound } from 'lucide-react'
@@ -39,10 +32,6 @@ export default function AdminUsers() {
   const { data: teams } = useTeams()
   const updateUser = useUpdateUserProfile()
   const [search, setSearch] = useState('')
-  const [supervisorDialog, setSupervisorDialog] = useState<{
-    uid: string
-    name: string
-  } | null>(null)
 
   const filteredUsers = (users ?? []).filter((u) => {
     if (!search) return true
@@ -53,45 +42,17 @@ export default function AdminUsers() {
     )
   })
 
-  const getTeamName = (teamId: string | null) => {
-    if (!teamId) return 'Sin equipo'
-    return teams?.find((t) => t.id === teamId)?.name || 'Sin equipo'
+  const teamsMap = new Map(teams?.map((t) => [t.id, t.name]) ?? [])
+
+  const getTeamNames = (teamIds: string[]) => {
+    if (!teamIds || teamIds.length === 0) return ['Sin equipo']
+    return teamIds.map((id) => teamsMap.get(id) || id)
   }
 
-  const handleRoleChange = async (uid: string, name: string, newRole: UserRole) => {
-    if (newRole === 'supervisor') {
-      setSupervisorDialog({ uid, name })
-      return
-    }
+  const handleRoleChange = async (uid: string, newRole: UserRole) => {
     try {
       await updateUser.mutateAsync({ uid, data: { role: newRole } })
       toast.success(`Rol actualizado a ${ROLE_LABELS[newRole]}`)
-    } catch {
-      toast.error('Error al actualizar rol')
-    }
-  }
-
-  const handleTeamChange = async (uid: string, teamId: string) => {
-    try {
-      await updateUser.mutateAsync({
-        uid,
-        data: { team_id: teamId === 'none' ? null : teamId },
-      })
-      toast.success('Equipo actualizado')
-    } catch {
-      toast.error('Error al actualizar equipo')
-    }
-  }
-
-  const handleSupervisorAssign = async (teamId: string | null) => {
-    if (!supervisorDialog) return
-    try {
-      await updateUser.mutateAsync({
-        uid: supervisorDialog.uid,
-        data: { role: 'supervisor', team_id: teamId },
-      })
-      toast.success('Rol actualizado a Supervisor')
-      setSupervisorDialog(null)
     } catch {
       toast.error('Error al actualizar rol')
     }
@@ -141,18 +102,25 @@ export default function AdminUsers() {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      <span>Equipo: {getTeamName(user.team_id)}</span>
-                      <span>Registro: {formatDate(user.created_at)}</span>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      {getTeamNames(user.team_ids).map((name, i) => (
+                        <span
+                          key={i}
+                          className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground"
+                        >
+                          {name}
+                        </span>
+                      ))}
+                      <span className="text-xs text-muted-foreground">
+                        Registro: {formatDate(user.created_at)}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
                     <Select
                       value={user.role}
-                      onValueChange={(v) =>
-                        handleRoleChange(user.uid, user.display_name, v as UserRole)
-                      }
+                      onValueChange={(v) => handleRoleChange(user.uid, v as UserRole)}
                     >
                       <SelectTrigger className="w-[140px]">
                         <SelectValue />
@@ -163,23 +131,6 @@ export default function AdminUsers() {
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
-
-                    <Select
-                      value={user.team_id || 'none'}
-                      onValueChange={(v) => handleTeamChange(user.uid, v)}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sin equipo</SelectItem>
-                        {teams?.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
               </CardContent>
@@ -187,36 +138,6 @@ export default function AdminUsers() {
           ))}
         </div>
       )}
-
-      <Dialog open={!!supervisorDialog} onOpenChange={() => setSupervisorDialog(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Asignar supervisor a equipo</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {supervisorDialog?.name} será supervisor. ¿Deseas asignarlo a un equipo existente?
-          </p>
-          <div className="space-y-2 pt-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => handleSupervisorAssign(null)}
-            >
-              Sin equipo por ahora
-            </Button>
-            {teams?.map((t) => (
-              <Button
-                key={t.id}
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => handleSupervisorAssign(t.id)}
-              >
-                {t.name}
-              </Button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

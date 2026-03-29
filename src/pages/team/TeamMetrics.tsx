@@ -1,7 +1,7 @@
 import { useClients } from '@/hooks/useClients'
 import { useCalls } from '@/hooks/useCalls'
 import { useTeamMembers } from '@/hooks/useUsers'
-import { useUserProfile } from '@/hooks/useUserProfile'
+import { useTeamContext } from '@/contexts/TeamContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Phone, BarChart3, Trophy } from 'lucide-react'
 import { startOfDay, endOfDay } from 'date-fns'
@@ -24,9 +24,9 @@ const STATUS_COLORS: Record<ClientStatus, string> = {
 }
 
 export default function TeamMetrics() {
-  const { team_id } = useUserProfile()
+  const { activeTeamId } = useTeamContext()
   const { data: clients, isLoading: loadingClients } = useClients()
-  const { data: members } = useTeamMembers(team_id)
+  const { data: members } = useTeamMembers(activeTeamId)
 
   const now = new Date()
   const { data: todayCalls, isLoading: loadingCalls } = useCalls({

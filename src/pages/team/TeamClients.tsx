@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useClients } from '@/hooks/useClients'
 import { useTeamMembers } from '@/hooks/useUsers'
-import { useUserProfile } from '@/hooks/useUserProfile'
+import { useTeamContext } from '@/contexts/TeamContext'
 import ClientsTable from '@/components/shared/ClientsTable'
 import AgentFilter from '@/components/shared/AgentFilter'
 import { Input } from '@/components/ui/input'
@@ -25,7 +25,7 @@ const STATUS_OPTIONS = [
 ]
 
 export default function TeamClients() {
-  const { team_id } = useUserProfile()
+  const { activeTeamId } = useTeamContext()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [agentFilter, setAgentFilter] = useState('all')
@@ -34,7 +34,7 @@ export default function TeamClients() {
     status: statusFilter !== 'all' ? (statusFilter as ClientStatus) : undefined,
     search: search || undefined,
   })
-  const { data: members } = useTeamMembers(team_id)
+  const { data: members } = useTeamMembers(activeTeamId)
 
   const agentsMap = useMemo(() => {
     const map = new Map<string, typeof members extends (infer U)[] | undefined ? NonNullable<U> : never>()

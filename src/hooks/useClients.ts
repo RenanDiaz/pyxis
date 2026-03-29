@@ -17,7 +17,7 @@ interface ClientFilters {
 export function useClients(filters?: ClientFilters) {
   const { roleCtx } = useUserProfile()
   return useQuery<Client[]>({
-    queryKey: ['clients', roleCtx?.uid, roleCtx?.role, filters],
+    queryKey: ['clients', roleCtx?.uid, roleCtx?.globalRole, roleCtx?.activeTeamId, roleCtx?.activeTeamRole, filters],
     queryFn: () => getClients(roleCtx!, filters),
     enabled: !!roleCtx,
   })

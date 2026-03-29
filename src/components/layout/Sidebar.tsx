@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUserProfile } from '@/hooks/useUserProfile'
+import { useTeamContext } from '@/contexts/TeamContext'
 
 interface NavItem {
   to: string
@@ -28,7 +29,7 @@ const agentNavItems: NavItem[] = [
   { to: '/agenda', label: 'Agenda', icon: Calendar },
 ]
 
-const supervisorNavItems: NavItem[] = [
+const teamNavItems: NavItem[] = [
   { to: '/equipo/clientes', label: 'Clientes del equipo', icon: Users },
   { to: '/equipo/agenda', label: 'Agenda del equipo', icon: Calendar },
   { to: '/equipo/metricas', label: 'Métricas', icon: BarChart3 },
@@ -95,6 +96,10 @@ function NavSection({ title, items, onNavigate }: { title?: string; items: NavIt
 
 export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { role } = useUserProfile()
+  const { activeTeamId, activeTeamRole } = useTeamContext()
+
+  const showTeamSection = !!activeTeamId && activeTeamRole === 'admin'
+  const showAdminSection = role === 'admin'
 
   return (
     <div className="flex h-full flex-col">
@@ -107,11 +112,11 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex-1 space-y-6 px-3">
         <NavSection items={agentNavItems} onNavigate={onNavigate} />
 
-        {(role === 'supervisor' || role === 'admin') && (
-          <NavSection title="Mi Equipo" items={supervisorNavItems} onNavigate={onNavigate} />
+        {showTeamSection && (
+          <NavSection title="Mi Equipo" items={teamNavItems} onNavigate={onNavigate} />
         )}
 
-        {role === 'admin' && (
+        {showAdminSection && (
           <NavSection title="Administración" items={adminNavItems} onNavigate={onNavigate} />
         )}
       </nav>

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useCalls, useUpdateCall } from '@/hooks/useCalls'
 import { useClients } from '@/hooks/useClients'
 import { useTeamMembers } from '@/hooks/useUsers'
-import { useUserProfile } from '@/hooks/useUserProfile'
+import { useTeamContext } from '@/contexts/TeamContext'
 import CallsList from '@/components/shared/CallsList'
 import AgentFilter from '@/components/shared/AgentFilter'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -33,7 +33,7 @@ function getDateFilters(tab: FilterTab) {
 }
 
 export default function TeamSchedule() {
-  const { team_id } = useUserProfile()
+  const { activeTeamId } = useTeamContext()
   const [tab, setTab] = useState<FilterTab>('todas')
   const [agentFilter, setAgentFilter] = useState('all')
   const [outcomeFilter, setOutcomeFilter] = useState('all')
@@ -44,7 +44,7 @@ export default function TeamSchedule() {
     outcome: tab === 'pendientes' ? 'pendiente' : outcomeFilter !== 'all' ? (outcomeFilter as CallOutcome) : undefined,
   })
   const { data: clients } = useClients()
-  const { data: members } = useTeamMembers(team_id)
+  const { data: members } = useTeamMembers(activeTeamId)
   const updateCallMutation = useUpdateCall()
 
   const agentsMap = useMemo(() => {

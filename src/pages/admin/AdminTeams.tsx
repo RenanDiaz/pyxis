@@ -1,10 +1,20 @@
 import { useState } from 'react'
-import { useTeams, useCreateTeam, useUpdateTeam } from '@/hooks/useTeams'
-import { useAllUsers, useUpdateUserProfile } from '@/hooks/useUsers'
+import {
+  useTeams,
+  useCreateTeam,
+  useUpdateTeam,
+  useTeamMemberships,
+  useAddTeamMember,
+  useRemoveTeamMember,
+  useUpdateTeamMemberRole,
+} from '@/hooks/useTeams'
+import { useAllUsers } from '@/hooks/useUsers'
+import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -19,59 +29,186 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Building2, Pencil, UserMinus } from 'lucide-react'
+import { Plus, Building2, Pencil, UserMinus, UserPlus, Shield, User } from 'lucide-react'
 import { toast } from 'sonner'
+import type { TeamRole } from '@/types'
+
+function TeamMembersList({ teamId }: { teamId: string }) {
+  const { data: memberships, isLoading } = useTeamMemberships(teamId)
+  const removeMember = useRemoveTeamMember()
+  const updateRole = useUpdateTeamMemberRole()
+
+  const handleRemove = async (uid: string) => {
+    try {
+      await removeMember.mutateAsync({ teamId, uid })
+      toast.success('Miembro removido del equipo')
+    } catch {
+      toast.error('Error al remover miembro')
+    }
+  }
+
+  const handleRoleToggle = async (uid: string, currentRole: TeamRole) => {
+    const newRole: TeamRole = currentRole === 'admin' ? 'member' : 'admin'
+    try {
+      await updateRole.mutateAsync({ teamId, uid, role: newRole })
+      toast.success(`Rol actualizado a ${newRole === 'admin' ? 'Admin' : 'Miembro'}`)
+    } catch {
+      toast.error('Error al actualizar rol')
+    }
+  }
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Cargando miembros...</p>
+  if (!memberships || memberships.length === 0) {
+    return <p className="text-sm text-muted-foreground">No hay miembros</p>
+  }
+
+  return (
+    <div className="space-y-2">
+      {memberships.map((m) => (
+        <div
+          key={m.uid}
+          className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50"
+        >
+          <div className="flex items-center gap-2">
+            <div>
+              <p className="text-sm font-medium">{m.display_name}</p>
+              <p className="text-xs text-muted-foreground">{m.email}</p>
+            </div>
+            <Badge
+              variant="secondary"
+              className={
+                m.role === 'admin'
+                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+                  : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+              }
+            >
+              {m.role === 'admin' ? 'Admin' : 'Miembro'}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => handleRoleToggle(m.uid, m.role)}
+              title={m.role === 'admin' ? 'Cambiar a miembro' : 'Cambiar a admin'}
+            >
+              {m.role === 'admin' ? (
+                <User className="h-3.5 w-3.5" />
+              ) : (
+                <Shield className="h-3.5 w-3.5" />
+              )}
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={() => handleRemove(m.uid)}
+              title="Remover del equipo"
+            >
+              <UserMinus className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function AddMemberDialog({ teamId }: { teamId: string }) {
+  const { data: users } = useAllUsers()
+  const { data: memberships } = useTeamMemberships(teamId)
+  const addMember = useAddTeamMember()
+  const [open, setOpen] = useState(false)
+  const [selectedUid, setSelectedUid] = useState('')
+
+  const memberUids = new Set(memberships?.map((m) => m.uid) ?? [])
+  const availableUsers = users?.filter((u) => !memberUids.has(u.uid)) ?? []
+
+  const handleAdd = async () => {
+    const user = users?.find((u) => u.uid === selectedUid)
+    if (!user) return
+    try {
+      await addMember.mutateAsync({
+        teamId,
+        user: { uid: user.uid, display_name: user.display_name, email: user.email },
+      })
+      toast.success('Miembro agregado')
+      setOpen(false)
+      setSelectedUid('')
+    } catch {
+      toast.error('Error al agregar miembro')
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+          Agregar
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Agregar miembro</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div>
+            <Label>Usuario</Label>
+            <Select value={selectedUid} onValueChange={setSelectedUid}>
+              <SelectTrigger className="mt-1.5">
+                <SelectValue placeholder="Selecciona usuario" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableUsers.map((u) => (
+                  <SelectItem key={u.uid} value={u.uid}>
+                    {u.display_name || u.email}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            onClick={handleAdd}
+            disabled={!selectedUid || addMember.isPending}
+            className="w-full"
+          >
+            {addMember.isPending ? 'Agregando...' : 'Agregar al equipo'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 export default function AdminTeams() {
+  const { user } = useAuth()
   const { data: teams, isLoading } = useTeams()
-  const { data: users } = useAllUsers()
   const createTeam = useCreateTeam()
   const updateTeam = useUpdateTeam()
-  const updateUser = useUpdateUserProfile()
 
   const [createOpen, setCreateOpen] = useState(false)
   const [newName, setNewName] = useState('')
-  const [newSupervisor, setNewSupervisor] = useState('')
 
   const [editTeamId, setEditTeamId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
 
-  const getMembersByTeam = (teamId: string) => {
-    return users?.filter((u) => u.team_id === teamId) ?? []
-  }
-
-  const getSupervisorName = (uid: string) => {
-    const user = users?.find((u) => u.uid === uid)
-    return user?.display_name || user?.email || 'No asignado'
-  }
-
   const handleCreate = async () => {
-    if (!newName.trim() || !newSupervisor) {
-      toast.error('Completa todos los campos')
+    if (!newName.trim() || !user) {
+      toast.error('Ingresa un nombre para el equipo')
       return
     }
     try {
-      const teamId = await createTeam.mutateAsync({
+      await createTeam.mutateAsync({
         name: newName.trim(),
-        supervisor_uid: newSupervisor,
+        creator_uid: user.uid,
+        creator_display_name: user.displayName || user.email || '',
+        creator_email: user.email || '',
       })
-      // Assign supervisor role and team if needed
-      const sup = users?.find((u) => u.uid === newSupervisor)
-      if (sup && sup.role !== 'supervisor' && sup.role !== 'admin') {
-        await updateUser.mutateAsync({
-          uid: newSupervisor,
-          data: { role: 'supervisor', team_id: teamId },
-        })
-      } else if (sup) {
-        await updateUser.mutateAsync({
-          uid: newSupervisor,
-          data: { team_id: teamId },
-        })
-      }
       toast.success('Equipo creado')
       setCreateOpen(false)
       setNewName('')
-      setNewSupervisor('')
     } catch {
       toast.error('Error al crear equipo')
     }
@@ -85,15 +222,6 @@ export default function AdminTeams() {
       setEditTeamId(null)
     } catch {
       toast.error('Error al actualizar nombre')
-    }
-  }
-
-  const handleRemoveMember = async (uid: string) => {
-    try {
-      await updateUser.mutateAsync({ uid, data: { team_id: null } })
-      toast.success('Agente removido del equipo')
-    } catch {
-      toast.error('Error al remover agente')
     }
   }
 
@@ -120,26 +248,12 @@ export default function AdminTeams() {
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Ej: Equipo Ventas Norte"
                   className="mt-1.5"
+                  onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                 />
               </div>
-              <div>
-                <Label>Supervisor</Label>
-                <Select value={newSupervisor} onValueChange={setNewSupervisor}>
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue placeholder="Selecciona supervisor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users?.map((u) => (
-                      <SelectItem key={u.uid} value={u.uid}>
-                        {u.display_name || u.email}
-                        {u.role !== 'supervisor' && u.role !== 'admin'
-                          ? ' (se asignará rol supervisor)'
-                          : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Serás el administrador de este equipo.
+              </p>
               <Button
                 onClick={handleCreate}
                 disabled={createTeam.isPending}
@@ -163,7 +277,6 @@ export default function AdminTeams() {
       ) : (
         <div className="space-y-4">
           {teams.map((team) => {
-            const members = getMembersByTeam(team.id)
             const isEditing = editTeamId === team.id
 
             return (
@@ -201,43 +314,12 @@ export default function AdminTeams() {
                         </Button>
                       </div>
                     )}
+                    <AddMemberDialog teamId={team.id} />
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Supervisor: {getSupervisorName(team.supervisor_uid)}
-                  </p>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm font-medium mb-2">
-                    Agentes ({members.length})
-                  </p>
-                  {members.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No hay agentes asignados</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {members.map((member) => (
-                        <div
-                          key={member.uid}
-                          className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50"
-                        >
-                          <div>
-                            <p className="text-sm font-medium">{member.display_name}</p>
-                            <p className="text-xs text-muted-foreground">{member.email}</p>
-                          </div>
-                          {member.uid !== team.supervisor_uid && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                              onClick={() => handleRemoveMember(member.uid)}
-                              title="Remover del equipo"
-                            >
-                              <UserMinus className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <p className="text-sm font-medium mb-2">Miembros</p>
+                  <TeamMembersList teamId={team.id} />
                 </CardContent>
               </Card>
             )
