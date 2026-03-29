@@ -2,12 +2,6 @@
   "description": "Datos del cliente — solo el teléfono es obligatorio para crear un lead",
   "fields": [
     {
-      "id": "phone",
-      "label": "Número telefónico",
-      "type": "phone",
-      "required": true
-    },
-    {
       "id": "first_name",
       "label": "Primer nombre",
       "type": "text",

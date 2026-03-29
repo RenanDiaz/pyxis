@@ -13,6 +13,7 @@ import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
 import { formatInTimeZone } from 'date-fns-tz'
 import { es } from 'date-fns/locale'
 import type { Call, CallOutcome, Client, UserProfile } from '@/types'
+import { getClientDisplayName } from '@/lib/clientUtils'
 
 interface CallsListProps {
   calls: Call[]
@@ -28,9 +29,7 @@ interface CallsListProps {
 function getClientName(clients: Client[], clientId: string): string {
   const client = clients.find((c) => c.id === clientId)
   if (!client) return 'Cliente desconocido'
-  return client.first_name || client.last_name
-    ? `${client.first_name || ''} ${client.last_name || ''}`.trim()
-    : client.phone
+  return getClientDisplayName(client)
 }
 
 export default function CallsList({

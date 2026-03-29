@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select'
 import { Search, Plus, Phone, Building2, MapPin, ChevronRight, Users } from 'lucide-react'
 import type { ClientStatus } from '@/types'
+import { getPrimaryPhoneNumber } from '@/lib/clientUtils'
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'all', label: 'Todos' },
@@ -136,10 +137,10 @@ export default function Clients() {
                         </div>
 
                         <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2">
-                          {client.phone && (
+                          {getPrimaryPhoneNumber(client) && (
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Phone className="h-3 w-3" />
-                              <span>{client.phone}</span>
+                              <span>{getPrimaryPhoneNumber(client)}</span>
                             </div>
                           )}
                           {client.state && (

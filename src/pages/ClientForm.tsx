@@ -20,8 +20,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import StateClock from '@/components/states/StateClock'
 import { getStateTimezone } from '@/lib/timezones'
-import { ArrowLeft } from 'lucide-react'
-import type { Client, ClientStatus } from '@/types'
+import { ArrowLeft, Plus, X } from 'lucide-react'
+import type { Client, ClientStatus, ClientPhone, PhoneLabel } from '@/types'
 import { toast } from 'sonner'
 
 type FormData = Record<string, string>
@@ -36,6 +36,9 @@ export default function ClientForm() {
   const updateMutation = useUpdateClient()
 
   const [formData, setFormData] = useState<FormData>({})
+  const [phones, setPhones] = useState<ClientPhone[]>([
+    { number: '', label: 'personal', is_primary: true },
+  ])
   const [status, setStatus] = useState<ClientStatus>('nuevo')
   const stateManuallySet = useRef(false)
   const [stateAutoDetected, setStateAutoDetected] = useState(false)
@@ -50,25 +53,35 @@ export default function ClientForm() {
       setFormData(data)
       setStatus(existingClient.status)
       if (data.state) stateManuallySet.current = true
+
+      // Load phones
+      if (existingClient.phones?.length) {
+        setPhones(existingClient.phones)
+      } else if (existingClient.phone) {
+        setPhones([{ number: existingClient.phone, label: 'personal', is_primary: true }])
+      }
     }
   }, [existingClient])
+
+  // Auto-detect state from primary phone's area code
+  useEffect(() => {
+    if (stateManuallySet.current) return
+    const primary = phones.find((p) => p.is_primary) ?? phones[0]
+    if (primary?.number) {
+      const detected = getStateByAreaCode(primary.number)
+      if (detected) {
+        setFormData((prev) => ({ ...prev, state: detected }))
+        setStateAutoDetected(true)
+      } else if (stateAutoDetected) {
+        setFormData((prev) => ({ ...prev, state: '' }))
+        setStateAutoDetected(false)
+      }
+    }
+  }, [phones, stateAutoDetected])
 
   const handleChange = (fieldId: string, value: string) => {
     setFormData((prev) => {
       const next = { ...prev, [fieldId]: value }
-
-      if (fieldId === 'phone' && !stateManuallySet.current) {
-        const detected = getStateByAreaCode(value)
-        if (detected) {
-          next.state = detected
-          setStateAutoDetected(true)
-        } else {
-          if (stateAutoDetected) {
-            next.state = ''
-            setStateAutoDetected(false)
-          }
-        }
-      }
 
       if (fieldId === 'state') {
         stateManuallySet.current = true
@@ -79,25 +92,60 @@ export default function ClientForm() {
     })
   }
 
+  // Phone CRUD helpers
+  const updatePhone = (index: number, field: keyof ClientPhone, value: string | boolean) => {
+    setPhones((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)))
+  }
+
+  const setPrimaryPhone = (index: number) => {
+    setPhones((prev) => prev.map((p, i) => ({ ...p, is_primary: i === index })))
+  }
+
+  const addPhone = () => {
+    setPhones((prev) => [...prev, { number: '', label: 'personal', is_primary: false }])
+  }
+
+  const removePhone = (index: number) => {
+    setPhones((prev) => {
+      const next = prev.filter((_, i) => i !== index)
+      if (next.length > 0 && !next.some((p) => p.is_primary)) {
+        next[0].is_primary = true
+      }
+      return next
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validate required fields
-    if (!formData.phone?.trim()) {
-      toast.error('El número telefónico es requerido')
+    // Validate phones
+    const validPhones = phones.filter((p) => p.number.trim())
+    if (validPhones.length === 0) {
+      toast.error('Al menos un número telefónico es requerido')
       return
     }
 
-    const clientData: Record<string, string> = {
-      phone: formData.phone.trim(),
+    // Ensure one is primary
+    const primaryPhone = validPhones.find((p) => p.is_primary) ?? validPhones[0]
+    if (!primaryPhone.is_primary) primaryPhone.is_primary = true
+
+    const cleanPhones = validPhones.map((p) => ({
+      number: p.number.trim(),
+      label: p.label,
+      is_primary: p.is_primary,
+    }))
+
+    const clientData: Record<string, unknown> = {
+      phone: primaryPhone.number.trim(),
+      phones: cleanPhones,
       status,
       notes: isEditing ? (existingClient?.notes || '') : '',
     }
 
     // Only include non-empty optional fields
     for (const field of clientFormConfig.fields) {
-      if (field.id !== 'phone' && formData[field.id]?.trim()) {
-        clientData[field.id] = formData[field.id].trim()
+      if (formData[field.id]?.trim()) {
+        clientData[field.id] = (formData[field.id] as string).trim()
       }
     }
 
@@ -147,6 +195,66 @@ export default function ClientForm() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Phones section */}
+              <div className="space-y-3">
+                <Label>
+                  Teléfonos <span className="text-destructive ml-1">*</span>
+                </Label>
+                {phones.map((phone, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      type="tel"
+                      value={phone.number}
+                      onChange={(e) => updatePhone(index, 'number', e.target.value)}
+                      placeholder="Número telefónico"
+                      className="flex-1"
+                    />
+                    <Select
+                      value={phone.label}
+                      onValueChange={(v) => updatePhone(index, 'label', v as PhoneLabel)}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="personal">Personal</SelectItem>
+                        <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                        <SelectItem value="trabajo">Trabajo</SelectItem>
+                        <SelectItem value="otro">Otro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <label className="flex items-center gap-1 text-xs whitespace-nowrap cursor-pointer">
+                      <input
+                        type="radio"
+                        name="primary_phone"
+                        checked={phone.is_primary}
+                        onChange={() => setPrimaryPhone(index)}
+                      />
+                      Principal
+                    </label>
+                    {phones.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => removePhone(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={addPhone}>
+                  <Plus className="mr-1 h-3 w-3" /> Agregar teléfono
+                </Button>
+                {stateAutoDetected && (
+                  <p className="text-xs text-muted-foreground">
+                    Estado detectado por código de área del teléfono principal
+                  </p>
+                )}
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 {clientFormConfig.fields.map((field) => (
                   <div key={field.id} className={field.type === 'textarea' ? 'sm:col-span-2' : ''}>
@@ -172,11 +280,6 @@ export default function ClientForm() {
                             ))}
                           </SelectContent>
                         </Select>
-                        {stateAutoDetected && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Detectado por código de área
-                          </p>
-                        )}
                       </>
                     ) : field.type === 'select' && field.id === 'process' ? (
                       <Select

@@ -3,6 +3,7 @@ import StatusBadge from '@/components/clients/StatusBadge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Phone, Building2, MapPin, ChevronRight, Users } from 'lucide-react'
 import type { Client, UserProfile } from '@/types'
+import { getPrimaryPhoneNumber } from '@/lib/clientUtils'
 
 interface ClientsTableProps {
   clients: Client[]
@@ -103,10 +104,10 @@ export default function ClientsTable({
                     </div>
 
                     <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2">
-                      {client.phone && (
+                      {getPrimaryPhoneNumber(client) && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Phone className="h-3 w-3" />
-                          <span>{client.phone}</span>
+                          <span>{getPrimaryPhoneNumber(client)}</span>
                         </div>
                       )}
                       {client.state && (
