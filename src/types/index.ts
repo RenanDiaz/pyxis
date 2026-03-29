@@ -117,3 +117,18 @@ export interface ClientFormField {
   required: boolean
   sensitive?: boolean
 }
+
+export type DocumentCategory = 'identificacion' | 'registro' | 'legal' | 'financiero' | 'otro'
+
+export interface ClientDocument {
+  id: string
+  client_id: string
+  name: string
+  file_type: string
+  size: number
+  storage_path: string
+  download_url: string
+  category: DocumentCategory
+  uploaded_by: string
+  created_at: Timestamp
+}

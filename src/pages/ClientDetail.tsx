@@ -13,6 +13,7 @@ import { getStateTimezone } from '@/lib/timezones'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
+import DocumentGrid from '@/components/documents/DocumentGrid'
 import { ArrowLeft, Pencil, Trash2, Phone, FileDown } from 'lucide-react'
 import type { ClientStatus } from '@/types'
 import { toast } from 'sonner'
@@ -213,6 +214,8 @@ export default function ClientDetail() {
           </Card>
         )
       })()}
+
+      <DocumentGrid clientId={client.id} />
 
       <Card>
         <CardHeader className="pb-3">
