@@ -117,3 +117,18 @@ export interface ClientFormField {
   required: boolean
   sensitive?: boolean
 }
+
+export type DocFileType = 'image' | 'pdf' | 'word' | 'excel' | 'other'
+
+export interface ClientDocument {
+  id: string
+  name: string
+  storage_path: string
+  download_url: string
+  type: DocFileType
+  mime_type: string
+  size_bytes: number
+  uploaded_by_uid: string
+  uploaded_by_name: string
+  uploaded_at: Timestamp
+}

@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients'
 import { useCalls } from '@/hooks/useCalls'
 import { useStates } from '@/hooks/useStates'
+import { useUserProfile } from '@/hooks/useUserProfile'
+import { useAuth } from '@/contexts/AuthContext'
 import { PROCESSES } from '@/data/processes'
 import { getFieldValue, formatFieldValue } from '@/lib/processUtils'
 import StatusSelect from '@/components/clients/StatusSelect'
@@ -13,6 +15,7 @@ import { getStateTimezone } from '@/lib/timezones'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
+import DocumentGrid from '@/components/documents/DocumentGrid'
 import { ArrowLeft, Pencil, Trash2, Phone, FileDown } from 'lucide-react'
 import type { ClientStatus } from '@/types'
 import { toast } from 'sonner'
@@ -22,6 +25,8 @@ import { getClientDisplayName, getAllPhones, PHONE_LABELS } from '@/lib/clientUt
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const { role } = useUserProfile()
   const { data: client, isLoading } = useClient(id)
   const { data: calls } = useCalls({ clientId: id })
   const { data: states } = useStates()
@@ -213,6 +218,13 @@ export default function ClientDetail() {
           </Card>
         )
       })()}
+
+      <DocumentGrid
+        clientId={client.id}
+        currentUid={user?.uid ?? ''}
+        currentRole={role}
+        currentDisplayName={user?.displayName ?? user?.email ?? ''}
+      />
 
       <Card>
         <CardHeader className="pb-3">
