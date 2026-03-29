@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients'
 import { useCalls } from '@/hooks/useCalls'
 import { useStates } from '@/hooks/useStates'
+import { useUserProfile } from '@/hooks/useUserProfile'
+import { useAuth } from '@/contexts/AuthContext'
 import { PROCESSES } from '@/data/processes'
 import { getFieldValue, formatFieldValue } from '@/lib/processUtils'
 import StatusSelect from '@/components/clients/StatusSelect'
@@ -23,6 +25,8 @@ import { getClientDisplayName, getAllPhones, PHONE_LABELS } from '@/lib/clientUt
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const { role } = useUserProfile()
   const { data: client, isLoading } = useClient(id)
   const { data: calls } = useCalls({ clientId: id })
   const { data: states } = useStates()
@@ -215,7 +219,12 @@ export default function ClientDetail() {
         )
       })()}
 
-      <DocumentGrid clientId={client.id} />
+      <DocumentGrid
+        clientId={client.id}
+        currentUid={user?.uid ?? ''}
+        currentRole={role}
+        currentDisplayName={user?.displayName ?? user?.email ?? ''}
+      />
 
       <Card>
         <CardHeader className="pb-3">

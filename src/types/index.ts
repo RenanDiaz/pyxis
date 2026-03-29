@@ -118,17 +118,17 @@ export interface ClientFormField {
   sensitive?: boolean
 }
 
-export type DocumentCategory = 'identificacion' | 'registro' | 'legal' | 'financiero' | 'otro'
+export type DocFileType = 'image' | 'pdf' | 'word' | 'excel' | 'other'
 
 export interface ClientDocument {
   id: string
-  client_id: string
   name: string
-  file_type: string
-  size: number
   storage_path: string
   download_url: string
-  category: DocumentCategory
-  uploaded_by: string
-  created_at: Timestamp
+  type: DocFileType
+  mime_type: string
+  size_bytes: number
+  uploaded_by_uid: string
+  uploaded_by_name: string
+  uploaded_at: Timestamp
 }

@@ -1,69 +1,50 @@
-import type { ClientDocument } from '@/types'
-import { FileText, FileSpreadsheet, FileImage, File, Trash2, Eye } from 'lucide-react'
+import type { ClientDocument, UserRole } from '@/types'
+import {
+  getFileIcon,
+  getFileIconColor,
+  formatFileSize,
+} from '@/lib/storageUtils'
 import { Button } from '@/components/ui/button'
-
-function isImage(fileType: string) {
-  return fileType.startsWith('image/')
-}
-
-function isPdf(fileType: string) {
-  return fileType === 'application/pdf'
-}
-
-function isWord(fileType: string) {
-  return (
-    fileType === 'application/msword' ||
-    fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  )
-}
-
-function isExcel(fileType: string) {
-  return (
-    fileType === 'application/vnd.ms-excel' ||
-    fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  )
-}
-
-function FileIcon({ fileType }: { fileType: string }) {
-  const className = 'h-10 w-10'
-  if (isPdf(fileType)) return <FileText className={`${className} text-red-500`} />
-  if (isWord(fileType)) return <FileText className={`${className} text-blue-500`} />
-  if (isExcel(fileType)) return <FileSpreadsheet className={`${className} text-green-500`} />
-  if (isImage(fileType)) return <FileImage className={`${className} text-purple-500`} />
-  return <File className={`${className} text-muted-foreground`} />
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-const CATEGORY_LABELS: Record<string, string> = {
-  identificacion: 'Identificación',
-  registro: 'Registro',
-  legal: 'Legal',
-  financiero: 'Financiero',
-  otro: 'Otro',
-}
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { MoreVertical, Eye, Download, Trash2 } from 'lucide-react'
 
 interface Props {
   doc: ClientDocument
+  currentUid: string
+  currentRole: UserRole
   onView: (doc: ClientDocument) => void
   onDelete: (doc: ClientDocument) => void
   deleting?: boolean
 }
 
-export default function DocumentCard({ doc, onView, onDelete, deleting }: Props) {
+export default function DocumentCard({
+  doc,
+  currentUid,
+  currentRole,
+  onView,
+  onDelete,
+  deleting,
+}: Props) {
+  const Icon = getFileIcon(doc.type)
+  const iconColor = getFileIconColor(doc.type)
+  const canDelete = currentRole === 'admin' || doc.uploaded_by_uid === currentUid
+  const uploadDate = doc.uploaded_at?.toDate?.()
+
   return (
-    <div className="group relative flex flex-col items-center rounded-lg border bg-card p-3 transition-shadow hover:shadow-md">
+    <div className="group relative flex flex-col rounded-lg border bg-card p-3 transition-shadow hover:shadow-md">
       {/* Thumbnail or icon */}
       <button
         type="button"
         className="flex h-28 w-full items-center justify-center rounded-md bg-muted/50 overflow-hidden cursor-pointer"
         onClick={() => onView(doc)}
       >
-        {isImage(doc.file_type) ? (
+        {doc.type === 'image' ? (
           <img
             src={doc.download_url}
             alt={doc.name}
@@ -71,41 +52,69 @@ export default function DocumentCard({ doc, onView, onDelete, deleting }: Props)
             loading="lazy"
           />
         ) : (
-          <FileIcon fileType={doc.file_type} />
+          <Icon className={`h-10 w-10 ${iconColor}`} />
         )}
       </button>
 
+      {/* Type badge on thumbnail */}
+      {doc.type === 'image' && (
+        <span className="absolute top-4.5 left-4.5 rounded bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white uppercase">
+          {doc.name.split('.').pop()}
+        </span>
+      )}
+
       {/* Info */}
-      <div className="mt-2 w-full text-center space-y-0.5">
+      <div className="mt-2 w-full space-y-0.5">
         <p className="text-xs font-medium truncate" title={doc.name}>
           {doc.name}
         </p>
         <p className="text-[10px] text-muted-foreground">
-          {formatSize(doc.size)} · {CATEGORY_LABELS[doc.category] || doc.category}
+          {formatFileSize(doc.size_bytes)}
+          {uploadDate && ` · ${uploadDate.toLocaleDateString('es-MX')}`}
+        </p>
+        <p className="text-[10px] text-muted-foreground truncate">
+          {doc.uploaded_by_name}
         </p>
       </div>
 
-      {/* Actions */}
-      <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button
-          variant="secondary"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => onView(doc)}
-          title="Ver documento"
-        >
-          <Eye className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          variant="destructive"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => onDelete(doc)}
-          disabled={deleting}
-          title="Eliminar documento"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+      {/* Three-dot menu */}
+      <div className="absolute top-1.5 right-1.5">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onView(doc)}>
+              <Eye className="mr-2 h-4 w-4" />
+              Abrir
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href={doc.download_url} target="_blank" rel="noopener noreferrer" download>
+                <Download className="mr-2 h-4 w-4" />
+                Descargar
+              </a>
+            </DropdownMenuItem>
+            {canDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => onDelete(doc)}
+                  disabled={deleting}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Eliminar
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )

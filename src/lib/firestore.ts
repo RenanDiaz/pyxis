@@ -16,7 +16,7 @@ import {
   type QueryConstraint,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '@/lib/firebase'
-import type { Client, ClientStatus, Call, CallOutcome, UserProfile, UserRole, Team, ClientDocument } from '@/types'
+import type { Client, ClientStatus, Call, CallOutcome, UserProfile, UserRole, Team } from '@/types'
 
 // ── User Profiles ──
 
@@ -250,35 +250,6 @@ export async function updateCall(
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   await updateDoc(doc(db, 'calls', id), data)
-}
-
-// ── Documents ──
-
-export async function getDocuments(clientId: string): Promise<ClientDocument[]> {
-  if (!isFirebaseConfigured || !db) return []
-  const q = query(
-    collection(db, 'clients', clientId, 'documents'),
-    orderBy('created_at', 'desc')
-  )
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as ClientDocument))
-}
-
-export async function createDocument(
-  clientId: string,
-  data: Omit<ClientDocument, 'id' | 'created_at'>
-): Promise<string> {
-  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  const ref = await addDoc(collection(db, 'clients', clientId, 'documents'), {
-    ...data,
-    created_at: Timestamp.now(),
-  })
-  return ref.id
-}
-
-export async function deleteDocument(clientId: string, docId: string): Promise<void> {
-  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  await deleteDoc(doc(db, 'clients', clientId, 'documents', docId))
 }
 
 // ── Dashboard helpers ──
