@@ -53,7 +53,7 @@
     {
       "id": "business_address",
       "label": "Dirección comercial de la empresa",
-      "type": "text",
+      "type": "textarea",
       "required": false
     },
     {

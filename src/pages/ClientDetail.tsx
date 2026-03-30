@@ -159,7 +159,7 @@ export default function ClientDetail() {
             <Separator />
             <div className="text-sm">
               <p className="text-muted-foreground">Dirección comercial</p>
-              <p className="font-medium">{client.business_address || '—'}</p>
+              <p className="font-medium whitespace-pre-line">{client.business_address || '—'}</p>
             </div>
             <div className="text-sm">
               <p className="text-muted-foreground">Propósito del negocio</p>
