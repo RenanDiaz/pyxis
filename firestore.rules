@@ -61,6 +61,20 @@ service cloud.firestore {
       allow delete: if request.auth != null
                     && (isAdmin()
                         || resource.data.owner_uid == request.auth.uid);
+
+      match /documents/{docId} {
+        allow read: if request.auth != null
+                    && (isAdmin()
+                        || get(/databases/$(database)/documents/clients/$(clientId)).data.owner_uid == request.auth.uid
+                        || isTeamAdmin(get(/databases/$(database)/documents/clients/$(clientId)).data.team_id));
+        allow create: if request.auth != null
+                      && (isAdmin()
+                          || get(/databases/$(database)/documents/clients/$(clientId)).data.owner_uid == request.auth.uid
+                          || isTeamAdmin(get(/databases/$(database)/documents/clients/$(clientId)).data.team_id));
+        allow delete: if request.auth != null
+                      && (isAdmin()
+                          || get(/databases/$(database)/documents/clients/$(clientId)).data.owner_uid == request.auth.uid);
+      }
     }
 
     match /calls/{callId} {

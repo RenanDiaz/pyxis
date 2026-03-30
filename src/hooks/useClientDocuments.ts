@@ -32,6 +32,10 @@ export function useClientDocuments(clientId: string | undefined) {
       })) as ClientDocument[]
       setDocuments(docs)
       setIsLoading(false)
+    }, (error) => {
+      console.error('Error loading documents:', error)
+      setDocuments([])
+      setIsLoading(false)
     })
 
     return unsubscribe
