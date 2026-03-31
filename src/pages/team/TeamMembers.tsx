@@ -1,25 +1,19 @@
 import { useState } from 'react'
 import {
   useTeamMemberships,
-  useAddTeamMember,
   useRemoveTeamMember,
   useUpdateTeamMemberRole,
 } from '@/hooks/useTeams'
-import { useAllUsers } from '@/hooks/useUsers'
+import { useTeamInvitations, useCreateInvitation, useCancelInvitation } from '@/hooks/useInvitations'
+import { useAuth } from '@/contexts/AuthContext'
 import { useTeamContext } from '@/contexts/TeamContext'
 import { useUserTeams } from '@/hooks/useTeams'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -27,7 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { UserMinus, UserPlus, Shield, User, UsersRound } from 'lucide-react'
+import { UserMinus, Shield, User, UsersRound, Mail, Clock, X } from 'lucide-react'
 import { toast } from 'sonner'
 import type { TeamRole } from '@/types'
 
@@ -56,7 +50,7 @@ export default function TeamMembers() {
             <p className="text-sm text-muted-foreground mt-1">{activeTeam.name}</p>
           )}
         </div>
-        <AddMemberDialog teamId={activeTeamId} />
+        <InviteMemberDialog teamId={activeTeamId} teamName={activeTeam?.name ?? ''} />
       </div>
 
       <Card>
@@ -67,6 +61,8 @@ export default function TeamMembers() {
           <TeamMembersList teamId={activeTeamId} />
         </CardContent>
       </Card>
+
+      <PendingInvitationsList teamId={activeTeamId} />
     </div>
   )
 }
@@ -162,29 +158,29 @@ function TeamMembersList({ teamId }: { teamId: string }) {
   )
 }
 
-function AddMemberDialog({ teamId }: { teamId: string }) {
-  const { data: users } = useAllUsers()
-  const { data: memberships } = useTeamMemberships(teamId)
-  const addMember = useAddTeamMember()
+function InviteMemberDialog({ teamId, teamName }: { teamId: string; teamName: string }) {
+  const { user } = useAuth()
+  const createInvitation = useCreateInvitation()
   const [open, setOpen] = useState(false)
-  const [selectedUid, setSelectedUid] = useState('')
+  const [email, setEmail] = useState('')
 
-  const memberUids = new Set(memberships?.map((m) => m.uid) ?? [])
-  const availableUsers = users?.filter((u) => !memberUids.has(u.uid)) ?? []
-
-  const handleAdd = async () => {
-    const user = users?.find((u) => u.uid === selectedUid)
-    if (!user) return
+  const handleInvite = async () => {
+    const trimmed = email.trim().toLowerCase()
+    if (!trimmed || !user) return
     try {
-      await addMember.mutateAsync({
-        teamId,
-        user: { uid: user.uid, display_name: user.display_name, email: user.email },
+      await createInvitation.mutateAsync({
+        team_id: teamId,
+        team_name: teamName,
+        email: trimmed,
+        role: 'member',
+        invited_by_uid: user.uid,
+        invited_by_name: user.displayName || user.email || '',
       })
-      toast.success('Miembro agregado al equipo')
+      toast.success(`Invitación enviada a ${trimmed}`)
       setOpen(false)
-      setSelectedUid('')
-    } catch {
-      toast.error('Error al agregar miembro')
+      setEmail('')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al enviar invitación')
     }
   }
 
@@ -192,48 +188,103 @@ function AddMemberDialog({ teamId }: { teamId: string }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Agregar miembro
+          <Mail className="mr-2 h-4 w-4" />
+          Invitar miembro
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Agregar miembro al equipo</DialogTitle>
+          <DialogTitle>Invitar miembro al equipo</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div>
-            <Label>Usuario</Label>
-            <Select value={selectedUid} onValueChange={setSelectedUid}>
-              <SelectTrigger className="mt-1.5">
-                <SelectValue placeholder="Selecciona un usuario" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableUsers.length === 0 ? (
-                  <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                    No hay usuarios disponibles
-                  </div>
-                ) : (
-                  availableUsers.map((u) => (
-                    <SelectItem key={u.uid} value={u.uid}>
-                      {u.display_name || u.email}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <Label>Correo electrónico</Label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="usuario@ejemplo.com"
+              className="mt-1.5"
+              onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
+            />
           </div>
           <p className="text-sm text-muted-foreground">
-            El usuario será agregado como miembro. Puedes cambiar su rol después.
+            Se enviará una invitación al correo indicado. Si el usuario aún no tiene cuenta,
+            podrá aceptar la invitación cuando se registre.
           </p>
           <Button
-            onClick={handleAdd}
-            disabled={!selectedUid || addMember.isPending}
+            onClick={handleInvite}
+            disabled={!email.trim() || createInvitation.isPending}
             className="w-full"
           >
-            {addMember.isPending ? 'Agregando...' : 'Agregar al equipo'}
+            {createInvitation.isPending ? 'Enviando...' : 'Enviar invitación'}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function PendingInvitationsList({ teamId }: { teamId: string }) {
+  const { data: invitations } = useTeamInvitations(teamId)
+  const cancelInvitation = useCancelInvitation()
+
+  const handleCancel = async (id: string) => {
+    try {
+      await cancelInvitation.mutateAsync(id)
+      toast.success('Invitación cancelada')
+    } catch {
+      toast.error('Error al cancelar invitación')
+    }
+  }
+
+  if (!invitations || invitations.length === 0) return null
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Clock className="h-4 w-4" />
+          Invitaciones pendientes
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-1">
+          {invitations.map((inv) => (
+            <div
+              key={inv.id}
+              className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-sm font-medium">
+                  <Mail className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{inv.email}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Invitado por {inv.invited_by_name}
+                  </p>
+                </div>
+                <Badge
+                  variant="secondary"
+                  className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                >
+                  Pendiente
+                </Badge>
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                onClick={() => handleCancel(inv.id)}
+                title="Cancelar invitación"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

@@ -28,6 +28,20 @@ export interface TeamMembership {
   joined_at: Timestamp
 }
 
+export type InvitationStatus = 'pending' | 'accepted' | 'declined'
+
+export interface TeamInvitation {
+  id: string
+  team_id: string
+  team_name: string
+  email: string
+  role: TeamRole
+  status: InvitationStatus
+  invited_by_uid: string
+  invited_by_name: string
+  created_at: Timestamp
+}
+
 export interface StateInfo {
   abbreviation: string
   name: string

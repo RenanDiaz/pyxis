@@ -29,6 +29,8 @@ import type {
   Team,
   TeamRole,
   TeamMembership,
+  TeamInvitation,
+  InvitationStatus,
 } from '@/types'
 
 // ── User Profiles ──
@@ -213,6 +215,130 @@ export async function updateTeamMemberRole(
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   await updateDoc(doc(db, 'teams', teamId, 'members', uid), { role })
+}
+
+// ── Team Invitations ──
+
+export async function createTeamInvitation(data: {
+  team_id: string
+  team_name: string
+  email: string
+  role: TeamRole
+  invited_by_uid: string
+  invited_by_name: string
+}): Promise<string> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  // Check if there's already a pending invitation for this email+team
+  const existing = await getPendingInvitationByEmail(data.email, data.team_id)
+  if (existing) throw new Error('Ya existe una invitación pendiente para este correo en este equipo')
+  // Check if user is already a member
+  const q = query(collection(db, 'users'), where('email', '==', data.email))
+  const userSnap = await getDocs(q)
+  if (!userSnap.empty) {
+    const userDoc = userSnap.docs[0].data() as UserProfile
+    const memberSnap = await getDoc(doc(db, 'teams', data.team_id, 'members', userDoc.uid))
+    if (memberSnap.exists()) throw new Error('Este usuario ya es miembro del equipo')
+  }
+  const ref = await addDoc(collection(db, 'team_invitations'), {
+    team_id: data.team_id,
+    team_name: data.team_name,
+    email: data.email.toLowerCase().trim(),
+    role: data.role,
+    status: 'pending' as InvitationStatus,
+    invited_by_uid: data.invited_by_uid,
+    invited_by_name: data.invited_by_name,
+    created_at: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function getTeamInvitations(teamId: string): Promise<TeamInvitation[]> {
+  if (!isFirebaseConfigured || !db) return []
+  const q = query(
+    collection(db, 'team_invitations'),
+    where('team_id', '==', teamId),
+    where('status', '==', 'pending'),
+    orderBy('created_at', 'desc')
+  )
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as TeamInvitation))
+}
+
+export async function getPendingInvitationsForUser(email: string): Promise<TeamInvitation[]> {
+  if (!isFirebaseConfigured || !db) return []
+  const q = query(
+    collection(db, 'team_invitations'),
+    where('email', '==', email.toLowerCase().trim()),
+    where('status', '==', 'pending'),
+    orderBy('created_at', 'desc')
+  )
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as TeamInvitation))
+}
+
+async function getPendingInvitationByEmail(
+  email: string,
+  teamId: string
+): Promise<TeamInvitation | null> {
+  if (!isFirebaseConfigured || !db) return null
+  const q = query(
+    collection(db, 'team_invitations'),
+    where('email', '==', email.toLowerCase().trim()),
+    where('team_id', '==', teamId),
+    where('status', '==', 'pending')
+  )
+  const snapshot = await getDocs(q)
+  if (snapshot.empty) return null
+  const d = snapshot.docs[0]
+  return { id: d.id, ...d.data() } as TeamInvitation
+}
+
+export async function acceptTeamInvitation(invitationId: string, user: {
+  uid: string
+  display_name: string
+  email: string
+}): Promise<void> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  const invRef = doc(db, 'team_invitations', invitationId)
+  const invSnap = await getDoc(invRef)
+  if (!invSnap.exists()) throw new Error('Invitación no encontrada')
+  const invitation = invSnap.data() as Omit<TeamInvitation, 'id'>
+
+  if (invitation.status !== 'pending') throw new Error('Esta invitación ya no está pendiente')
+
+  const batch = writeBatch(db)
+
+  // Update invitation status
+  batch.update(invRef, { status: 'accepted' as InvitationStatus })
+
+  // Add user as team member
+  const memberRef = doc(db, 'teams', invitation.team_id, 'members', user.uid)
+  batch.set(memberRef, {
+    uid: user.uid,
+    team_id: invitation.team_id,
+    role: invitation.role,
+    display_name: user.display_name,
+    email: user.email,
+    joined_at: serverTimestamp(),
+  })
+
+  // Add team to user's team_ids
+  const userRef = doc(db, 'users', user.uid)
+  batch.update(userRef, { team_ids: arrayUnion(invitation.team_id) })
+
+  await batch.commit()
+}
+
+export async function declineTeamInvitation(invitationId: string): Promise<void> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  await updateDoc(doc(db, 'team_invitations', invitationId), {
+    status: 'declined' as InvitationStatus,
+  })
+}
+
+export async function cancelTeamInvitation(invitationId: string): Promise<void> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  await deleteDoc(doc(db, 'team_invitations', invitationId))
 }
 
 // ── Role-based query helpers ──
