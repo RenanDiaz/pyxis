@@ -21,7 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { UserMinus, UserPlus, Shield, User, UsersRound, Mail, Clock, X } from 'lucide-react'
+import { UserMinus, Shield, User, UsersRound, Mail, Clock, X } from 'lucide-react'
 import { toast } from 'sonner'
 import type { TeamRole } from '@/types'
 
