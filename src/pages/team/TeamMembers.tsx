@@ -226,7 +226,7 @@ function InviteMemberDialog({ teamId, teamName }: { teamId: string; teamName: st
 }
 
 function PendingInvitationsList({ teamId }: { teamId: string }) {
-  const { data: invitations } = useTeamInvitations(teamId)
+  const { data: invitations, isError } = useTeamInvitations(teamId)
   const cancelInvitation = useCancelInvitation()
 
   const handleCancel = async (id: string) => {
@@ -236,6 +236,16 @@ function PendingInvitationsList({ teamId }: { teamId: string }) {
     } catch {
       toast.error('Error al cancelar invitación')
     }
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="py-6 text-center text-sm text-destructive">
+          Error al cargar invitaciones pendientes. Verifica tu conexión e intenta de nuevo.
+        </CardContent>
+      </Card>
+    )
   }
 
   if (!invitations || invitations.length === 0) return null
