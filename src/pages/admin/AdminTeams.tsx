@@ -4,11 +4,10 @@ import {
   useCreateTeam,
   useUpdateTeam,
   useTeamMemberships,
-  useAddTeamMember,
   useRemoveTeamMember,
   useUpdateTeamMemberRole,
 } from '@/hooks/useTeams'
-import { useAllUsers } from '@/hooks/useUsers'
+import { useTeamInvitations, useCreateInvitation, useCancelInvitation } from '@/hooks/useInvitations'
 import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -16,20 +15,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Building2, Pencil, UserMinus, UserPlus, Shield, User } from 'lucide-react'
+import { Plus, Building2, Pencil, UserMinus, Mail, Shield, User, Clock, X } from 'lucide-react'
 import { toast } from 'sonner'
 import type { TeamRole } from '@/types'
 
@@ -115,29 +107,29 @@ function TeamMembersList({ teamId }: { teamId: string }) {
   )
 }
 
-function AddMemberDialog({ teamId }: { teamId: string }) {
-  const { data: users } = useAllUsers()
-  const { data: memberships } = useTeamMemberships(teamId)
-  const addMember = useAddTeamMember()
+function InviteMemberDialog({ teamId, teamName }: { teamId: string; teamName: string }) {
+  const { user } = useAuth()
+  const createInvitation = useCreateInvitation()
   const [open, setOpen] = useState(false)
-  const [selectedUid, setSelectedUid] = useState('')
+  const [email, setEmail] = useState('')
 
-  const memberUids = new Set(memberships?.map((m) => m.uid) ?? [])
-  const availableUsers = users?.filter((u) => !memberUids.has(u.uid)) ?? []
-
-  const handleAdd = async () => {
-    const user = users?.find((u) => u.uid === selectedUid)
-    if (!user) return
+  const handleInvite = async () => {
+    const trimmed = email.trim().toLowerCase()
+    if (!trimmed || !user) return
     try {
-      await addMember.mutateAsync({
-        teamId,
-        user: { uid: user.uid, display_name: user.display_name, email: user.email },
+      await createInvitation.mutateAsync({
+        team_id: teamId,
+        team_name: teamName,
+        email: trimmed,
+        role: 'member',
+        invited_by_uid: user.uid,
+        invited_by_name: user.displayName || user.email || '',
       })
-      toast.success('Miembro agregado')
+      toast.success(`Invitación enviada a ${trimmed}`)
       setOpen(false)
-      setSelectedUid('')
-    } catch {
-      toast.error('Error al agregar miembro')
+      setEmail('')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al enviar invitación')
     }
   }
 
@@ -145,40 +137,94 @@ function AddMemberDialog({ teamId }: { teamId: string }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
-          <UserPlus className="mr-1.5 h-3.5 w-3.5" />
-          Agregar
+          <Mail className="mr-1.5 h-3.5 w-3.5" />
+          Invitar
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Agregar miembro</DialogTitle>
+          <DialogTitle>Invitar miembro al equipo</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div>
-            <Label>Usuario</Label>
-            <Select value={selectedUid} onValueChange={setSelectedUid}>
-              <SelectTrigger className="mt-1.5">
-                <SelectValue placeholder="Selecciona usuario" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableUsers.map((u) => (
-                  <SelectItem key={u.uid} value={u.uid}>
-                    {u.display_name || u.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Correo electrónico</Label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="usuario@ejemplo.com"
+              className="mt-1.5"
+              onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
+            />
           </div>
+          <p className="text-sm text-muted-foreground">
+            Se enviará una invitación al correo indicado. Si el usuario aún no tiene cuenta,
+            podrá aceptar la invitación cuando se registre.
+          </p>
           <Button
-            onClick={handleAdd}
-            disabled={!selectedUid || addMember.isPending}
+            onClick={handleInvite}
+            disabled={!email.trim() || createInvitation.isPending}
             className="w-full"
           >
-            {addMember.isPending ? 'Agregando...' : 'Agregar al equipo'}
+            {createInvitation.isPending ? 'Enviando...' : 'Enviar invitación'}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function PendingInvitationsList({ teamId }: { teamId: string }) {
+  const { data: invitations } = useTeamInvitations(teamId)
+  const cancelInvitation = useCancelInvitation()
+
+  const handleCancel = async (id: string) => {
+    try {
+      await cancelInvitation.mutateAsync(id)
+      toast.success('Invitación cancelada')
+    } catch {
+      toast.error('Error al cancelar invitación')
+    }
+  }
+
+  if (!invitations || invitations.length === 0) return null
+
+  return (
+    <div className="mt-3">
+      <p className="text-sm font-medium mb-2 flex items-center gap-1.5">
+        <Clock className="h-3.5 w-3.5" />
+        Invitaciones pendientes
+      </p>
+      <div className="space-y-1">
+        {invitations.map((inv) => (
+          <div
+            key={inv.id}
+            className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50"
+          >
+            <div className="flex items-center gap-2">
+              <div>
+                <p className="text-sm">{inv.email}</p>
+              </div>
+              <Badge
+                variant="secondary"
+                className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+              >
+                Pendiente
+              </Badge>
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={() => handleCancel(inv.id)}
+              title="Cancelar invitación"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -314,12 +360,13 @@ export default function AdminTeams() {
                         </Button>
                       </div>
                     )}
-                    <AddMemberDialog teamId={team.id} />
+                    <InviteMemberDialog teamId={team.id} teamName={team.name} />
                   </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm font-medium mb-2">Miembros</p>
                   <TeamMembersList teamId={team.id} />
+                  <PendingInvitationsList teamId={team.id} />
                 </CardContent>
               </Card>
             )

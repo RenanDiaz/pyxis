@@ -1,7 +1,16 @@
-import { Menu, LogOut, Sun, Moon, Monitor } from 'lucide-react'
+import { useState } from 'react'
+import { Menu, LogOut, Sun, Moon, Monitor, Bell, Check, X } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePendingInvitations, useAcceptInvitation, useDeclineInvitation } from '@/hooks/useInvitations'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,9 +19,104 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import TeamSelector from '@/components/layout/TeamSelector'
+import { toast } from 'sonner'
 
 interface HeaderProps {
   onMenuToggle: () => void
+}
+
+function InvitationsButton() {
+  const { user } = useAuth()
+  const { data: invitations } = usePendingInvitations(user?.email)
+  const acceptInvitation = useAcceptInvitation()
+  const declineInvitation = useDeclineInvitation()
+  const [open, setOpen] = useState(false)
+
+  const count = invitations?.length ?? 0
+
+  const handleAccept = async (invitationId: string) => {
+    if (!user) return
+    try {
+      await acceptInvitation.mutateAsync({
+        invitationId,
+        user: {
+          uid: user.uid,
+          display_name: user.displayName || user.email || '',
+          email: user.email || '',
+        },
+      })
+      toast.success('Te has unido al equipo')
+      if (count <= 1) setOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al aceptar invitación')
+    }
+  }
+
+  const handleDecline = async (invitationId: string) => {
+    try {
+      await declineInvitation.mutateAsync(invitationId)
+      toast.success('Invitación rechazada')
+      if (count <= 1) setOpen(false)
+    } catch {
+      toast.error('Error al rechazar invitación')
+    }
+  }
+
+  if (count === 0) return null
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative h-8 w-8">
+          <Bell className="h-4 w-4" />
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+            {count}
+          </span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Invitaciones pendientes</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          {invitations?.map((inv) => (
+            <div
+              key={inv.id}
+              className="flex items-center justify-between rounded-lg border p-3"
+            >
+              <div>
+                <p className="text-sm font-medium">{inv.team_name}</p>
+                <p className="text-xs text-muted-foreground">
+                  Invitado por {inv.invited_by_name}
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="h-8 gap-1"
+                  onClick={() => handleAccept(inv.id)}
+                  disabled={acceptInvitation.isPending}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  Aceptar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 gap-1 text-muted-foreground hover:text-destructive"
+                  onClick={() => handleDecline(inv.id)}
+                  disabled={declineInvitation.isPending}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 export default function Header({ onMenuToggle }: HeaderProps) {
@@ -42,6 +146,8 @@ export default function Header({ onMenuToggle }: HeaderProps) {
       <div className="flex-1" />
 
       <TeamSelector />
+
+      <InvitationsButton />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
