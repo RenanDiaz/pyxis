@@ -3,6 +3,7 @@ import type { Call, CallOutcome } from '@/types'
 import {
   getCalls,
   getUpcomingCalls,
+  getOverdueCalls,
   createCall,
   updateCall,
 } from '@/lib/firestore'
@@ -29,6 +30,15 @@ export function useUpcomingCalls(max: number = 5) {
   return useQuery<Call[]>({
     queryKey: ['calls', 'upcoming', roleCtx?.uid, roleCtx?.globalRole, roleCtx?.activeTeamId, roleCtx?.activeTeamRole, max],
     queryFn: () => getUpcomingCalls(roleCtx!, max),
+    enabled: !!roleCtx,
+  })
+}
+
+export function useOverdueCalls(max: number = 10) {
+  const { roleCtx } = useUserProfile()
+  return useQuery<Call[]>({
+    queryKey: ['calls', 'overdue', roleCtx?.uid, roleCtx?.globalRole, roleCtx?.activeTeamId, roleCtx?.activeTeamRole, max],
+    queryFn: () => getOverdueCalls(roleCtx!, max),
     enabled: !!roleCtx,
   })
 }
