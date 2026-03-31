@@ -15,6 +15,7 @@ export function useTeamInvitations(teamId: string | null | undefined) {
     queryKey: ['teamInvitations', teamId],
     queryFn: () => getTeamInvitations(teamId!),
     enabled: !!teamId,
+    retry: 1,
   })
 }
 
@@ -23,6 +24,7 @@ export function usePendingInvitations(email: string | null | undefined) {
     queryKey: ['pendingInvitations', email],
     queryFn: () => getPendingInvitationsForUser(email!),
     enabled: !!email,
+    retry: 1,
   })
 }
 
