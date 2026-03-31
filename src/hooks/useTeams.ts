@@ -39,6 +39,8 @@ export function useCreateTeam() {
       queryClient.invalidateQueries({ queryKey: ['teams'] })
       queryClient.invalidateQueries({ queryKey: ['userTeams'] })
       queryClient.invalidateQueries({ queryKey: ['userProfile'] })
+      queryClient.invalidateQueries({ queryKey: ['teamMembership'] })
+      queryClient.invalidateQueries({ queryKey: ['teamMemberships'] })
     },
   })
 }
