@@ -95,7 +95,7 @@ service cloud.firestore {
     match /team_invitations/{invId} {
       allow read: if request.auth != null
                   && (isAdmin()
-                      || resource.data.email == request.auth.token.email
+                      || resource.data.email == request.auth.token.email.lower()
                       || isTeamAdmin(resource.data.team_id)
                       || isTeamMember(resource.data.team_id));
       allow create: if request.auth != null
@@ -104,7 +104,7 @@ service cloud.firestore {
       allow update: if request.auth != null
                     && (isAdmin()
                         || isTeamAdmin(resource.data.team_id)
-                        || resource.data.email == request.auth.token.email);
+                        || resource.data.email == request.auth.token.email.lower());
       allow delete: if request.auth != null
                     && (isAdmin()
                         || isTeamAdmin(resource.data.team_id));
