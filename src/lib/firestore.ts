@@ -488,6 +488,21 @@ export async function getUpcomingCalls(ctx: RoleContext, max: number = 5): Promi
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Call))
 }
 
+export async function getOverdueCalls(ctx: RoleContext, max: number = 10): Promise<Call[]> {
+  if (!isFirebaseConfigured || !db) return []
+  const now = Timestamp.now()
+  const constraints: QueryConstraint[] = [
+    ...addRoleConstraints(ctx),
+    where('outcome', '==', 'pendiente'),
+    where('scheduled_at', '<', now),
+    orderBy('scheduled_at', 'desc'),
+    limit(max),
+  ]
+  const q = query(collection(db, 'calls'), ...constraints)
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Call))
+}
+
 export async function createCall(
   ctx: RoleContext,
   data: Omit<Call, 'id' | 'created_at' | 'owner_uid' | 'team_id'>
