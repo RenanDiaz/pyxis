@@ -33,6 +33,7 @@ const teamNavItems: NavItem[] = [
   { to: '/equipo/clientes', label: 'Clientes del equipo', icon: Users },
   { to: '/equipo/agenda', label: 'Agenda del equipo', icon: Calendar },
   { to: '/equipo/metricas', label: 'Métricas', icon: BarChart3 },
+  { to: '/equipo/miembros', label: 'Miembros', icon: UsersRound },
 ]
 
 const adminNavItems: NavItem[] = [

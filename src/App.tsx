@@ -19,6 +19,7 @@ import Glossary from '@/pages/Glossary'
 import TeamMetrics from '@/pages/team/TeamMetrics'
 import TeamClients from '@/pages/team/TeamClients'
 import TeamSchedule from '@/pages/team/TeamSchedule'
+import TeamMembers from '@/pages/team/TeamMembers'
 import AdminUsers from '@/pages/admin/AdminUsers'
 import AdminTeams from '@/pages/admin/AdminTeams'
 import AdminClients from '@/pages/admin/AdminClients'
@@ -63,6 +64,14 @@ export default function App() {
                 <Route path="glosario" element={<Glossary />} />
 
                 {/* Team routes — require team admin role */}
+                <Route
+                  path="equipo/miembros"
+                  element={
+                    <RoleRoute requiredTeamRole="admin">
+                      <TeamMembers />
+                    </RoleRoute>
+                  }
+                />
                 <Route
                   path="equipo/metricas"
                   element={
