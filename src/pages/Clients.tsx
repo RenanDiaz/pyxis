@@ -12,7 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Search, Plus, Phone, Building2, MapPin, ChevronRight, Users } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { Archive, Search, Plus, Phone, Building2, MapPin, ChevronRight, Users } from 'lucide-react'
 import type { ClientStatus } from '@/types'
 import { getPrimaryPhoneNumber } from '@/lib/clientUtils'
 
@@ -35,10 +37,12 @@ function getInitials(firstName?: string, lastName?: string): string {
 export default function Clients() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [showArchived, setShowArchived] = useState(false)
 
   const { data: clients, isLoading } = useClients({
     status: statusFilter !== 'all' ? (statusFilter as ClientStatus) : undefined,
     search: search || undefined,
+    archived: showArchived,
   })
 
   return (
@@ -75,7 +79,20 @@ export default function Clients() {
             ))}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-2">
+          <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+          <Label htmlFor="show-archived" className="text-sm cursor-pointer whitespace-nowrap">
+            Mostrar archivados
+          </Label>
+        </div>
       </div>
+
+      {showArchived && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+          <Archive className="h-4 w-4 shrink-0" />
+          Estás viendo clientes archivados
+        </div>
+      )}
 
       {isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -115,7 +132,7 @@ export default function Clients() {
 
             return (
               <Link key={client.id} to={`/clientes/${client.id}`} className="group">
-                <Card className="transition-all hover:shadow-md hover:border-primary/30 group-focus-visible:ring-2 group-focus-visible:ring-ring">
+                <Card className={`transition-all hover:shadow-md hover:border-primary/30 group-focus-visible:ring-2 group-focus-visible:ring-ring ${client.archived ? 'opacity-60' : ''}`}>
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
@@ -152,8 +169,14 @@ export default function Clients() {
                           )}
                         </div>
 
-                        <div className="mt-2">
+                        <div className="flex items-center gap-2 mt-2">
                           <StatusBadge status={client.status} />
+                          {client.archived && (
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                              <Archive className="h-3 w-3" />
+                              Archivado
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

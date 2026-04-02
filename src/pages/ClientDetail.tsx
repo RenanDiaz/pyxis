@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import DocumentGrid from '@/components/documents/DocumentGrid'
-import { ArrowLeft, Pencil, Trash2, Phone, FileDown } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Phone, FileDown, Archive, ArchiveRestore } from 'lucide-react'
 import type { ClientStatus } from '@/types'
 import { toast } from 'sonner'
 import { exportClientDoc } from '@/lib/exportClientDoc'
@@ -68,10 +68,25 @@ export default function ClientDetail() {
     navigate('/clientes')
   }
 
+  const handleToggleArchive = async () => {
+    if (!client.archived) {
+      if (!confirm('Este cliente no aparecerá en tus listas activas. Puedes encontrarlo activando \'Mostrar archivados\'.')) return
+    }
+    const newArchived = !client.archived
+    await updateMutation.mutateAsync({ id: client.id, data: { archived: newArchived } })
+    toast.success(newArchived ? 'Cliente archivado' : 'Cliente desarchivado')
+  }
+
   const currentNotes = notes ?? client.notes ?? ''
 
   return (
     <div className="space-y-6">
+      {client.archived && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+          <Archive className="h-4 w-4 shrink-0" />
+          Este cliente está archivado
+        </div>
+      )}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4 min-w-0">
           <Link to="/clientes" className="shrink-0">
@@ -101,6 +116,19 @@ export default function ClientDetail() {
               <Pencil className="mr-2 h-3 w-3" />
               Editar
             </Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleToggleArchive}>
+            {client.archived ? (
+              <>
+                <ArchiveRestore className="mr-2 h-3 w-3" />
+                Desarchivar
+              </>
+            ) : (
+              <>
+                <Archive className="mr-2 h-3 w-3" />
+                Archivar
+              </>
+            )}
           </Button>
           <Button variant="destructive" size="sm" onClick={handleDelete}>
             <Trash2 className="mr-2 h-3 w-3" />

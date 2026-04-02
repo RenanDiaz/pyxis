@@ -6,12 +6,14 @@ import {
   createClient,
   updateClient,
   deleteClient,
+  findClientsByPhone,
 } from '@/lib/firestore'
 import { useUserProfile } from '@/hooks/useUserProfile'
 
 interface ClientFilters {
   status?: ClientStatus
   search?: string
+  archived?: boolean
 }
 
 export function useClients(filters?: ClientFilters) {
@@ -61,5 +63,13 @@ export function useDeleteClient() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
+  })
+}
+
+export function useFindClientsByPhone(phone: string) {
+  return useQuery<Client[]>({
+    queryKey: ['clients', 'phone-lookup', phone],
+    queryFn: () => findClientsByPhone(phone),
+    enabled: phone.trim().length >= 7,
   })
 }

@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useClient, useCreateClient, useUpdateClient } from '@/hooks/useClients'
+import { useClient, useCreateClient, useUpdateClient, useFindClientsByPhone } from '@/hooks/useClients'
 import { useStates } from '@/hooks/useStates'
 import clientFormConfig from '@/data/client_form.json'
 import { PROCESSES } from '@/data/processes'
@@ -20,7 +20,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import StateClock from '@/components/states/StateClock'
 import { getStateTimezone } from '@/lib/timezones'
-import { ArrowLeft, Plus, X } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ArrowLeft, Plus, X, AlertTriangle } from 'lucide-react'
 import type { Client, ClientStatus, ClientPhone, PhoneLabel } from '@/types'
 import { inferStatus } from '@/lib/statusUtils'
 import { toast } from 'sonner'
@@ -79,6 +80,22 @@ export default function ClientForm() {
       }
     }
   }, [phones, stateAutoDetected])
+
+  // Duplicate phone detection (debounced)
+  const [debouncedPhone, setDebouncedPhone] = useState('')
+  useEffect(() => {
+    if (isEditing) return
+    const primary = phones.find((p) => p.is_primary) ?? phones[0]
+    const num = primary?.number?.trim() || ''
+    const timer = setTimeout(() => setDebouncedPhone(num), 500)
+    return () => clearTimeout(timer)
+  }, [phones, isEditing])
+
+  const { data: duplicateClients } = useFindClientsByPhone(isEditing ? '' : debouncedPhone)
+  const duplicateClient = useMemo(
+    () => duplicateClients?.find((c) => c.id !== id),
+    [duplicateClients, id]
+  )
 
   const handleChange = (fieldId: string, value: string) => {
     setFormData((prev) => {
@@ -141,6 +158,7 @@ export default function ClientForm() {
       phones: cleanPhones,
       status,
       notes: isEditing ? (existingClient?.notes || '') : '',
+      ...(!isEditing && { archived: false }),
     }
 
     // Only include non-empty optional fields
@@ -258,6 +276,23 @@ export default function ClientForm() {
                   <p className="text-xs text-muted-foreground">
                     Estado detectado por código de área del teléfono principal
                   </p>
+                )}
+                {!isEditing && duplicateClient && (
+                  <Alert variant="default" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800 dark:text-amber-300">
+                      {duplicateClient.archived
+                        ? 'Este número pertenece a un cliente archivado.'
+                        : 'Ya existe un cliente con este número.'}
+                      {' '}
+                      <Link
+                        to={`/clientes/${duplicateClient.id}`}
+                        className="font-medium underline hover:no-underline"
+                      >
+                        Ver cliente →
+                      </Link>
+                    </AlertDescription>
+                  </Alert>
                 )}
               </div>
 

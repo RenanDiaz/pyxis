@@ -12,7 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Search } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { Archive, Search } from 'lucide-react'
 import type { ClientStatus } from '@/types'
 
 const STATUS_OPTIONS = [
@@ -30,10 +32,12 @@ export default function AdminClients() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [agentFilter, setAgentFilter] = useState('all')
   const [teamFilter, setTeamFilter] = useState('all')
+  const [showArchived, setShowArchived] = useState(false)
 
   const { data: clients, isLoading } = useClients({
     status: statusFilter !== 'all' ? (statusFilter as ClientStatus) : undefined,
     search: search || undefined,
+    archived: showArchived,
   })
   const { data: users } = useAllUsers()
   const { data: teams } = useTeams()
@@ -113,7 +117,20 @@ export default function AdminClients() {
             ))}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-2">
+          <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+          <Label htmlFor="show-archived" className="text-sm cursor-pointer whitespace-nowrap">
+            Mostrar archivados
+          </Label>
+        </div>
       </div>
+
+      {showArchived && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+          <Archive className="h-4 w-4 shrink-0" />
+          Estás viendo clientes archivados
+        </div>
+      )}
 
       <ClientsTable
         clients={filteredClients}
