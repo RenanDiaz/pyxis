@@ -110,7 +110,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <h1 className="text-2xl font-bold tracking-tight">Pyxis</h1>
         </div>
       </div>
-      <nav className="flex-1 space-y-6 px-3">
+      <nav className="flex-1 space-y-6 overflow-y-auto px-3">
         <NavSection items={agentNavItems} onNavigate={onNavigate} />
 
         {showTeamSection && (
