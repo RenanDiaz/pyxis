@@ -6,6 +6,7 @@ import {
   Geography,
   ZoomableGroup,
 } from 'react-simple-maps'
+import { geoIdentity } from 'd3-geo'
 import { formatInTimeZone } from 'date-fns-tz'
 import { es } from 'date-fns/locale'
 import type { StateInfo } from '@/types'
@@ -14,6 +15,11 @@ import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
 
 // Pre-projected AlbersUSA topology — includes Alaska & Hawaii insets
 import statesAlbers from 'us-atlas/states-albers-10m.json'
+
+// Custom identity projection that preserves pre-projected coordinates as-is.
+// react-simple-maps' built-in "geoIdentity" string applies translate([w/2, h/2])
+// which shifts pre-projected AlbersUSA data off-center.
+const identityProjection = geoIdentity().scale(1).translate([0, 0])
 
 interface StatesMapProps {
   states: StateInfo[]
@@ -93,16 +99,12 @@ export default function StatesMap({ states, search, filteredStates }: StatesMapP
 
       <div className="w-full border rounded-lg bg-card overflow-hidden">
         <ComposableMap
-          projection="geoIdentity"
-          projectionConfig={{
-            scale: 1,
-            translate: [0, 0],
-          }}
+          projection={identityProjection as any}
           width={975}
           height={610}
           style={{ width: '100%', height: 'auto' }}
         >
-          <ZoomableGroup>
+          <ZoomableGroup center={[450, 310]}>
             <Geographies geography={statesAlbers as any}>
               {({ geographies }: { geographies: any[] }) =>
                 geographies.map((geo) => {
