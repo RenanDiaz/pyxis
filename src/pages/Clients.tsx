@@ -23,6 +23,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'en_proceso', label: 'En proceso' },
   { value: 'cerrado', label: 'Cerrado' },
   { value: 'perdido', label: 'Perdido' },
+  { value: 'deuda_pendiente', label: 'Deuda pendiente' },
 ]
 
 function getInitials(firstName?: string, lastName?: string): string {

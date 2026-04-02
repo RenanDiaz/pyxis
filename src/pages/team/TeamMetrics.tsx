@@ -13,6 +13,7 @@ const STATUS_LABELS: Record<ClientStatus, string> = {
   en_proceso: 'En proceso',
   cerrado: 'Cerrado',
   perdido: 'Perdido',
+  deuda_pendiente: 'Deuda pendiente',
 }
 
 const STATUS_COLORS: Record<ClientStatus, string> = {
@@ -21,6 +22,7 @@ const STATUS_COLORS: Record<ClientStatus, string> = {
   en_proceso: 'bg-orange-500',
   cerrado: 'bg-green-500',
   perdido: 'bg-gray-400',
+  deuda_pendiente: 'bg-amber-600',
 }
 
 export default function TeamMetrics() {

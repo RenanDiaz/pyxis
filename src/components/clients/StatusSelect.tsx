@@ -13,7 +13,7 @@ interface StatusSelectProps {
   onChange: (value: ClientStatus) => void
 }
 
-const ALL_STATUSES: ClientStatus[] = ['nuevo', 'contactado', 'en_proceso', 'cerrado', 'perdido']
+const ALL_STATUSES: ClientStatus[] = ['nuevo', 'contactado', 'en_proceso', 'cerrado', 'perdido', 'deuda_pendiente']
 
 export default function StatusSelect({ value, onChange }: StatusSelectProps) {
   return (

@@ -1,11 +1,13 @@
 import { useRef, useState, useCallback } from 'react'
-import type { ClientDocument, UserRole } from '@/types'
+import type { Client, ClientDocument, UserRole } from '@/types'
 import { useClientDocuments } from '@/hooks/useClientDocuments'
 import {
   uploadClientFile,
   deleteClientFile,
   type UploadProgress,
 } from '@/lib/storageUtils'
+import { inferStatus } from '@/lib/statusUtils'
+import { updateClient } from '@/lib/firestore'
 import DocumentCard from '@/components/documents/DocumentCard'
 import DocumentViewer from '@/components/documents/DocumentViewer'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -38,6 +40,7 @@ interface Props {
   currentUid: string
   currentRole: UserRole
   currentDisplayName: string
+  clientStatus?: Client['status']
 }
 
 export default function DocumentGrid({
@@ -45,6 +48,7 @@ export default function DocumentGrid({
   currentUid,
   currentRole,
   currentDisplayName,
+  clientStatus,
 }: Props) {
   const { documents, isLoading } = useClientDocuments(clientId)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -120,13 +124,21 @@ export default function DocumentGrid({
       }
     }
 
+    // Auto-infer status after successful document upload
+    if (clientStatus) {
+      const newStatus = inferStatus(clientStatus, 'document_uploaded')
+      if (newStatus) {
+        updateClient(clientId, { status: newStatus }).catch(() => {})
+      }
+    }
+
     // Clear completed uploads after a short delay
     setTimeout(() => {
       setUploads((prev) => prev.filter((u) => u.status !== 'done'))
     }, 1500)
 
     if (fileInputRef.current) fileInputRef.current.value = ''
-  }, [clientId, currentUid, currentDisplayName, uploads.length])
+  }, [clientId, currentUid, currentDisplayName, clientStatus, uploads.length])
 
   const handleDelete = async (doc: ClientDocument) => {
     if (!confirm(`¿Eliminar "${doc.name}"?`)) return

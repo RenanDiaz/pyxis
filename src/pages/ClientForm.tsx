@@ -22,6 +22,7 @@ import StateClock from '@/components/states/StateClock'
 import { getStateTimezone } from '@/lib/timezones'
 import { ArrowLeft, Plus, X } from 'lucide-react'
 import type { Client, ClientStatus, ClientPhone, PhoneLabel } from '@/types'
+import { inferStatus } from '@/lib/statusUtils'
 import { toast } from 'sonner'
 
 type FormData = Record<string, string>
@@ -151,6 +152,11 @@ export default function ClientForm() {
 
     try {
       if (isEditing && id) {
+        // Auto-infer status on edit (info_added trigger)
+        const newStatus = inferStatus(status, 'info_added')
+        if (newStatus) {
+          clientData.status = newStatus
+        }
         await updateMutation.mutateAsync({ id, data: clientData as Partial<Client> })
         toast.success('Cliente actualizado')
         navigate(`/clientes/${id}`)

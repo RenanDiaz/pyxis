@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog'
 import { DollarSign, Plus, CircleCheck, CircleAlert, Clock } from 'lucide-react'
 import type { Client, Payment, PaymentMethod } from '@/types'
+import { inferStatus } from '@/lib/statusUtils'
 
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   efectivo: 'Efectivo',
@@ -31,7 +32,7 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
 
 interface PaymentSectionProps {
   client: Client
-  onUpdate: (data: { payment_total?: number; payments?: Payment[] }) => Promise<void>
+  onUpdate: (data: { payment_total?: number; payments?: Payment[]; status?: Client['status'] }) => Promise<void>
   isPending: boolean
   suggestedTotal?: number | null
 }
@@ -69,7 +70,16 @@ export default function PaymentSection({ client, onUpdate, isPending, suggestedT
       ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
     }
 
-    await onUpdate({ payments: [...payments, newPayment] })
+    const newPayments = [...payments, newPayment]
+    const newAmountPaid = amountPaid + amount
+    const isFullPayment = total > 0 && newAmountPaid >= total
+    const trigger = isFullPayment ? 'full_payment' as const : 'partial_payment' as const
+    const newStatus = inferStatus(client.status, trigger)
+
+    await onUpdate({
+      payments: newPayments,
+      ...(newStatus ? { status: newStatus } : {}),
+    })
     setPaymentAmount('')
     setPaymentNote('')
     setShowDialog(false)
@@ -85,7 +95,12 @@ export default function PaymentSection({ client, onUpdate, isPending, suggestedT
       ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
     }
 
-    await onUpdate({ payments: [...payments, newPayment] })
+    const newStatus = inferStatus(client.status, 'full_payment')
+
+    await onUpdate({
+      payments: [...payments, newPayment],
+      ...(newStatus ? { status: newStatus } : {}),
+    })
     setPaymentNote('')
     setShowDialog(false)
   }

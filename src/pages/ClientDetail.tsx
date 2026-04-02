@@ -239,6 +239,7 @@ export default function ClientDetail() {
         currentUid={user?.uid ?? ''}
         currentRole={role}
         currentDisplayName={user?.displayName ?? user?.email ?? ''}
+        clientStatus={client.status}
       />
 
       <Card>
