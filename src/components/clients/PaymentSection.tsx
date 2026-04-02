@@ -172,8 +172,8 @@ export default function PaymentSection({ client, onUpdate, isPending, suggestedT
             <div className="space-y-2 pt-2">
               <p className="text-xs font-medium text-muted-foreground">Historial de pagos</p>
               {payments.map((p, i) => (
-                <div key={i} className="flex items-center justify-between text-sm border-b pb-2 last:border-0">
-                  <div>
+                <div key={i} className="flex items-center justify-between gap-2 text-sm border-b pb-2 last:border-0">
+                  <div className="min-w-0">
                     <p className="font-medium">${p.amount.toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">
                       {p.date} · {METHOD_LABELS[p.method] ?? p.method}

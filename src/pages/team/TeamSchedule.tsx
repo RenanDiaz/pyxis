@@ -86,7 +86,7 @@ export default function TeamSchedule() {
           />
         )}
         <Select value={outcomeFilter} onValueChange={setOutcomeFilter}>
-          <SelectTrigger className="w-[170px]">
+          <SelectTrigger className="w-full sm:w-[170px]">
             <SelectValue placeholder="Resultado" />
           </SelectTrigger>
           <SelectContent>

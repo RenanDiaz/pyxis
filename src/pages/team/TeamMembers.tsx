@@ -109,13 +109,13 @@ function TeamMembersList({ teamId }: { teamId: string }) {
           key={m.uid}
           className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors"
         >
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-medium">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-medium">
               {(m.display_name || m.email || '?')[0].toUpperCase()}
             </div>
-            <div>
-              <p className="text-sm font-medium">{m.display_name}</p>
-              <p className="text-xs text-muted-foreground">{m.email}</p>
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">{m.display_name}</p>
+              <p className="text-xs text-muted-foreground truncate">{m.email}</p>
             </div>
             <Badge
               variant="secondary"
@@ -265,13 +265,13 @@ function PendingInvitationsList({ teamId }: { teamId: string }) {
               key={inv.id}
               className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors"
             >
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-sm font-medium">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-sm font-medium">
                   <Mail className="h-4 w-4" />
                 </div>
-                <div>
-                  <p className="text-sm font-medium">{inv.email}</p>
-                  <p className="text-xs text-muted-foreground">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{inv.email}</p>
+                  <p className="text-xs text-muted-foreground truncate">
                     Invitado por {inv.invited_by_name}
                   </p>
                 </div>

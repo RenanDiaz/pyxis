@@ -222,7 +222,7 @@ export default function Schedule() {
           {calls.map((call) => (
             <Card key={call.id}>
               <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <Link
                     to={`/clientes/${call.client_id}`}
                     className="font-medium hover:underline"

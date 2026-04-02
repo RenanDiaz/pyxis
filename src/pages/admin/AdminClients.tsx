@@ -75,7 +75,7 @@ export default function AdminClients() {
       <h1 className="text-2xl font-bold tracking-tight">Todos los clientes</h1>
 
       <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-        <div className="relative flex-1 sm:max-w-xs">
+        <div className="relative flex-1 min-w-0 sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por nombre, teléfono, LLC o estado..."
@@ -85,7 +85,7 @@ export default function AdminClients() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -104,7 +104,7 @@ export default function AdminClients() {
           />
         )}
         <Select value={teamFilter} onValueChange={setTeamFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Equipo" />
           </SelectTrigger>
           <SelectContent>

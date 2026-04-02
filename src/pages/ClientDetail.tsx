@@ -106,7 +106,7 @@ export default function ClientDetail() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={() => exportClientDoc(client)}>
             <FileDown className="mr-2 h-3 w-3" />
             <span className="hidden sm:inline">Exportar</span> .docx
@@ -179,9 +179,9 @@ export default function ClientDetail() {
                   <p className="text-muted-foreground">Estado</p>
                   <p className="font-medium">{client.state || '—'}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-muted-foreground">Email</p>
-                  <p className="font-medium">{client.email || '—'}</p>
+                  <p className="font-medium break-all">{client.email || '—'}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">SSN/ITIN</p>
