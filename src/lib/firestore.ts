@@ -370,6 +370,7 @@ function addRoleConstraints(ctx: RoleContext): QueryConstraint[] {
 interface ClientFilters {
   status?: ClientStatus
   search?: string
+  archived?: boolean
 }
 
 export async function getClients(ctx: RoleContext, filters?: ClientFilters): Promise<Client[]> {
@@ -378,6 +379,9 @@ export async function getClients(ctx: RoleContext, filters?: ClientFilters): Pro
     ...addRoleConstraints(ctx),
     orderBy('created_at', 'desc'),
   ]
+  // Filter by archived status (default: only non-archived)
+  const showArchived = filters?.archived ?? false
+  constraints.unshift(where('archived', '==', showArchived))
   if (filters?.status) {
     constraints.unshift(where('status', '==', filters.status))
   }
@@ -414,6 +418,7 @@ export async function createClient(
   const now = Timestamp.now()
   const ref = await addDoc(collection(db, 'clients'), {
     ...data,
+    archived: false,
     owner_uid: ctx.uid,
     team_id: ctx.activeTeamId,
     created_at: now,
@@ -436,6 +441,13 @@ export async function updateClient(
 export async function deleteClient(id: string): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   await deleteDoc(doc(db, 'clients', id))
+}
+
+export async function findClientsByPhone(phone: string): Promise<Client[]> {
+  if (!isFirebaseConfigured || !db || !phone.trim()) return []
+  const q = query(collection(db, 'clients'), where('phone', '==', phone.trim()))
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Client))
 }
 
 // ── Calls ──

@@ -116,6 +116,7 @@ export interface Client {
   payment_total?: number
   payments?: Payment[]
   status: ClientStatus
+  archived: boolean
   notes: string
   owner_uid: string
   team_id: string | null

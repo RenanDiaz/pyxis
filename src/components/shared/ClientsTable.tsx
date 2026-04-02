@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import StatusBadge from '@/components/clients/StatusBadge'
 import { Card, CardContent } from '@/components/ui/card'
-import { Phone, Building2, MapPin, ChevronRight, Users, DollarSign } from 'lucide-react'
+import { Archive, Phone, Building2, MapPin, ChevronRight, Users, DollarSign } from 'lucide-react'
 import type { Client, UserProfile } from '@/types'
 import { getPrimaryPhoneNumber } from '@/lib/clientUtils'
 
@@ -81,7 +81,7 @@ export default function ClientsTable({
 
         return (
           <Link key={client.id} to={`${linkPrefix}/${client.id}`} className="group">
-            <Card className="transition-all hover:shadow-md hover:border-primary/30 group-focus-visible:ring-2 group-focus-visible:ring-ring">
+            <Card className={`transition-all hover:shadow-md hover:border-primary/30 group-focus-visible:ring-2 group-focus-visible:ring-ring ${client.archived ? 'opacity-60' : ''}`}>
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
@@ -120,6 +120,12 @@ export default function ClientsTable({
 
                     <div className="flex items-center flex-wrap gap-2 mt-2">
                       <StatusBadge status={client.status} />
+                      {client.archived && (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                          <Archive className="h-3 w-3" />
+                          Archivado
+                        </span>
+                      )}
                       {client.payment_total != null && client.payment_total > 0 && (() => {
                         const paid = (client.payments ?? []).reduce((s, p) => s + p.amount, 0)
                         const bal = client.payment_total - paid
