@@ -6,19 +6,6 @@ export type StatusTrigger = 'info_added' | 'document_uploaded' | 'partial_paymen
  * Status priority order (lower index = less advanced).
  * Automatic transitions only move forward, never backward.
  */
-const STATUS_ORDER: ClientStatus[] = [
-  'nuevo',
-  'contactado',
-  'en_proceso',
-  'cerrado',
-  'perdido',
-  'deuda_pendiente',
-]
-
-function statusIndex(status: ClientStatus): number {
-  return STATUS_ORDER.indexOf(status)
-}
-
 /**
  * Given the current client status and a trigger event, returns the new
  * status if an automatic transition applies, or `null` if no change.
