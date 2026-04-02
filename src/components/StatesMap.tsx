@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ComposableMap,
@@ -6,8 +6,11 @@ import {
   Geography,
   ZoomableGroup,
 } from 'react-simple-maps'
+import { formatInTimeZone } from 'date-fns-tz'
+import { es } from 'date-fns/locale'
 import type { StateInfo } from '@/types'
 import { formatPrice, formatDays } from '@/lib/format'
+import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
 
 // Pre-projected AlbersUSA topology — includes Alaska & Hawaii insets
 import statesAlbers from 'us-atlas/states-albers-10m.json'
@@ -18,8 +21,21 @@ interface StatesMapProps {
   filteredStates: StateInfo[]
 }
 
+function formatStateTime(abbreviation: string, now: Date): string {
+  const tz = getStateTimezone(abbreviation)
+  const time = formatInTimeZone(now, tz, 'h:mm a', { locale: es })
+  return `${time} — ${getTimezoneLabel(tz)}`
+}
+
 export default function StatesMap({ states, search, filteredStates }: StatesMapProps) {
   const navigate = useNavigate()
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(interval)
+  }, [])
+
   const [tooltip, setTooltip] = useState<{
     state: StateInfo
     x: number
@@ -174,7 +190,7 @@ export default function StatesMap({ states, search, filteredStates }: StatesMapP
                   {formatPrice(tooltip.state.sale_price)}
                 </span>
               </span>
-              <span>Fee del estado: {formatPrice(tooltip.state.state_fee)}</span>
+              <span>{formatStateTime(tooltip.state.abbreviation, now)}</span>
               <span>Proceso: {formatDays(tooltip.state.processing_days)} días</span>
             </div>
           </div>
@@ -194,7 +210,7 @@ export default function StatesMap({ states, search, filteredStates }: StatesMapP
                   {formatPrice(exactMatch.sale_price)}
                 </span>
               </span>
-              <span>Fee del estado: {formatPrice(exactMatch.state_fee)}</span>
+              <span>{formatStateTime(exactMatch.abbreviation, now)}</span>
               <span>Proceso: {formatDays(exactMatch.processing_days)} días</span>
             </div>
           </div>
