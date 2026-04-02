@@ -381,15 +381,25 @@ export async function getClients(ctx: RoleContext, filters?: ClientFilters): Pro
     ...addRoleConstraints(ctx),
     orderBy('created_at', 'desc'),
   ]
-  // Filter by archived status (default: only non-archived)
+  // Filter by archived status:
+  // When showing archived, query for archived == true.
+  // When showing non-archived (default), don't add a Firestore filter because
+  // older documents may not have the 'archived' field at all, and Firestore's
+  // equality check won't match documents where the field is missing.
   const showArchived = filters?.archived ?? false
-  constraints.unshift(where('archived', '==', showArchived))
+  if (showArchived) {
+    constraints.unshift(where('archived', '==', true))
+  }
   if (filters?.status) {
     constraints.unshift(where('status', '==', filters.status))
   }
   const q = query(collection(db, 'clients'), ...constraints)
   const snapshot = await getDocs(q)
   let clients = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Client))
+  // Client-side filter: exclude archived clients when not showing archived
+  if (!showArchived) {
+    clients = clients.filter((c) => !c.archived)
+  }
   if (filters?.search) {
     const s = filters.search.toLowerCase()
     clients = clients.filter(
