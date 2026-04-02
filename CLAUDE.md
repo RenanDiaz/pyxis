@@ -70,6 +70,7 @@ Ver los esquemas completos en los archivos `src/data/*.json` y los types en el c
 - Colores semafóricos para status de clientes: nuevo (azul), contactado (amarillo), en_proceso (naranja), cerrado (verde), perdido (rojo/gris)
 - La info de estados debe ser fácil de escanear durante una llamada
 - Mobile-friendly
+- Layout y scroll: usar scroll nativo del documento. No aplicar overflow: hidden/auto ni height: 100% en html/body/#root. Sidebar fixed, header sticky, contenido en flujo normal. Usar unidades dvh en vez de vh para compatibilidad con iOS Safari.
 
 # Feature completado — Roles, equipos y colecciones raíz
 Clientes y llamadas ahora usan colecciones raíz (`/clients`, `/calls`)
