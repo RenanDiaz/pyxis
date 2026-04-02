@@ -1,9 +1,14 @@
+import { useState } from 'react'
+import { format } from 'date-fns'
 import { useClients } from '@/hooks/useClients'
 import { useCalls } from '@/hooks/useCalls'
 import { useTeamMembers } from '@/hooks/useUsers'
 import { useTeamContext } from '@/contexts/TeamContext'
+import { useTeamGoalsForPeriod } from '@/hooks/useGoals'
+import GoalModal from '@/components/goals/GoalModal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Phone, BarChart3, Trophy } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Users, Phone, BarChart3, Trophy, Target, Plus } from 'lucide-react'
 import { startOfDay, endOfDay } from 'date-fns'
 import type { ClientStatus } from '@/types'
 
@@ -36,6 +41,13 @@ export default function TeamMetrics() {
     toDate: endOfDay(now),
   })
 
+  const monthlyPeriod = format(now, 'yyyy-MM')
+  const { data: teamGoals } = useTeamGoalsForPeriod(activeTeamId, 'monthly', monthlyPeriod)
+
+  const [goalModalOpen, setGoalModalOpen] = useState(false)
+  const [goalTargetUid, setGoalTargetUid] = useState<string | null>(null)
+  const [goalTargetName, setGoalTargetName] = useState<string>('')
+
   const totalClients = clients?.length ?? 0
   const totalCallsToday = todayCalls?.length ?? 0
 
@@ -53,6 +65,32 @@ export default function TeamMetrics() {
   const topAgentUid = Object.entries(clientsByAgent).sort((a, b) => b[1] - a[1])[0]?.[0]
   const topAgent = members?.find((m) => m.uid === topAgentUid)
   const topAgentCount = topAgentUid ? clientsByAgent[topAgentUid] : 0
+
+  // Monthly closed by agent
+  const closedByAgent = (clients ?? []).reduce<Record<string, number>>((acc, c) => {
+    if (c.status !== 'cerrado') return acc
+    const d = c.updated_at?.toDate?.()
+    if (!d) return acc
+    const m = format(d, 'yyyy-MM')
+    if (m !== monthlyPeriod) return acc
+    acc[c.owner_uid] = (acc[c.owner_uid] || 0) + 1
+    return acc
+  }, {})
+
+  // Build a map of latest goal per agent (by precedence: most recent created_at)
+  const goalByAgent = (teamGoals ?? []).reduce<Record<string, number>>((acc, g) => {
+    // Goals are already ordered by created_at desc, so first one per agent wins
+    if (!(g.target_uid in acc)) {
+      acc[g.target_uid] = g.value
+    }
+    return acc
+  }, {})
+
+  const openGoalModal = (uid: string, name: string) => {
+    setGoalTargetUid(uid)
+    setGoalTargetName(name)
+    setGoalModalOpen(true)
+  }
 
   const isLoading = loadingClients || loadingCalls
 
@@ -122,6 +160,64 @@ export default function TeamMetrics() {
         </Card>
       </div>
 
+      {/* Team goals */}
+      <Card>
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            Metas del mes — {monthlyPeriod}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!members || members.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay miembros en el equipo</p>
+          ) : (
+            <div className="space-y-4">
+              {members.map((member) => {
+                const closed = closedByAgent[member.uid] ?? 0
+                const goalValue = goalByAgent[member.uid]
+                const hasGoal = goalValue != null
+                const pct = hasGoal && goalValue > 0 ? Math.min((closed / goalValue) * 100, 100) : 0
+
+                return (
+                  <div key={member.uid} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{member.display_name}</span>
+                      <div className="flex items-center gap-2">
+                        {hasGoal ? (
+                          <span className="text-muted-foreground">
+                            {closed} de {goalValue} ventas
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">Sin meta</span>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => openGoalModal(member.uid, member.display_name)}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Meta
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                      {hasGoal && (
+                        <div
+                          className="h-full rounded-full bg-green-500 transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Clientes por status</CardTitle>
@@ -155,6 +251,20 @@ export default function TeamMetrics() {
           )}
         </CardContent>
       </Card>
+
+      {/* Goal modal for team members */}
+      {goalTargetUid && (
+        <GoalModal
+          open={goalModalOpen}
+          onOpenChange={(open) => {
+            setGoalModalOpen(open)
+            if (!open) setGoalTargetUid(null)
+          }}
+          targetUid={goalTargetUid}
+          teamId={activeTeamId}
+          targetName={goalTargetName}
+        />
+      )}
     </div>
   )
 }

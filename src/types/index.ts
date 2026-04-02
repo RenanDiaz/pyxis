@@ -154,6 +154,20 @@ export interface ClientFormField {
   sensitive?: boolean
 }
 
+export type GoalType = 'daily' | 'monthly'
+
+export interface Goal {
+  id: string
+  target_uid: string
+  team_id: string | null
+  type: GoalType
+  value: number
+  set_by_uid: string
+  set_by_role: UserRole
+  period: string // "2025-01" for monthly, "2025-01-15" for daily
+  created_at: Timestamp
+}
+
 export type DocFileType = 'image' | 'pdf' | 'word' | 'excel' | 'other'
 
 export interface ClientDocument {

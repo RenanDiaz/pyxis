@@ -31,6 +31,8 @@ import type {
   TeamMembership,
   TeamInvitation,
   InvitationStatus,
+  Goal,
+  GoalType,
 } from '@/types'
 
 // ── User Profiles ──
@@ -535,6 +537,52 @@ export async function updateCall(
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   await updateDoc(doc(db, 'calls', id), data)
+}
+
+// ── Goals ──
+
+export async function getGoalsForAgent(
+  targetUid: string,
+  type: GoalType,
+  period: string
+): Promise<Goal[]> {
+  if (!isFirebaseConfigured || !db) return []
+  const q = query(
+    collection(db, 'goals'),
+    where('target_uid', '==', targetUid),
+    where('type', '==', type),
+    where('period', '==', period),
+    orderBy('created_at', 'desc'),
+    limit(1)
+  )
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Goal))
+}
+
+export async function getTeamGoals(
+  teamId: string,
+  type: GoalType,
+  period: string
+): Promise<Goal[]> {
+  if (!isFirebaseConfigured || !db) return []
+  const q = query(
+    collection(db, 'goals'),
+    where('team_id', '==', teamId),
+    where('type', '==', type),
+    where('period', '==', period),
+    orderBy('created_at', 'desc')
+  )
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Goal))
+}
+
+export async function createGoal(data: Omit<Goal, 'id' | 'created_at'>): Promise<string> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  const ref = await addDoc(collection(db, 'goals'), {
+    ...data,
+    created_at: serverTimestamp(),
+  })
+  return ref.id
 }
 
 // ── Dashboard helpers ──
