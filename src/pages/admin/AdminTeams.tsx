@@ -61,10 +61,10 @@ function TeamMembersList({ teamId }: { teamId: string }) {
           key={m.uid}
           className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50"
         >
-          <div className="flex items-center gap-2">
-            <div>
-              <p className="text-sm font-medium">{m.display_name}</p>
-              <p className="text-xs text-muted-foreground">{m.email}</p>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">{m.display_name}</p>
+              <p className="text-xs text-muted-foreground truncate">{m.email}</p>
             </div>
             <Badge
               variant="secondary"
@@ -201,9 +201,9 @@ function PendingInvitationsList({ teamId }: { teamId: string }) {
             key={inv.id}
             className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50"
           >
-            <div className="flex items-center gap-2">
-              <div>
-                <p className="text-sm">{inv.email}</p>
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="min-w-0">
+                <p className="text-sm truncate">{inv.email}</p>
               </div>
               <Badge
                 variant="secondary"

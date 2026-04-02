@@ -280,12 +280,12 @@ export default function Home() {
                   return (
                     <div
                       key={call.id}
-                      className="flex items-center justify-between border-b pb-2 last:border-0"
+                      className="flex items-center justify-between gap-2 border-b pb-2 last:border-0"
                     >
-                      <div className="text-sm">
+                      <div className="text-sm min-w-0">
                         <Link
                           to={`/clientes/${call.client_id}`}
-                          className="font-medium hover:underline"
+                          className="font-medium hover:underline truncate block"
                         >
                           {clientName}
                         </Link>
@@ -333,17 +333,17 @@ export default function Home() {
                 {recentClients.map((client) => (
                   <div
                     key={client.id}
-                    className="flex items-center justify-between border-b pb-2 last:border-0"
+                    className="flex items-center justify-between gap-2 border-b pb-2 last:border-0"
                   >
-                    <div className="text-sm">
+                    <div className="text-sm min-w-0">
                       <Link
                         to={`/clientes/${client.id}`}
-                        className="font-medium hover:underline"
+                        className="font-medium hover:underline truncate block"
                       >
                         {getClientDisplayName(client)}
                       </Link>
                       {client.llc_name && (
-                        <p className="text-muted-foreground">{client.llc_name}</p>
+                        <p className="text-muted-foreground truncate">{client.llc_name}</p>
                       )}
                     </div>
                     <StatusBadge status={client.status} />

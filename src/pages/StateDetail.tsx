@@ -163,7 +163,7 @@ export default function StateDetail() {
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground mb-1">Códigos postales (ZIP codes)</p>
-              <p className="text-lg font-semibold font-mono">
+              <p className="text-lg font-semibold font-mono break-words">
                 {state.zip_code_range.split(',').map((range, i) => {
                   const trimmed = range.trim()
                   const [start, end] = trimmed.split('-')

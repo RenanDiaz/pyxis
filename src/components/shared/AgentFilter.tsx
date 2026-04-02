@@ -20,7 +20,7 @@ function getAgentLabel(agent: UserProfile) {
 export default function AgentFilter({ agents, value, onChange }: AgentFilterProps) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-[200px]">
+      <SelectTrigger className="w-full sm:w-[200px]">
         <SelectValue placeholder="Agente" />
       </SelectTrigger>
       <SelectContent>

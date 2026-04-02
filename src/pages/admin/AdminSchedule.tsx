@@ -103,7 +103,7 @@ export default function AdminSchedule() {
           />
         )}
         <Select value={outcomeFilter} onValueChange={setOutcomeFilter}>
-          <SelectTrigger className="w-[170px]">
+          <SelectTrigger className="w-full sm:w-[170px]">
             <SelectValue placeholder="Resultado" />
           </SelectTrigger>
           <SelectContent>
@@ -116,7 +116,7 @@ export default function AdminSchedule() {
           </SelectContent>
         </Select>
         <Select value={teamFilter} onValueChange={setTeamFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Equipo" />
           </SelectTrigger>
           <SelectContent>

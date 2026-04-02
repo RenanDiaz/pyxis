@@ -225,19 +225,19 @@ export default function ClientForm() {
                   Teléfonos <span className="text-destructive ml-1">*</span>
                 </Label>
                 {phones.map((phone, index) => (
-                  <div key={index} className="flex items-center gap-2">
+                  <div key={index} className="flex flex-wrap items-center gap-2">
                     <Input
                       type="tel"
                       value={phone.number}
                       onChange={(e) => updatePhone(index, 'number', e.target.value)}
                       placeholder="Número telefónico"
-                      className="flex-1"
+                      className="min-w-0 flex-1 basis-40"
                     />
                     <Select
                       value={phone.label}
                       onValueChange={(v) => updatePhone(index, 'label', v as PhoneLabel)}
                     >
-                      <SelectTrigger className="w-[140px]">
+                      <SelectTrigger className="w-[130px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

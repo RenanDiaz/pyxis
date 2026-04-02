@@ -8,7 +8,7 @@ export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex min-h-dvh max-w-full overflow-x-hidden">
+    <div className="flex min-h-dvh w-full">
       {/* Desktop sidebar */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-64 lg:flex-col border-r bg-sidebar text-sidebar-foreground">
         <Sidebar />
@@ -22,7 +22,7 @@ export default function AppLayout() {
       </Sheet>
 
       {/* Main content */}
-      <div className="flex-1 lg:pl-64">
+      <div className="flex-1 min-w-0 lg:pl-64">
         <Header onMenuToggle={() => setSidebarOpen(true)} />
         <main className="p-4 lg:p-6">
           <Outlet />
