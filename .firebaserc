@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "pyxis-crm"
-  }
+    "default": "pyxis-crm",
+    "prod": "pyxis-crm"
+  },
+  "targets": {},
+  "etags": {}
 }
