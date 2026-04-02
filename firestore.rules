@@ -115,7 +115,7 @@ service cloud.firestore {
                   && (isAdmin()
                       || resource.data.target_uid == request.auth.uid
                       || resource.data.set_by_uid == request.auth.uid
-                      || isTeamAdmin(resource.data.team_id));
+                      || isTeamMember(resource.data.team_id));
       allow create: if request.auth != null;
       allow update: if request.auth != null
                     && (isAdmin()
