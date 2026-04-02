@@ -8,7 +8,7 @@ export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-dvh overflow-hidden">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:sticky lg:top-0 lg:h-screen border-r bg-sidebar text-sidebar-foreground">
         <Sidebar />
