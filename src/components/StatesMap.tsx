@@ -94,6 +94,10 @@ export default function StatesMap({ states, search, filteredStates }: StatesMapP
       <div className="w-full border rounded-lg bg-card overflow-hidden">
         <ComposableMap
           projection="geoIdentity"
+          projectionConfig={{
+            scale: 1,
+            translate: [0, 0],
+          }}
           width={975}
           height={610}
           style={{ width: '100%', height: 'auto' }}
