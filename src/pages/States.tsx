@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useStates } from '@/hooks/useStates'
 import { formatPrice, formatDays } from '@/lib/format'
-import { getStateTimezone } from '@/lib/timezones'
+import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
 import { getSpanishName } from '@/lib/stateNamesEs'
 import { filterStates } from '@/lib/stateSearch'
 import { formatInTimeZone } from 'date-fns-tz'
@@ -33,7 +33,7 @@ export default function States() {
   const [view, setView] = useState<ViewMode>(getInitialView)
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 30_000)
+    const interval = setInterval(() => setNow(new Date()), 60_000)
     return () => clearInterval(interval)
   }, [])
 
@@ -103,26 +103,23 @@ export default function States() {
                 <Link key={state.abbreviation} to={`/estados/${state.abbreviation}`}>
                   <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
                     <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold">{state.name}</h3>
-                            <Badge variant="secondary">{state.abbreviation}</Badge>
-                          </div>
-                          {spanishName && (
-                            <p className="text-sm text-muted-foreground">{spanishName}</p>
-                          )}
-                          <p className="text-2xl font-bold text-primary mt-1">
-                            {formatPrice(state.sale_price)}
-                          </p>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">{state.name}</h3>
+                          <Badge variant="secondary">{state.abbreviation}</Badge>
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                          <Clock className="h-3 w-3" />
-                          <span>{time}</span>
-                        </div>
+                        {spanishName && (
+                          <p className="text-sm text-muted-foreground">{spanishName}</p>
+                        )}
+                        <p className="text-2xl font-bold text-primary mt-1">
+                          {formatPrice(state.sale_price)}
+                        </p>
                       </div>
                       <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
-                        <span>Fee: {formatPrice(state.state_fee)}</span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {time} — {getTimezoneLabel(tz)}
+                        </span>
                         <span>{formatDays(state.processing_days)} días</span>
                       </div>
                     </CardContent>

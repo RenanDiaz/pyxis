@@ -5,7 +5,6 @@ export const PROCESSES = [
     priceKey: "sale_price",
     fields: [
       { key: "sale_price",        label: "Precio de venta",  format: "currency" as const },
-      { key: "state_fee",         label: "Fee del estado",   format: "currency" as const },
       { key: "processing_days",   label: "Días de proceso",  format: "integer" as const },
     ],
   },
