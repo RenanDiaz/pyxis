@@ -137,173 +137,180 @@ export default function ClientDetail() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Información</CardTitle>
-              <StatusSelect value={client.status} onChange={handleStatusChange} />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="col-span-2">
-                <p className="text-muted-foreground mb-1">Teléfono(s)</p>
-                {(() => {
-                  const allPhones = getAllPhones(client)
-                  if (allPhones.length === 0) return <p className="font-medium">—</p>
-                  return (
-                    <div className="space-y-1">
-                      {allPhones.map((p, i) => (
-                        <a
-                          key={i}
-                          href={`tel:${p.number}`}
-                          className="flex items-center gap-1.5 font-medium text-primary hover:underline"
-                        >
-                          <Phone className="h-3.5 w-3.5" />
-                          {p.number}
-                          <span className="text-xs text-muted-foreground font-normal">
-                            ({PHONE_LABELS[p.label] || p.label})
-                            {p.is_primary && ' — principal'}
-                          </span>
-                        </a>
-                      ))}
-                    </div>
-                  )
-                })()}
-              </div>
-              <div>
-                <p className="text-muted-foreground">Estado</p>
-                <p className="font-medium">{client.state || '—'}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Email</p>
-                <p className="font-medium">{client.email || '—'}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">SSN/ITIN</p>
-                <p className="font-medium">{client.ssn_itin ? `••••${client.ssn_itin.slice(-4)}` : '—'}</p>
-              </div>
-            </div>
-            <Separator />
-            <div className="text-sm">
-              <p className="text-muted-foreground">Dirección comercial</p>
-              <p className="font-medium whitespace-pre-line">{client.business_address || '—'}</p>
-            </div>
-            <div className="text-sm">
-              <p className="text-muted-foreground">Propósito del negocio</p>
-              <p className="font-medium">{client.business_purpose || '—'}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Notas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Textarea
-              value={currentNotes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Escribe notas sobre el cliente..."
-              rows={6}
-            />
-            <Button
-              size="sm"
-              onClick={handleSaveNotes}
-              disabled={notes === null || updateMutation.isPending}
-            >
-              Guardar notas
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {client.process && client.state && (() => {
-        const process = PROCESSES.find((p) => p.id === client.process)
-        const state = states?.find((s) => s.abbreviation === client.state)
-        if (!process || !state) return null
-        return (
+      {/* Desktop: 2-column layout (40/60) — Mobile: single column */}
+      <div className="lg:grid lg:grid-cols-5 lg:gap-6 space-y-6 lg:space-y-0">
+        {/* Left column: info, process, notes */}
+        <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Proceso contratado
-              </CardTitle>
-              <p className="text-sm font-medium">
-                {process.label} — {state.name} ({state.abbreviation})
-              </p>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Información</CardTitle>
+                <StatusSelect value={client.status} onChange={handleStatusChange} />
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <StateClock timezone={getStateTimezone(state.abbreviation)} />
-              <dl className="grid gap-3 sm:grid-cols-2">
-                {process.fields.map((f) => (
-                  <div key={f.key} className="flex items-center justify-between text-sm">
-                    <dt className="text-muted-foreground">{f.label}</dt>
-                    <dd className="font-semibold">{formatFieldValue(getFieldValue(state, f.key), f.format)}</dd>
-                  </div>
-                ))}
-              </dl>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="col-span-2">
+                  <p className="text-muted-foreground mb-1">Teléfono(s)</p>
+                  {(() => {
+                    const allPhones = getAllPhones(client)
+                    if (allPhones.length === 0) return <p className="font-medium">—</p>
+                    return (
+                      <div className="space-y-1">
+                        {allPhones.map((p, i) => (
+                          <a
+                            key={i}
+                            href={`tel:${p.number}`}
+                            className="flex items-center gap-1.5 font-medium text-primary hover:underline"
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                            {p.number}
+                            <span className="text-xs text-muted-foreground font-normal">
+                              ({PHONE_LABELS[p.label] || p.label})
+                              {p.is_primary && ' — principal'}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Estado</p>
+                  <p className="font-medium">{client.state || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Email</p>
+                  <p className="font-medium">{client.email || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">SSN/ITIN</p>
+                  <p className="font-medium">{client.ssn_itin ? `••••${client.ssn_itin.slice(-4)}` : '—'}</p>
+                </div>
+              </div>
+              <Separator />
+              <div className="text-sm">
+                <p className="text-muted-foreground">Dirección comercial</p>
+                <p className="font-medium whitespace-pre-line">{client.business_address || '—'}</p>
+              </div>
+              <div className="text-sm">
+                <p className="text-muted-foreground">Propósito del negocio</p>
+                <p className="font-medium">{client.business_purpose || '—'}</p>
+              </div>
             </CardContent>
           </Card>
-        )
-      })()}
 
-      <PaymentSection
-        client={client}
-        onUpdate={async (data) => {
-          await updateMutation.mutateAsync({ id: client.id, data })
-          toast.success('Pagos actualizados')
-        }}
-        isPending={updateMutation.isPending}
-        suggestedTotal={(() => {
-          if (client.payment_total) return null
-          const st = client.state && states?.find((s) => s.abbreviation === client.state)
-          return st && client.process ? getProcessPrice(st, client.process) : null
-        })()}
-      />
+          {client.process && client.state && (() => {
+            const process = PROCESSES.find((p) => p.id === client.process)
+            const state = states?.find((s) => s.abbreviation === client.state)
+            if (!process || !state) return null
+            return (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Proceso contratado
+                  </CardTitle>
+                  <p className="text-sm font-medium">
+                    {process.label} — {state.name} ({state.abbreviation})
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <StateClock timezone={getStateTimezone(state.abbreviation)} />
+                  <dl className="grid gap-3">
+                    {process.fields.map((f) => (
+                      <div key={f.key} className="flex items-center justify-between text-sm">
+                        <dt className="text-muted-foreground">{f.label}</dt>
+                        <dd className="font-semibold">{formatFieldValue(getFieldValue(state, f.key), f.format)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </CardContent>
+              </Card>
+            )
+          })()}
 
-      <DocumentGrid
-        clientId={client.id}
-        currentUid={user?.uid ?? ''}
-        currentRole={role}
-        currentDisplayName={user?.displayName ?? user?.email ?? ''}
-        clientStatus={client.status}
-      />
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Notas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Textarea
+                value={currentNotes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Escribe notas sobre el cliente..."
+                rows={6}
+              />
+              <Button
+                size="sm"
+                onClick={handleSaveNotes}
+                disabled={notes === null || updateMutation.isPending}
+              >
+                Guardar notas
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Historial de llamadas
-            </CardTitle>
-            <Button asChild size="sm" variant="outline">
-              <Link to={`/agenda?client=${client.id}`}>
-                <Phone className="mr-2 h-3 w-3" />
-                Agendar llamada
-              </Link>
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {!calls || calls.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No hay llamadas registradas</p>
-          ) : (
-            <div className="space-y-3">
-              {calls.map((call) => (
-                <div key={call.id} className="flex items-center justify-between border-b pb-2 last:border-0">
-                  <div className="text-sm">
-                    <p className="font-medium">
-                      {call.scheduled_at?.toDate?.()?.toLocaleDateString('es-MX') ?? 'Sin fecha'}
-                    </p>
-                    <p className="text-muted-foreground">{call.notes || 'Sin notas'}</p>
-                  </div>
-                  <OutcomeBadge outcome={call.outcome} />
+        {/* Right column: payments, documents, call history */}
+        <div className="lg:col-span-3 space-y-6">
+          <PaymentSection
+            client={client}
+            onUpdate={async (data) => {
+              await updateMutation.mutateAsync({ id: client.id, data })
+              toast.success('Pagos actualizados')
+            }}
+            isPending={updateMutation.isPending}
+            suggestedTotal={(() => {
+              if (client.payment_total) return null
+              const st = client.state && states?.find((s) => s.abbreviation === client.state)
+              return st && client.process ? getProcessPrice(st, client.process) : null
+            })()}
+          />
+
+          <DocumentGrid
+            clientId={client.id}
+            currentUid={user?.uid ?? ''}
+            currentRole={role}
+            currentDisplayName={user?.displayName ?? user?.email ?? ''}
+            clientStatus={client.status}
+          />
+
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Historial de llamadas
+                </CardTitle>
+                <Button asChild size="sm" variant="outline">
+                  <Link to={`/agenda?client=${client.id}`}>
+                    <Phone className="mr-2 h-3 w-3" />
+                    Agendar llamada
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!calls || calls.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay llamadas registradas</p>
+              ) : (
+                <div className="space-y-3">
+                  {calls.map((call) => (
+                    <div key={call.id} className="flex items-center justify-between border-b pb-2 last:border-0">
+                      <div className="text-sm">
+                        <p className="font-medium">
+                          {call.scheduled_at?.toDate?.()?.toLocaleDateString('es-MX') ?? 'Sin fecha'}
+                        </p>
+                        <p className="text-muted-foreground">{call.notes || 'Sin notas'}</p>
+                      </div>
+                      <OutcomeBadge outcome={call.outcome} />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
