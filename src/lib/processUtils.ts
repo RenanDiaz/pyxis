@@ -1,4 +1,14 @@
 import type { StateInfo } from '@/types'
+import { PROCESSES } from '@/data/processes'
+
+export function getProcessPrice(state: StateInfo, processId: string): number | null {
+  const process = PROCESSES.find((p) => p.id === processId)
+  if (!process) return null
+  const raw = getFieldValue(state, process.priceKey)
+  if (raw === '—') return null
+  const num = parseFloat(raw.replace(/[$,]/g, ''))
+  return isNaN(num) ? null : num
+}
 
 export function getFieldValue(state: StateInfo, key: string): string {
   const parts = key.split('.')
