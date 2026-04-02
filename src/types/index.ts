@@ -78,7 +78,7 @@ export interface Trade {
   description_es: string
 }
 
-export type ClientStatus = 'nuevo' | 'contactado' | 'en_proceso' | 'cerrado' | 'perdido'
+export type ClientStatus = 'nuevo' | 'contactado' | 'en_proceso' | 'cerrado' | 'perdido' | 'deuda_pendiente'
 
 export type ProcessType = 'registration' | 'annual_report' | 'dissolution' | 'amendment'
 

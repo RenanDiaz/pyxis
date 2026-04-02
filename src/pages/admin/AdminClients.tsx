@@ -22,6 +22,7 @@ const STATUS_OPTIONS = [
   { value: 'en_proceso', label: 'En proceso' },
   { value: 'cerrado', label: 'Cerrado' },
   { value: 'perdido', label: 'Perdido' },
+  { value: 'deuda_pendiente', label: 'Deuda pendiente' },
 ]
 
 export default function AdminClients() {
