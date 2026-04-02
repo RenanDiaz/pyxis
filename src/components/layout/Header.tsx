@@ -30,7 +30,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     : user?.email?.slice(0, 2).toUpperCase() ?? '?'
 
   return (
-    <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:px-6">
+    <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b bg-card px-4 lg:px-6">
       <Button
         variant="ghost"
         size="icon"
