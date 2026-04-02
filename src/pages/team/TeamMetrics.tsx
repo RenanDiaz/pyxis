@@ -149,11 +149,14 @@ export default function TeamMetrics() {
             <Trophy className="h-4 w-4 shrink-0 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold truncate">
+            <div className="flex items-baseline gap-1 text-2xl font-bold">
               {isLoading
                 ? '...'
                 : topAgent
-                  ? `${topAgent.display_name} (${topAgentCount})`
+                  ? <>
+                      <span className="truncate">{topAgent.display_name}</span>
+                      <span className="shrink-0">({topAgentCount})</span>
+                    </>
                   : '—'}
             </div>
           </CardContent>
