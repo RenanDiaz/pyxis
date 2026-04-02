@@ -33,9 +33,10 @@ interface PaymentSectionProps {
   client: Client
   onUpdate: (data: { payment_total?: number; payments?: Payment[] }) => Promise<void>
   isPending: boolean
+  suggestedTotal?: number | null
 }
 
-export default function PaymentSection({ client, onUpdate, isPending }: PaymentSectionProps) {
+export default function PaymentSection({ client, onUpdate, isPending, suggestedTotal }: PaymentSectionProps) {
   const [showDialog, setShowDialog] = useState(false)
   const [showTotalDialog, setShowTotalDialog] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState('')
@@ -136,7 +137,7 @@ export default function PaymentSection({ client, onUpdate, isPending }: PaymentS
               size="sm"
               variant="outline"
               onClick={() => {
-                setTotalInput(total > 0 ? String(total) : '')
+                setTotalInput(total > 0 ? String(total) : (suggestedTotal ? String(suggestedTotal) : ''))
                 setShowTotalDialog(true)
               }}
             >

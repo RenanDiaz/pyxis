@@ -6,7 +6,7 @@ import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useAuth } from '@/contexts/AuthContext'
 import { PROCESSES } from '@/data/processes'
-import { getFieldValue, formatFieldValue } from '@/lib/processUtils'
+import { getFieldValue, formatFieldValue, getProcessPrice } from '@/lib/processUtils'
 import StatusSelect from '@/components/clients/StatusSelect'
 import PaymentSection from '@/components/clients/PaymentSection'
 import OutcomeBadge from '@/components/calls/OutcomeBadge'
@@ -227,6 +227,11 @@ export default function ClientDetail() {
           toast.success('Pagos actualizados')
         }}
         isPending={updateMutation.isPending}
+        suggestedTotal={(() => {
+          if (client.payment_total) return null
+          const st = client.state && states?.find((s) => s.abbreviation === client.state)
+          return st && client.process ? getProcessPrice(st, client.process) : null
+        })()}
       />
 
       <DocumentGrid
