@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import StatusBadge from '@/components/clients/StatusBadge'
 import { Card, CardContent } from '@/components/ui/card'
-import { Phone, Building2, MapPin, ChevronRight, Users } from 'lucide-react'
+import { Phone, Building2, MapPin, ChevronRight, Users, DollarSign } from 'lucide-react'
 import type { Client, UserProfile } from '@/types'
 import { getPrimaryPhoneNumber } from '@/lib/clientUtils'
 
@@ -120,6 +120,25 @@ export default function ClientsTable({
 
                     <div className="flex items-center flex-wrap gap-2 mt-2">
                       <StatusBadge status={client.status} />
+                      {client.payment_total != null && client.payment_total > 0 && (() => {
+                        const paid = (client.payments ?? []).reduce((s, p) => s + p.amount, 0)
+                        const bal = client.payment_total - paid
+                        if (bal <= 0) return (
+                          <span className="inline-flex items-center gap-0.5 text-xs text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full dark:bg-green-900/30 dark:text-green-300">
+                            <DollarSign className="h-3 w-3" /> Pagado
+                          </span>
+                        )
+                        if (paid > 0) return (
+                          <span className="inline-flex items-center gap-0.5 text-xs text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded-full dark:bg-orange-900/30 dark:text-orange-300">
+                            <DollarSign className="h-3 w-3" /> Debe ${bal.toLocaleString()}
+                          </span>
+                        )
+                        return (
+                          <span className="inline-flex items-center gap-0.5 text-xs text-red-700 bg-red-100 px-1.5 py-0.5 rounded-full dark:bg-red-900/30 dark:text-red-300">
+                            <DollarSign className="h-3 w-3" /> Pendiente
+                          </span>
+                        )
+                      })()}
                       {agentName && (
                         <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                           {agentName}

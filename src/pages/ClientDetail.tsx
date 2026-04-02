@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { PROCESSES } from '@/data/processes'
 import { getFieldValue, formatFieldValue } from '@/lib/processUtils'
 import StatusSelect from '@/components/clients/StatusSelect'
+import PaymentSection from '@/components/clients/PaymentSection'
 import OutcomeBadge from '@/components/calls/OutcomeBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import StateClock from '@/components/states/StateClock'
@@ -218,6 +219,15 @@ export default function ClientDetail() {
           </Card>
         )
       })()}
+
+      <PaymentSection
+        client={client}
+        onUpdate={async (data) => {
+          await updateMutation.mutateAsync({ id: client.id, data })
+          toast.success('Pagos actualizados')
+        }}
+        isPending={updateMutation.isPending}
+      />
 
       <DocumentGrid
         clientId={client.id}

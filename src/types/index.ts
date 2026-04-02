@@ -82,6 +82,15 @@ export type ClientStatus = 'nuevo' | 'contactado' | 'en_proceso' | 'cerrado' | '
 
 export type ProcessType = 'registration' | 'annual_report' | 'dissolution' | 'amendment'
 
+export type PaymentMethod = 'efectivo' | 'zelle' | 'transferencia' | 'otro'
+
+export interface Payment {
+  amount: number
+  method: PaymentMethod
+  date: string // ISO date string
+  note?: string
+}
+
 export type PhoneLabel = 'personal' | 'whatsapp' | 'trabajo' | 'otro'
 
 export interface ClientPhone {
@@ -104,6 +113,8 @@ export interface Client {
   email?: string
   business_address?: string
   business_purpose?: string
+  payment_total?: number
+  payments?: Payment[]
   status: ClientStatus
   notes: string
   owner_uid: string
