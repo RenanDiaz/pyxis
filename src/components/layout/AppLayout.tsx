@@ -10,7 +10,7 @@ export default function AppLayout() {
   return (
     <div className="flex h-screen">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex lg:w-64 lg:flex-col border-r bg-sidebar text-sidebar-foreground">
+      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:sticky lg:top-0 lg:h-screen border-r bg-sidebar text-sidebar-foreground">
         <Sidebar />
       </aside>
 
@@ -22,9 +22,9 @@ export default function AppLayout() {
       </Sheet>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto">
         <Header onMenuToggle={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main className="p-4 lg:p-6">
           <Outlet />
         </main>
       </div>
