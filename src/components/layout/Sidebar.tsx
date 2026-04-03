@@ -66,7 +66,7 @@ function NavSection({ title, items, onNavigate }: { title?: string; items: NavIt
           <NavLink
             key={to}
             to={to}
-            end={to === '/'}
+            end={to === '/' || to === '/workspace'}
             onClick={onNavigate}
             className={({ isActive }) =>
               cn(
