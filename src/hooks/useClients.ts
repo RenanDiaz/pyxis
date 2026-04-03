@@ -38,8 +38,13 @@ export function useCreateClient() {
   const { wsCtx } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'owner_uid' | 'subteam_id'>) =>
-      createClient(wsCtx!, data),
+    mutationFn: ({
+      data,
+      assignTo,
+    }: {
+      data: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'owner_uid' | 'subteam_id'>
+      assignTo?: { owner_uid: string; subteam_id: string | null }
+    }) => createClient(wsCtx!, data, assignTo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
