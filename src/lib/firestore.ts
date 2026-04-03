@@ -390,15 +390,16 @@ export async function getClientById(workspaceId: string, id: string): Promise<Cl
 
 export async function createClient(
   ctx: WorkspaceCtx,
-  data: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'owner_uid' | 'subteam_id'>
+  data: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'owner_uid' | 'subteam_id'>,
+  assignTo?: { owner_uid: string; subteam_id: string | null }
 ): Promise<string> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   const now = Timestamp.now()
   const ref = await addDoc(wsCol(ctx.workspaceId, 'clients'), {
     ...data,
     archived: false,
-    owner_uid: ctx.uid,
-    subteam_id: ctx.subteamId,
+    owner_uid: assignTo?.owner_uid ?? ctx.uid,
+    subteam_id: assignTo?.subteam_id ?? ctx.subteamId,
     created_at: now,
     updated_at: now,
   })
@@ -408,7 +409,7 @@ export async function createClient(
 export async function updateClient(
   workspaceId: string,
   id: string,
-  data: Partial<Omit<Client, 'id' | 'created_at' | 'owner_uid'>>
+  data: Partial<Omit<Client, 'id' | 'created_at'>>
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   await updateDoc(wsDoc(workspaceId, 'clients', id), {
