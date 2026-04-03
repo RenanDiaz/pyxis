@@ -93,7 +93,7 @@ export async function uploadClientFile(
 
   const timestamp = Date.now()
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-  const storagePath = `clients/${clientId}/${timestamp}_${safeName}`
+  const storagePath = `workspaces/${workspaceId}/clients/${clientId}/${timestamp}_${safeName}`
   const storageRef = ref(storage, storagePath)
 
   const downloadUrl = await new Promise<string>((resolve, reject) => {
