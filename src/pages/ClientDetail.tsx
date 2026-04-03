@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients'
-import { useCalls } from '@/hooks/useCalls'
+import { useCalls, useCreateCall } from '@/hooks/useCalls'
 import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useAuth } from '@/contexts/AuthContext'
@@ -25,11 +25,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft, Pencil, Trash2, Phone, FileDown, Archive, ArchiveRestore, UserCircle, RefreshCw, Info } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Phone, Mail, FileDown, Archive, ArchiveRestore, UserCircle, RefreshCw, Info } from 'lucide-react'
 import type { ClientStatus } from '@/types'
+import { Timestamp } from 'firebase/firestore'
 import { toast } from 'sonner'
 import { exportClientDoc } from '@/lib/exportClientDoc'
-import { getClientDisplayName, getAllPhones, PHONE_LABELS } from '@/lib/clientUtils'
+import { getClientDisplayName, getAllPhones, getPrimaryPhoneNumber, PHONE_LABELS } from '@/lib/clientUtils'
+import { formatPhoneForWhatsApp } from '@/lib/phoneUtils'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -43,6 +45,7 @@ export default function ClientDetail() {
   const { data: states } = useStates()
   const updateMutation = useUpdateClient()
   const deleteMutation = useDeleteClient()
+  const createCallMutation = useCreateCall()
   const [notes, setNotes] = useState<string | null>(null)
 
   const showAgent = role === 'owner' || role === 'supervisor'
@@ -102,6 +105,33 @@ export default function ClientDetail() {
     toast.success(newArchived ? 'Cliente archivado' : 'Cliente desarchivado')
   }
 
+  const primaryPhone = getPrimaryPhoneNumber(client)
+  const whatsappNumber = primaryPhone ? formatPhoneForWhatsApp(primaryPhone) : ''
+
+  const handleContactClick = (channel: 'WhatsApp' | 'Llamada' | 'Email') => {
+    toast('¿Registrar intento de contacto?', {
+      action: {
+        label: 'Sí, registrar',
+        onClick: () => {
+          createCallMutation.mutate(
+            {
+              client_id: client.id,
+              scheduled_at: Timestamp.now(),
+              notes: `Contacto iniciado vía ${channel}`,
+              outcome: 'pendiente',
+            },
+            {
+              onSuccess: () => toast.success('Contacto registrado'),
+              onError: () => toast.error('Error al registrar contacto'),
+            },
+          )
+        },
+      },
+      cancel: { label: 'No', onClick: () => {} },
+      duration: 6000,
+    })
+  }
+
   const handleReassign = async () => {
     if (!reassignUid || !client || reassignUid === client.owner_uid) return
     const newAgent = assignableMembers?.find((m) => m.uid === reassignUid)
@@ -123,7 +153,7 @@ export default function ClientDetail() {
         notes: updatedNotes,
       },
     })
-    setNotes(null) // Reset local notes state so it picks up the updated value
+    setNotes(null)
     setShowReassign(false)
     setReassignUid('')
     toast.success(`Cliente reasignado a ${newAgent.display_name}`)
@@ -158,6 +188,54 @@ export default function ClientDetail() {
             )}
           </div>
         </div>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {whatsappNumber && (
+            <Button
+              size="sm"
+              className="bg-[#25D366] hover:bg-[#1da851] text-white h-11 sm:h-9"
+              onClick={() => {
+                window.open(`https://wa.me/${whatsappNumber}`, '_blank')
+                handleContactClick('WhatsApp')
+              }}
+            >
+              <svg viewBox="0 0 24 24" className="mr-2 h-4 w-4 fill-current" aria-hidden="true">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+              </svg>
+              WhatsApp
+            </Button>
+          )}
+          {primaryPhone && (
+            <Button
+              size="sm"
+              variant="default"
+              className="h-11 sm:h-9"
+              onClick={() => {
+                window.location.href = `tel:${primaryPhone}`
+                handleContactClick('Llamada')
+              }}
+            >
+              <Phone className="mr-2 h-4 w-4" />
+              Llamar
+            </Button>
+          )}
+          {client.email && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-11 sm:h-9"
+              onClick={() => {
+                window.location.href = `mailto:${client.email}`
+                handleContactClick('Email')
+              }}
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Email
+            </Button>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div />
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={() => exportClientDoc(client)}>
             <FileDown className="mr-2 h-3 w-3" />

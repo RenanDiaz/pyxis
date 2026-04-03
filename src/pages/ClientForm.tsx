@@ -8,6 +8,7 @@ import clientFormConfig from '@/data/client_form.json'
 import { PROCESSES } from '@/data/processes'
 import { getFieldValue, formatFieldValue } from '@/lib/processUtils'
 import { getStateByAreaCode } from '@/lib/areaCodeMap'
+import { formatPhoneForDisplay, isValidPhone } from '@/lib/phoneUtils'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -165,14 +166,21 @@ export default function ClientForm() {
     const primaryPhone = validPhones.find((p) => p.is_primary) ?? validPhones[0]
     if (!primaryPhone.is_primary) primaryPhone.is_primary = true
 
+    // Validate phone format
+    const invalidPhone = validPhones.find((p) => !isValidPhone(p.number))
+    if (invalidPhone) {
+      toast.error(`Número inválido: ${invalidPhone.number}. Debe tener al menos 10 dígitos.`)
+      return
+    }
+
     const cleanPhones = validPhones.map((p) => ({
-      number: p.number.trim(),
+      number: formatPhoneForDisplay(p.number.trim()),
       label: p.label,
       is_primary: p.is_primary,
     }))
 
     const clientData: Record<string, unknown> = {
-      phone: primaryPhone.number.trim(),
+      phone: formatPhoneForDisplay(primaryPhone.number.trim()),
       phones: cleanPhones,
       status,
       notes: isEditing ? (existingClient?.notes || '') : '',
