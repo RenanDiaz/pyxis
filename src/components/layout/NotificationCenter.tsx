@@ -1,92 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Check, X, Phone, PhoneOff, Clock, Users } from 'lucide-react'
+import { Bell, Phone, PhoneOff, Clock } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { useAuth } from '@/contexts/AuthContext'
-import { usePendingInvitations, useAcceptInvitation, useDeclineInvitation } from '@/hooks/useInvitations'
 import { useOverdueCalls, useUpcomingCalls } from '@/hooks/useCalls'
 import { useClients } from '@/hooks/useClients'
 import { getClientDisplayName } from '@/lib/clientUtils'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { toast } from 'sonner'
-import type { Call, Client, TeamInvitation } from '@/types'
-
-function InvitationItem({
-  invitation,
-  onAccepted,
-}: {
-  invitation: TeamInvitation
-  onAccepted: () => void
-}) {
-  const { user } = useAuth()
-  const acceptInvitation = useAcceptInvitation()
-  const declineInvitation = useDeclineInvitation()
-
-  const handleAccept = async () => {
-    if (!user) return
-    try {
-      await acceptInvitation.mutateAsync({
-        invitationId: invitation.id,
-        user: {
-          uid: user.uid,
-          display_name: user.displayName || user.email || '',
-          email: user.email || '',
-        },
-      })
-      toast.success('Te has unido al equipo')
-      onAccepted()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al aceptar invitación')
-    }
-  }
-
-  const handleDecline = async () => {
-    try {
-      await declineInvitation.mutateAsync(invitation.id)
-      toast.success('Invitación rechazada')
-    } catch {
-      toast.error('Error al rechazar invitación')
-    }
-  }
-
-  return (
-    <div className="flex items-start gap-3 rounded-lg border p-3">
-      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-        <Users className="h-4 w-4" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium">Invitación a equipo</p>
-        <p className="text-xs text-muted-foreground truncate">
-          {invitation.team_name} — por {invitation.invited_by_name}
-        </p>
-        <div className="mt-2 flex items-center gap-1">
-          <Button
-            size="sm"
-            variant="default"
-            className="h-7 gap-1 text-xs"
-            onClick={handleAccept}
-            disabled={acceptInvitation.isPending}
-          >
-            <Check className="h-3 w-3" />
-            Aceptar
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 gap-1 text-xs text-muted-foreground hover:text-destructive"
-            onClick={handleDecline}
-            disabled={declineInvitation.isPending}
-          >
-            <X className="h-3 w-3" />
-            Rechazar
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
+import type { Call, Client } from '@/types'
 
 function CallItem({
   call,
@@ -137,17 +59,14 @@ function CallItem({
 export default function NotificationCenter() {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
-  const { user } = useAuth()
 
-  const { data: invitations } = usePendingInvitations(user?.email)
   const { data: overdueCalls } = useOverdueCalls(5)
   const { data: upcomingCalls } = useUpcomingCalls(5)
   const { data: clients } = useClients()
 
-  const invitationCount = invitations?.length ?? 0
   const overdueCount = overdueCalls?.length ?? 0
   const upcomingCount = upcomingCalls?.length ?? 0
-  const totalCount = invitationCount + overdueCount + upcomingCount
+  const totalCount = overdueCount + upcomingCount
 
   const handleCallClick = (call: Call) => {
     setOpen(false)
@@ -178,20 +97,6 @@ export default function NotificationCenter() {
             </div>
           ) : (
             <div className="space-y-1 p-2">
-              {/* Invitations */}
-              {invitations?.map((inv) => (
-                <InvitationItem
-                  key={inv.id}
-                  invitation={inv}
-                  onAccepted={() => {
-                    if (invitationCount <= 1 && overdueCount === 0 && upcomingCount === 0) {
-                      setOpen(false)
-                    }
-                  }}
-                />
-              ))}
-
-              {/* Overdue calls */}
               {overdueCalls?.map((call) => (
                 <CallItem
                   key={call.id}
@@ -202,7 +107,6 @@ export default function NotificationCenter() {
                 />
               ))}
 
-              {/* Upcoming calls */}
               {upcomingCalls?.map((call) => (
                 <CallItem
                   key={call.id}

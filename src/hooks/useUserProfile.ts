@@ -1,42 +1,29 @@
-import { useQuery } from '@tanstack/react-query'
-import type { UserProfile, UserRole } from '@/types'
-import { getUserProfile, type RoleContext } from '@/lib/firestore'
 import { useAuth } from '@/contexts/AuthContext'
-import { useTeamContext } from '@/contexts/TeamContext'
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
+import type { WorkspaceCtx } from '@/lib/firestore'
+import type { WorkspaceRole } from '@/types'
 
 export function useUserProfile() {
   const { user } = useAuth()
-  const { activeTeamId, activeTeamRole } = useTeamContext()
+  const { workspace, member, role, workspaceId, needsOnboarding, isLoading } = useWorkspaceContext()
 
-  const query = useQuery<UserProfile | null>({
-    queryKey: ['userProfile', user?.uid],
-    queryFn: () => getUserProfile(user!.uid),
-    enabled: !!user,
-  })
-
-  const profile = query.data ?? null
-
-  const roleCtx: RoleContext | null = profile
-    ? {
-        uid: profile.uid,
-        globalRole: profile.role,
-        activeTeamId,
-        activeTeamRole,
-      }
-    : user
+  const wsCtx: WorkspaceCtx | null =
+    user && workspaceId && member
       ? {
           uid: user.uid,
-          globalRole: 'agent' as UserRole,
-          activeTeamId,
-          activeTeamRole,
+          workspaceId,
+          role: member.role,
+          subteamId: member.subteam_id,
         }
       : null
 
   return {
-    ...query,
-    profile,
-    role: profile?.role ?? ('agent' as UserRole),
-    team_ids: profile?.team_ids ?? [],
-    roleCtx,
+    profile: member,
+    role: (role ?? 'agent') as WorkspaceRole,
+    workspaceId,
+    workspace,
+    needsOnboarding,
+    isLoading,
+    wsCtx,
   }
 }

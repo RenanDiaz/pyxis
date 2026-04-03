@@ -1,11 +1,25 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, Navigate } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { needsOnboarding, isLoading } = useWorkspaceContext()
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <p className="text-muted-foreground">Cargando workspace...</p>
+      </div>
+    )
+  }
+
+  if (needsOnboarding) {
+    return <Navigate to="/onboarding" replace />
+  }
 
   return (
     <div className="flex min-h-dvh w-full">

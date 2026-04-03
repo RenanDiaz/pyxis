@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import type { Goal, GoalType, UserRole } from '@/types'
-import { getGoalsForAgent, getTeamGoals, createGoal } from '@/lib/firestore'
+import type { Goal, GoalType, WorkspaceRole } from '@/types'
+import { getGoalsForAgent, getWorkspaceGoals, createGoal } from '@/lib/firestore'
 import { useUserProfile } from '@/hooks/useUserProfile'
 
 function todayPeriod(): string {
@@ -13,25 +13,26 @@ function monthPeriod(): string {
 }
 
 export function useGoals(targetUid: string | undefined) {
+  const { workspaceId } = useUserProfile()
   const dailyPeriod = todayPeriod()
   const monthlyPeriod = monthPeriod()
 
   const dailyQuery = useQuery<Goal | null>({
-    queryKey: ['goals', targetUid, 'daily', dailyPeriod],
+    queryKey: ['goals', workspaceId, targetUid, 'daily', dailyPeriod],
     queryFn: async () => {
-      const goals = await getGoalsForAgent(targetUid!, 'daily', dailyPeriod)
+      const goals = await getGoalsForAgent(workspaceId!, targetUid!, 'daily', dailyPeriod)
       return goals[0] ?? null
     },
-    enabled: !!targetUid,
+    enabled: !!targetUid && !!workspaceId,
   })
 
   const monthlyQuery = useQuery<Goal | null>({
-    queryKey: ['goals', targetUid, 'monthly', monthlyPeriod],
+    queryKey: ['goals', workspaceId, targetUid, 'monthly', monthlyPeriod],
     queryFn: async () => {
-      const goals = await getGoalsForAgent(targetUid!, 'monthly', monthlyPeriod)
+      const goals = await getGoalsForAgent(workspaceId!, targetUid!, 'monthly', monthlyPeriod)
       return goals[0] ?? null
     },
-    enabled: !!targetUid,
+    enabled: !!targetUid && !!workspaceId,
   })
 
   return {
@@ -41,34 +42,34 @@ export function useGoals(targetUid: string | undefined) {
   }
 }
 
-export function useTeamGoalsForPeriod(teamId: string | null, type: GoalType, period: string) {
+export function useWorkspaceGoalsForPeriod(type: GoalType, period: string) {
+  const { workspaceId } = useUserProfile()
   return useQuery<Goal[]>({
-    queryKey: ['goals', 'team', teamId, type, period],
-    queryFn: () => getTeamGoals(teamId!, type, period),
-    enabled: !!teamId,
+    queryKey: ['goals', 'workspace', workspaceId, type, period],
+    queryFn: () => getWorkspaceGoals(workspaceId!, type, period),
+    enabled: !!workspaceId,
   })
 }
 
 export function useCreateGoal() {
-  const { roleCtx, role } = useUserProfile()
+  const { wsCtx, role } = useUserProfile()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (data: {
       target_uid: string
-      team_id: string | null
       type: GoalType
       value: number
       period: string
     }) =>
-      createGoal({
+      createGoal(wsCtx!.workspaceId, {
         target_uid: data.target_uid,
-        team_id: data.team_id,
+        subteam_id: wsCtx!.subteamId,
         type: data.type,
         value: data.value,
         period: data.period,
-        set_by_uid: roleCtx!.uid,
-        set_by_role: role as UserRole,
+        set_by_uid: wsCtx!.uid,
+        set_by_role: role as WorkspaceRole,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals'] })

@@ -29,8 +29,8 @@ import { es } from 'date-fns/locale'
 export default function Home() {
   const { data: clients } = useClients()
   const { data: upcomingCalls } = useUpcomingCalls(5)
-  const { roleCtx } = useUserProfile()
-  const { dailyGoal, monthlyGoal } = useGoals(roleCtx?.uid)
+  const { wsCtx } = useUserProfile()
+  const { dailyGoal, monthlyGoal } = useGoals(wsCtx?.uid)
   const updateClient = useUpdateClient()
   const [goalModalOpen, setGoalModalOpen] = useState(false)
 
@@ -356,12 +356,11 @@ export default function Home() {
       </div>
 
       {/* Goal Modal */}
-      {roleCtx && (
+      {wsCtx && (
         <GoalModal
           open={goalModalOpen}
           onOpenChange={setGoalModalOpen}
-          targetUid={roleCtx.uid}
-          teamId={roleCtx.activeTeamId}
+          targetUid={wsCtx.uid}
         />
       )}
     </div>

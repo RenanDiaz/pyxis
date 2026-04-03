@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback } from 'react'
-import type { Client, ClientDocument, UserRole } from '@/types'
+import type { Client, ClientDocument, WorkspaceRole } from '@/types'
 import { useClientDocuments } from '@/hooks/useClientDocuments'
 import {
   uploadClientFile,
@@ -37,14 +37,16 @@ interface FileUploadState {
 
 interface Props {
   clientId: string
+  workspaceId: string
   currentUid: string
-  currentRole: UserRole
+  currentRole: WorkspaceRole
   currentDisplayName: string
   clientStatus?: Client['status']
 }
 
 export default function DocumentGrid({
   clientId,
+  workspaceId,
   currentUid,
   currentRole,
   currentDisplayName,
@@ -97,6 +99,7 @@ export default function DocumentGrid({
 
       try {
         await uploadClientFile(
+          workspaceId,
           clientId,
           file,
           currentUid,
@@ -128,7 +131,7 @@ export default function DocumentGrid({
     if (clientStatus) {
       const newStatus = inferStatus(clientStatus, 'document_uploaded')
       if (newStatus) {
-        updateClient(clientId, { status: newStatus }).catch(() => {})
+        updateClient(workspaceId, clientId, { status: newStatus }).catch(() => {})
       }
     }
 
@@ -144,7 +147,7 @@ export default function DocumentGrid({
     if (!confirm(`¿Eliminar "${doc.name}"?`)) return
     setDeleting(true)
     try {
-      await deleteClientFile(clientId, doc.id, doc.storage_path)
+      await deleteClientFile(workspaceId, clientId, doc.id, doc.storage_path)
       toast.success('Documento eliminado')
     } catch {
       toast.error('Error al eliminar el documento')

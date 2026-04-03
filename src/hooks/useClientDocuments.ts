@@ -6,14 +6,16 @@ import {
   onSnapshot,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '@/lib/firebase'
+import { useUserProfile } from '@/hooks/useUserProfile'
 import type { ClientDocument } from '@/types'
 
 export function useClientDocuments(clientId: string | undefined) {
+  const { workspaceId } = useUserProfile()
   const [documents, setDocuments] = useState<ClientDocument[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!clientId || !isFirebaseConfigured || !db) {
+    if (!clientId || !workspaceId || !isFirebaseConfigured || !db) {
       setDocuments([])
       setIsLoading(false)
       return
@@ -21,7 +23,7 @@ export function useClientDocuments(clientId: string | undefined) {
 
     setIsLoading(true)
     const q = query(
-      collection(db, 'clients', clientId, 'documents'),
+      collection(db, 'workspaces', workspaceId, 'clients', clientId, 'documents'),
       orderBy('uploaded_at', 'desc')
     )
 
@@ -39,7 +41,7 @@ export function useClientDocuments(clientId: string | undefined) {
     })
 
     return unsubscribe
-  }, [clientId])
+  }, [clientId, workspaceId])
 
   return { documents, isLoading }
 }

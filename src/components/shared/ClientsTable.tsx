@@ -2,13 +2,13 @@ import { Link } from 'react-router-dom'
 import StatusBadge from '@/components/clients/StatusBadge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Archive, Phone, Building2, MapPin, ChevronRight, Users, DollarSign } from 'lucide-react'
-import type { Client, UserProfile } from '@/types'
+import type { Client, WorkspaceMember } from '@/types'
 import { getPrimaryPhoneNumber } from '@/lib/clientUtils'
 
 interface ClientsTableProps {
   clients: Client[]
   showAgentColumn?: boolean
-  agentsMap?: Map<string, UserProfile>
+  agentsMap?: Map<string, WorkspaceMember>
   showTeamColumn?: boolean
   teamsMap?: Map<string, string>
   linkPrefix?: string
@@ -73,8 +73,8 @@ export default function ClientsTable({
         const agentName = showAgentColumn && agentsMap
           ? agentsMap.get(client.owner_uid)?.display_name || 'Desconocido'
           : null
-        const teamName = showTeamColumn && teamsMap && client.team_id
-          ? teamsMap.get(client.team_id) || 'Sin equipo'
+        const teamName = showTeamColumn && teamsMap && client.subteam_id
+          ? teamsMap.get(client.subteam_id) || 'Sin equipo'
           : showTeamColumn
             ? 'Sin equipo'
             : null
