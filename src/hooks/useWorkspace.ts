@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { WorkspaceMember, WorkspaceRole, Subteam } from '@/types'
 import {
@@ -19,6 +20,39 @@ export function useWorkspaceMembers(workspaceId: string | null | undefined) {
     queryFn: () => getWorkspaceMembers(workspaceId!),
     enabled: !!workspaceId,
   })
+}
+
+/**
+ * Returns the list of members that the current user can assign clients to.
+ * - owner: all agents and supervisors in the workspace (+ self)
+ * - supervisor: agents in their subteam (+ self)
+ * - agent: empty (no assignment UI shown)
+ */
+export function useAssignableMembers(
+  workspaceId: string | null | undefined,
+  role: WorkspaceRole,
+  subteamId: string | null
+) {
+  const { data: members, ...rest } = useWorkspaceMembers(
+    role === 'owner' || role === 'supervisor' ? workspaceId : null
+  )
+
+  const assignable = useMemo(() => {
+    if (!members) return []
+    if (role === 'owner') {
+      // Owner can assign to any agent or supervisor (including themselves)
+      return members.filter((m) => m.role !== 'owner' || true) // all members
+    }
+    if (role === 'supervisor') {
+      // Supervisor can assign to agents in their subteam + themselves
+      return members.filter(
+        (m) => m.subteam_id === subteamId
+      )
+    }
+    return []
+  }, [members, role, subteamId])
+
+  return { data: assignable, ...rest }
 }
 
 export function useUpdateMemberRole() {

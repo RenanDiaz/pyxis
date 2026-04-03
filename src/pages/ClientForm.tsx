@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useClient, useCreateClient, useUpdateClient, useFindClientsByPhone } from '@/hooks/useClients'
 import { useStates } from '@/hooks/useStates'
+import { useUserProfile } from '@/hooks/useUserProfile'
+import { useAssignableMembers } from '@/hooks/useWorkspace'
 import clientFormConfig from '@/data/client_form.json'
 import { PROCESSES } from '@/data/processes'
 import { getFieldValue, formatFieldValue } from '@/lib/processUtils'
@@ -34,8 +36,24 @@ export default function ClientForm() {
   const isEditing = !!id
   const { data: existingClient, isLoading: clientLoading } = useClient(id)
   const { data: states } = useStates()
+  const { role, workspaceId, wsCtx } = useUserProfile()
   const createMutation = useCreateClient()
   const updateMutation = useUpdateClient()
+
+  const canAssign = !isEditing && (role === 'owner' || role === 'supervisor')
+  const { data: assignableMembers } = useAssignableMembers(
+    workspaceId,
+    role,
+    wsCtx?.subteamId ?? null
+  )
+  const [selectedAgentUid, setSelectedAgentUid] = useState<string>('')
+
+  // Default to current user when assignable members load
+  useEffect(() => {
+    if (canAssign && wsCtx && !selectedAgentUid) {
+      setSelectedAgentUid(wsCtx.uid)
+    }
+  }, [canAssign, wsCtx, selectedAgentUid])
 
   const [formData, setFormData] = useState<FormData>({})
   const [phones, setPhones] = useState<ClientPhone[]>([
@@ -179,7 +197,17 @@ export default function ClientForm() {
         toast.success('Cliente actualizado')
         navigate(`/clientes/${id}`)
       } else {
-        const newId = await createMutation.mutateAsync(clientData as Omit<Client, 'id' | 'created_at' | 'updated_at'>)
+        // Determine agent assignment
+        const assignTo = canAssign && selectedAgentUid
+          ? {
+              owner_uid: selectedAgentUid,
+              subteam_id: assignableMembers?.find((m) => m.uid === selectedAgentUid)?.subteam_id ?? null,
+            }
+          : undefined
+        const newId = await createMutation.mutateAsync({
+          data: clientData as Omit<Client, 'id' | 'created_at' | 'updated_at' | 'owner_uid' | 'subteam_id'>,
+          assignTo,
+        })
         toast.success('Cliente creado')
         navigate(`/clientes/${newId}`)
       }
@@ -219,6 +247,30 @@ export default function ClientForm() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Agent assignment — owner/supervisor only, create mode */}
+              {canAssign && assignableMembers && assignableMembers.length > 0 && (
+                <div>
+                  <Label htmlFor="assigned_agent">
+                    Asignar a agente <span className="text-destructive ml-1">*</span>
+                  </Label>
+                  <Select
+                    value={selectedAgentUid}
+                    onValueChange={setSelectedAgentUid}
+                  >
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue placeholder="Selecciona un agente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assignableMembers.map((m) => (
+                        <SelectItem key={m.uid} value={m.uid}>
+                          {m.display_name} {m.uid === wsCtx?.uid ? '(tú)' : `— ${m.role}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* Phones section */}
               <div className="space-y-3">
                 <Label>

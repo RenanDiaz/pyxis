@@ -17,18 +17,27 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import DocumentGrid from '@/components/documents/DocumentGrid'
-import { useWorkspaceMembers } from '@/hooks/useWorkspace'
-import { ArrowLeft, Pencil, Trash2, Phone, FileDown, Archive, ArchiveRestore, UserCircle } from 'lucide-react'
+import { useWorkspaceMembers, useAssignableMembers } from '@/hooks/useWorkspace'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { ArrowLeft, Pencil, Trash2, Phone, FileDown, Archive, ArchiveRestore, UserCircle, RefreshCw, Info } from 'lucide-react'
 import type { ClientStatus } from '@/types'
 import { toast } from 'sonner'
 import { exportClientDoc } from '@/lib/exportClientDoc'
 import { getClientDisplayName, getAllPhones, PHONE_LABELS } from '@/lib/clientUtils'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { role, workspaceId } = useUserProfile()
+  const { role, workspaceId, profile: member } = useUserProfile()
   const { data: client, isLoading } = useClient(id)
   const { data: calls } = useCalls({ clientId: id })
   const { data: states } = useStates()
@@ -41,6 +50,15 @@ export default function ClientDetail() {
   const agentName = showAgent && client && members
     ? members.find((m) => m.uid === client.owner_uid)?.display_name || 'Desconocido'
     : null
+
+  // Reassignment
+  const { data: assignableMembers } = useAssignableMembers(
+    workspaceId,
+    role,
+    member?.subteam_id ?? null
+  )
+  const [showReassign, setShowReassign] = useState(false)
+  const [reassignUid, setReassignUid] = useState('')
 
   if (isLoading) {
     return <p className="text-muted-foreground">Cargando...</p>
@@ -82,6 +100,33 @@ export default function ClientDetail() {
     const newArchived = !client.archived
     await updateMutation.mutateAsync({ id: client.id, data: { archived: newArchived } })
     toast.success(newArchived ? 'Cliente archivado' : 'Cliente desarchivado')
+  }
+
+  const handleReassign = async () => {
+    if (!reassignUid || !client || reassignUid === client.owner_uid) return
+    const newAgent = assignableMembers?.find((m) => m.uid === reassignUid)
+    const oldAgent = members?.find((m) => m.uid === client.owner_uid)
+    if (!newAgent) return
+
+    const currentUserName = user?.displayName || user?.email || 'Sistema'
+    const dateStr = format(new Date(), "d 'de' MMMM yyyy", { locale: es })
+    const reassignNote = `[Sistema] Cliente reasignado de ${oldAgent?.display_name || 'Desconocido'} a ${newAgent.display_name} por ${currentUserName} el ${dateStr}`
+    const updatedNotes = client.notes
+      ? `${client.notes}\n\n${reassignNote}`
+      : reassignNote
+
+    await updateMutation.mutateAsync({
+      id: client.id,
+      data: {
+        owner_uid: reassignUid,
+        subteam_id: newAgent.subteam_id,
+        notes: updatedNotes,
+      },
+    })
+    setNotes(null) // Reset local notes state so it picks up the updated value
+    setShowReassign(false)
+    setReassignUid('')
+    toast.success(`Cliente reasignado a ${newAgent.display_name}`)
   }
 
   const currentNotes = notes ?? client.notes ?? ''
@@ -137,12 +182,61 @@ export default function ClientDetail() {
               </>
             )}
           </Button>
+          {showAgent && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setReassignUid(client.owner_uid)
+                setShowReassign(true)
+              }}
+            >
+              <RefreshCw className="mr-2 h-3 w-3" />
+              Reasignar
+            </Button>
+          )}
           <Button variant="destructive" size="sm" onClick={handleDelete}>
             <Trash2 className="mr-2 h-3 w-3" />
             Eliminar
           </Button>
         </div>
       </div>
+
+      {/* Reassignment modal */}
+      {showReassign && assignableMembers && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="pt-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <RefreshCw className="h-4 w-4" />
+              Reasignar agente
+            </div>
+            <Select value={reassignUid} onValueChange={setReassignUid}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona un agente" />
+              </SelectTrigger>
+              <SelectContent>
+                {assignableMembers.map((m) => (
+                  <SelectItem key={m.uid} value={m.uid}>
+                    {m.display_name} — {m.role}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={handleReassign}
+                disabled={!reassignUid || reassignUid === client.owner_uid || updateMutation.isPending}
+              >
+                {updateMutation.isPending ? 'Reasignando...' : 'Confirmar'}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setShowReassign(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Desktop: 2-column layout (40/60) — Mobile: single column */}
       <div className="lg:grid lg:grid-cols-5 lg:gap-6 space-y-6 lg:space-y-0">
@@ -253,6 +347,23 @@ export default function ClientDetail() {
               <CardTitle className="text-sm font-medium text-muted-foreground">Notas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/* System notes (reassignment history) */}
+              {currentNotes.split('\n').filter((line) => line.startsWith('[Sistema]')).length > 0 && (
+                <div className="space-y-1.5">
+                  {currentNotes
+                    .split('\n')
+                    .filter((line) => line.startsWith('[Sistema]'))
+                    .map((line, i) => (
+                      <div
+                        key={i}
+                        className="flex items-start gap-2 rounded-md border border-muted bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+                      >
+                        <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        <span>{line.replace('[Sistema] ', '')}</span>
+                      </div>
+                    ))}
+                </div>
+              )}
               <Textarea
                 value={currentNotes}
                 onChange={(e) => setNotes(e.target.value)}
