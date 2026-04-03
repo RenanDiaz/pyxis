@@ -1,45 +1,50 @@
 import type { Timestamp } from 'firebase/firestore'
 
-export type UserRole = 'agent' | 'supervisor' | 'admin'
-export type TeamRole = 'admin' | 'member'
+export type WorkspaceRole = 'owner' | 'supervisor' | 'agent'
 
 export interface UserProfile {
   uid: string
   email: string
   display_name: string
-  role: UserRole
-  team_ids: string[]
+  workspace_id: string | null
   created_at: Timestamp
 }
 
-export interface Team {
+export interface Workspace {
+  id: string
+  name: string
+  owner_uid: string
+  created_at: Timestamp
+}
+
+export interface WorkspaceMember {
+  uid: string
+  display_name: string
+  email: string
+  role: WorkspaceRole
+  subteam_id: string | null
+  joined_at: Timestamp
+}
+
+export interface Subteam {
   id: string
   name: string
   created_by: string
   created_at: Timestamp
 }
 
-export interface TeamMembership {
-  uid: string
-  team_id: string
-  role: TeamRole
-  display_name: string
-  email: string
-  joined_at: Timestamp
-}
+export type InvitationStatus = 'pending' | 'accepted' | 'expired'
 
-export type InvitationStatus = 'pending' | 'accepted' | 'declined'
-
-export interface TeamInvitation {
+export interface WorkspaceInvitation {
   id: string
-  team_id: string
-  team_name: string
   email: string
-  role: TeamRole
+  role: 'supervisor' | 'agent'
+  subteam_id: string | null
+  token: string
   status: InvitationStatus
-  invited_by_uid: string
-  invited_by_name: string
+  created_by_uid: string
   created_at: Timestamp
+  expires_at: Timestamp
 }
 
 export interface StateInfo {
@@ -119,7 +124,7 @@ export interface Client {
   archived: boolean
   notes: string
   owner_uid: string
-  team_id: string | null
+  subteam_id: string | null
   created_at: Timestamp
   updated_at: Timestamp
 }
@@ -134,7 +139,7 @@ export interface Call {
   notes: string
   outcome: CallOutcome
   owner_uid: string
-  team_id: string | null
+  subteam_id: string | null
   created_at: Timestamp
 }
 
@@ -159,11 +164,11 @@ export type GoalType = 'daily' | 'monthly'
 export interface Goal {
   id: string
   target_uid: string
-  team_id: string | null
+  subteam_id: string | null
   type: GoalType
   value: number
   set_by_uid: string
-  set_by_role: UserRole
+  set_by_role: WorkspaceRole
   period: string // "2025-01" for monthly, "2025-01-15" for daily
   created_at: Timestamp
 }

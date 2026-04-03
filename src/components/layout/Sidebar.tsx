@@ -7,12 +7,11 @@ import {
   Calendar,
   BookOpen,
   UsersRound,
-  BarChart3,
-  Building2,
+  Settings,
+  Network,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUserProfile } from '@/hooks/useUserProfile'
-import { useTeamContext } from '@/contexts/TeamContext'
 
 interface NavItem {
   to: string
@@ -29,18 +28,10 @@ const agentNavItems: NavItem[] = [
   { to: '/agenda', label: 'Agenda', icon: Calendar },
 ]
 
-const teamNavItems: NavItem[] = [
-  { to: '/equipo/clientes', label: 'Clientes del equipo', icon: Users },
-  { to: '/equipo/agenda', label: 'Agenda del equipo', icon: Calendar },
-  { to: '/equipo/metricas', label: 'Métricas', icon: BarChart3 },
-  { to: '/equipo/miembros', label: 'Miembros', icon: UsersRound },
-]
-
-const adminNavItems: NavItem[] = [
-  { to: '/admin/usuarios', label: 'Usuarios', icon: UsersRound },
-  { to: '/admin/equipos', label: 'Equipos', icon: Building2 },
-  { to: '/admin/clientes', label: 'Clientes', icon: Users },
-  { to: '/admin/agenda', label: 'Agenda', icon: Calendar },
+const workspaceNavItems: NavItem[] = [
+  { to: '/workspace/miembros', label: 'Miembros', icon: UsersRound },
+  { to: '/workspace/subteams', label: 'Subequipos', icon: Network },
+  { to: '/workspace', label: 'Configuración', icon: Settings },
 ]
 
 function PyxisLogo({ className }: { className?: string }) {
@@ -95,12 +86,16 @@ function NavSection({ title, items, onNavigate }: { title?: string; items: NavIt
   )
 }
 
-export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
-  const { role } = useUserProfile()
-  const { activeTeamId, activeTeamRole } = useTeamContext()
+const ROLE_LABELS: Record<string, string> = {
+  owner: 'Owner',
+  supervisor: 'Supervisor',
+  agent: 'Agente',
+}
 
-  const showTeamSection = !!activeTeamId && activeTeamRole === 'admin'
-  const showAdminSection = role === 'admin'
+export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const { role, workspace, profile } = useUserProfile()
+
+  const showWorkspaceSection = role === 'owner'
 
   return (
     <div className="flex h-full flex-col">
@@ -113,14 +108,20 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex-1 space-y-6 overflow-y-auto px-3">
         <NavSection items={agentNavItems} onNavigate={onNavigate} />
 
-        {showTeamSection && (
-          <NavSection title="Mi Equipo" items={teamNavItems} onNavigate={onNavigate} />
-        )}
-
-        {showAdminSection && (
-          <NavSection title="Administración" items={adminNavItems} onNavigate={onNavigate} />
+        {showWorkspaceSection && (
+          <NavSection title="Workspace" items={workspaceNavItems} onNavigate={onNavigate} />
         )}
       </nav>
+
+      {/* Footer: workspace name + user info */}
+      {workspace && (
+        <div className="border-t px-4 py-3 space-y-1">
+          <p className="text-xs font-semibold truncate">{workspace.name}</p>
+          <p className="text-xs text-muted-foreground truncate">
+            {profile?.display_name ?? ''} — {ROLE_LABELS[role] ?? role}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

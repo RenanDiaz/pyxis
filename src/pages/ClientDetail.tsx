@@ -27,7 +27,7 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { role } = useUserProfile()
+  const { role, workspaceId } = useUserProfile()
   const { data: client, isLoading } = useClient(id)
   const { data: calls } = useCalls({ clientId: id })
   const { data: states } = useStates()
@@ -269,6 +269,7 @@ export default function ClientDetail() {
 
           <DocumentGrid
             clientId={client.id}
+            workspaceId={workspaceId ?? ''}
             currentUid={user?.uid ?? ''}
             currentRole={role}
             currentDisplayName={user?.displayName ?? user?.email ?? ''}

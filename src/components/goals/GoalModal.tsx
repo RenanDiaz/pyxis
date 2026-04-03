@@ -24,7 +24,6 @@ interface GoalModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   targetUid: string
-  teamId: string | null
   targetName?: string
 }
 
@@ -32,7 +31,6 @@ export default function GoalModal({
   open,
   onOpenChange,
   targetUid,
-  teamId,
   targetName,
 }: GoalModalProps) {
   const [type, setType] = useState<GoalType>('daily')
@@ -48,7 +46,6 @@ export default function GoalModal({
 
     await createGoal.mutateAsync({
       target_uid: targetUid,
-      team_id: teamId,
       type,
       value: numValue,
       period: type === 'daily' ? defaultDailyPeriod : defaultMonthlyPeriod,

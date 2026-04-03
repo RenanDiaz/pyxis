@@ -1,4 +1,4 @@
-import type { ClientDocument, UserRole } from '@/types'
+import type { ClientDocument, WorkspaceRole } from '@/types'
 import {
   getFileIcon,
   getFileIconColor,
@@ -17,7 +17,7 @@ import { MoreVertical, Eye, Download, Trash2 } from 'lucide-react'
 interface Props {
   doc: ClientDocument
   currentUid: string
-  currentRole: UserRole
+  currentRole: WorkspaceRole
   onView: (doc: ClientDocument) => void
   onDelete: (doc: ClientDocument) => void
   deleting?: boolean
@@ -33,7 +33,7 @@ export default function DocumentCard({
 }: Props) {
   const Icon = getFileIcon(doc.type)
   const iconColor = getFileIconColor(doc.type)
-  const canDelete = currentRole === 'admin' || doc.uploaded_by_uid === currentUid
+  const canDelete = currentRole === 'owner' || doc.uploaded_by_uid === currentUid
   const uploadDate = doc.uploaded_at?.toDate?.()
 
   return (

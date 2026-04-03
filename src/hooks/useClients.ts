@@ -17,28 +17,29 @@ interface ClientFilters {
 }
 
 export function useClients(filters?: ClientFilters) {
-  const { roleCtx } = useUserProfile()
+  const { wsCtx } = useUserProfile()
   return useQuery<Client[]>({
-    queryKey: ['clients', roleCtx?.uid, roleCtx?.globalRole, roleCtx?.activeTeamId, roleCtx?.activeTeamRole, filters],
-    queryFn: () => getClients(roleCtx!, filters),
-    enabled: !!roleCtx,
+    queryKey: ['clients', wsCtx?.workspaceId, wsCtx?.role, wsCtx?.uid, filters],
+    queryFn: () => getClients(wsCtx!, filters),
+    enabled: !!wsCtx,
   })
 }
 
 export function useClient(id: string | undefined) {
+  const { workspaceId } = useUserProfile()
   return useQuery<Client | null>({
-    queryKey: ['clients', id],
-    queryFn: () => getClientById(id!),
-    enabled: !!id,
+    queryKey: ['clients', workspaceId, id],
+    queryFn: () => getClientById(workspaceId!, id!),
+    enabled: !!id && !!workspaceId,
   })
 }
 
 export function useCreateClient() {
-  const { roleCtx } = useUserProfile()
+  const { wsCtx } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'owner_uid' | 'team_id'>) =>
-      createClient(roleCtx!, data),
+    mutationFn: (data: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'owner_uid' | 'subteam_id'>) =>
+      createClient(wsCtx!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
@@ -46,10 +47,11 @@ export function useCreateClient() {
 }
 
 export function useUpdateClient() {
+  const { workspaceId } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) =>
-      updateClient(id, data),
+      updateClient(workspaceId!, id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
@@ -57,9 +59,10 @@ export function useUpdateClient() {
 }
 
 export function useDeleteClient() {
+  const { workspaceId } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => deleteClient(id),
+    mutationFn: (id: string) => deleteClient(workspaceId!, id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
@@ -67,9 +70,10 @@ export function useDeleteClient() {
 }
 
 export function useFindClientsByPhone(phone: string) {
+  const { workspaceId } = useUserProfile()
   return useQuery<Client[]>({
-    queryKey: ['clients', 'phone-lookup', phone],
-    queryFn: () => findClientsByPhone(phone),
-    enabled: phone.trim().length >= 7,
+    queryKey: ['clients', 'phone-lookup', workspaceId, phone],
+    queryFn: () => findClientsByPhone(workspaceId!, phone),
+    enabled: phone.trim().length >= 7 && !!workspaceId,
   })
 }

@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
 import { AuthProvider } from '@/contexts/AuthContext'
-import { TeamProviderWrapper } from '@/components/layout/TeamProviderWrapper'
+import { WorkspaceProvider } from '@/contexts/WorkspaceContext'
 import PrivateRoute from '@/components/layout/PrivateRoute'
 import RoleRoute from '@/components/layout/RoleRoute'
 import AppLayout from '@/components/layout/AppLayout'
@@ -16,14 +16,11 @@ import ClientDetail from '@/pages/ClientDetail'
 import ClientForm from '@/pages/ClientForm'
 import Schedule from '@/pages/Schedule'
 import Glossary from '@/pages/Glossary'
-import TeamMetrics from '@/pages/team/TeamMetrics'
-import TeamClients from '@/pages/team/TeamClients'
-import TeamSchedule from '@/pages/team/TeamSchedule'
-import TeamMembers from '@/pages/team/TeamMembers'
-import AdminUsers from '@/pages/admin/AdminUsers'
-import AdminTeams from '@/pages/admin/AdminTeams'
-import AdminClients from '@/pages/admin/AdminClients'
-import AdminSchedule from '@/pages/admin/AdminSchedule'
+import Onboarding from '@/pages/Onboarding'
+import JoinWorkspace from '@/pages/JoinWorkspace'
+import WorkspaceSettings from '@/pages/workspace/WorkspaceSettings'
+import WorkspaceMembers from '@/pages/workspace/WorkspaceMembers'
+import WorkspaceSubteams from '@/pages/workspace/WorkspaceSubteams'
 import { Toaster } from '@/components/ui/sonner'
 
 const queryClient = new QueryClient({
@@ -44,11 +41,21 @@ export default function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route
+                path="/join"
                 element={
                   <PrivateRoute>
-                    <TeamProviderWrapper>
+                    <WorkspaceProvider>
+                      <JoinWorkspace />
+                    </WorkspaceProvider>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                element={
+                  <PrivateRoute>
+                    <WorkspaceProvider>
                       <AppLayout />
-                    </TeamProviderWrapper>
+                    </WorkspaceProvider>
                   </PrivateRoute>
                 }
               >
@@ -63,74 +70,44 @@ export default function App() {
                 <Route path="agenda" element={<Schedule />} />
                 <Route path="glosario" element={<Glossary />} />
 
-                {/* Team routes — require team admin role */}
+                {/* Workspace management — owner only */}
                 <Route
-                  path="equipo/miembros"
+                  path="workspace"
                   element={
-                    <RoleRoute requiredTeamRole="admin">
-                      <TeamMembers />
+                    <RoleRoute allowedRoles={['owner']}>
+                      <WorkspaceSettings />
                     </RoleRoute>
                   }
                 />
                 <Route
-                  path="equipo/metricas"
+                  path="workspace/miembros"
                   element={
-                    <RoleRoute requiredTeamRole="admin">
-                      <TeamMetrics />
+                    <RoleRoute allowedRoles={['owner']}>
+                      <WorkspaceMembers />
                     </RoleRoute>
                   }
                 />
                 <Route
-                  path="equipo/clientes"
+                  path="workspace/subteams"
                   element={
-                    <RoleRoute requiredTeamRole="admin">
-                      <TeamClients />
-                    </RoleRoute>
-                  }
-                />
-                <Route
-                  path="equipo/agenda"
-                  element={
-                    <RoleRoute requiredTeamRole="admin">
-                      <TeamSchedule />
-                    </RoleRoute>
-                  }
-                />
-
-                {/* Admin routes */}
-                <Route
-                  path="admin/usuarios"
-                  element={
-                    <RoleRoute allowedRoles={['admin']}>
-                      <AdminUsers />
-                    </RoleRoute>
-                  }
-                />
-                <Route
-                  path="admin/equipos"
-                  element={
-                    <RoleRoute allowedRoles={['admin']}>
-                      <AdminTeams />
-                    </RoleRoute>
-                  }
-                />
-                <Route
-                  path="admin/clientes"
-                  element={
-                    <RoleRoute allowedRoles={['admin']}>
-                      <AdminClients />
-                    </RoleRoute>
-                  }
-                />
-                <Route
-                  path="admin/agenda"
-                  element={
-                    <RoleRoute allowedRoles={['admin']}>
-                      <AdminSchedule />
+                    <RoleRoute allowedRoles={['owner']}>
+                      <WorkspaceSubteams />
                     </RoleRoute>
                   }
                 />
               </Route>
+
+              {/* Onboarding — separate from AppLayout (no sidebar) */}
+              <Route
+                path="/onboarding"
+                element={
+                  <PrivateRoute>
+                    <WorkspaceProvider>
+                      <Onboarding />
+                    </WorkspaceProvider>
+                  </PrivateRoute>
+                }
+              />
             </Routes>
           </BrowserRouter>
           <Toaster position="top-right" richColors />

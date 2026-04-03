@@ -12,14 +12,14 @@ import { Phone, Clock } from 'lucide-react'
 import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
 import { formatInTimeZone } from 'date-fns-tz'
 import { es } from 'date-fns/locale'
-import type { Call, CallOutcome, Client, UserProfile } from '@/types'
+import type { Call, CallOutcome, Client, WorkspaceMember } from '@/types'
 import { getClientDisplayName } from '@/lib/clientUtils'
 
 interface CallsListProps {
   calls: Call[]
   clients: Client[]
   showAgentColumn?: boolean
-  agentsMap?: Map<string, UserProfile>
+  agentsMap?: Map<string, WorkspaceMember>
   showTeamColumn?: boolean
   teamsMap?: Map<string, string>
   isLoading?: boolean
@@ -61,8 +61,8 @@ export default function CallsList({
         const agentName = showAgentColumn && agentsMap
           ? agentsMap.get(call.owner_uid)?.display_name || 'Desconocido'
           : null
-        const teamName = showTeamColumn && teamsMap && call.team_id
-          ? teamsMap.get(call.team_id) || 'Sin equipo'
+        const teamName = showTeamColumn && teamsMap && call.subteam_id
+          ? teamsMap.get(call.subteam_id) || 'Sin equipo'
           : showTeamColumn
             ? 'Sin equipo'
             : null

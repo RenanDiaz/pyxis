@@ -82,6 +82,7 @@ export interface UploadProgress {
 }
 
 export async function uploadClientFile(
+  workspaceId: string,
   clientId: string,
   file: File,
   uploaderUid: string,
@@ -117,7 +118,7 @@ export async function uploadClientFile(
     )
   })
 
-  const docRef = await addDoc(collection(db, 'clients', clientId, 'documents'), {
+  const docRef = await addDoc(collection(db, 'workspaces', workspaceId, 'clients', clientId, 'documents'), {
     name: file.name,
     storage_path: storagePath,
     download_url: downloadUrl,
@@ -133,11 +134,12 @@ export async function uploadClientFile(
 }
 
 export async function deleteClientFile(
+  workspaceId: string,
   clientId: string,
   docId: string,
   storagePath: string
 ): Promise<void> {
   if (!isFirebaseConfigured || !storage || !db) throw new Error('Firebase no configurado')
   await deleteObject(ref(storage, storagePath))
-  await deleteDoc(doc(db, 'clients', clientId, 'documents', docId))
+  await deleteDoc(doc(db, 'workspaces', workspaceId, 'clients', clientId, 'documents', docId))
 }

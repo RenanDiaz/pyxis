@@ -31,13 +31,18 @@ Los JSON también sirven como fallback local si Firestore no responde.
 
 ## Arquitectura de Firestore
 
-### Colecciones
+### Colecciones estáticas (globales)
 - **`states`** — 50 docs (doc ID = abbreviation). Precio, fees, días de proceso, annual report, disolución, amendments, business purpose, link de name check.
 - **`trades`** — 25 docs (oficios). Categoría, nombre EN/ES, descripción.
 - **`glossary`** — Términos de negocio/legales/fiscales. Término, nombre completo, traducción, definición, categoría.
-- **`users/{uid}/clients`** — Prospectos/clientes con datos de LLC, contacto, status y notas. Aislados por usuario.
-- **`users/{uid}/calls`** — Historial y agenda de llamadas vinculadas a clientes. Aislados por usuario.
-- **`config/clientForm`** — Configuración del formulario de clientes.
+
+### Colecciones de negocio (bajo workspace)
+- **`workspaces/{wId}/clients`** — Prospectos/clientes con datos de LLC, contacto, status y notas.
+- **`workspaces/{wId}/calls`** — Historial y agenda de llamadas vinculadas a clientes.
+- **`workspaces/{wId}/goals`** — Metas de ventas diarias/mensuales.
+- **`workspaces/{wId}/members`** — Miembros del workspace con rol y subequipo.
+- **`workspaces/{wId}/subteams`** — Subequipos del workspace.
+- **`workspaces/{wId}/invitations`** — Invitaciones por token.
 
 Ver los esquemas completos en los archivos `src/data/*.json` y los types en el código.
 
@@ -53,6 +58,11 @@ Ver los esquemas completos en los archivos `src/data/*.json` y los types en el c
 | `/glosario` | Glosario | Términos de negocio, legales y fiscales con traducción y definición. Filtro por categoría, diseño flashcard |
 | `/clientes` | Clientes | CRM liviano: lista, detalle, formulario nuevo/editar, historial de llamadas, exportar registro como .docx |
 | `/agenda` | Agenda | Gestión de llamadas programadas con filtros y modal de creación |
+| `/workspace` | Workspace | Configuración del workspace (owner only) |
+| `/workspace/miembros` | Miembros | Gestión de miembros e invitaciones (owner only) |
+| `/workspace/subteams` | Subequipos | Gestión de subequipos (owner only) |
+| `/onboarding` | Onboarding | Crear workspace o unirse con invitación |
+| `/join` | Unirse | Acepta invitación por token desde URL |
 
 ### Autenticación
 - Login con Google OAuth y email/password
@@ -72,33 +82,39 @@ Ver los esquemas completos en los archivos `src/data/*.json` y los types en el c
 - Mobile-friendly
 - Layout y scroll: usar scroll nativo del documento. No aplicar overflow: hidden/auto ni height: 100% en html/body/#root. Sidebar fixed, header sticky, contenido en flujo normal. Usar unidades dvh en vez de vh para compatibilidad con iOS Safari.
 
-# Feature completado — Roles, equipos y colecciones raíz
-Clientes y llamadas ahora usan colecciones raíz (`/clients`, `/calls`)
-con campos `owner_uid` y `team_id` para ownership.
+# Feature completado — Workspaces
+Toda la data de negocio vive bajo `/workspaces/{workspaceId}/`.
+Cada usuario pertenece a un solo workspace (`users/{uid}.workspace_id`).
 
 ### Colecciones
-- **`users/{uid}`** — Perfil de usuario con `role` (`agent` | `supervisor` | `admin`) y `team_id`.
-- **`teams/{teamId}`** — Equipos con `supervisor_uid`.
-- **`clients/{clientId}`** — Clientes con `owner_uid` y `team_id`.
-- **`calls/{callId}`** — Llamadas con `owner_uid` y `team_id`.
+- **`users/{uid}`** — Perfil global: `display_name`, `email`, `workspace_id`, `created_at`.
+- **`workspaces/{workspaceId}`** — Workspace: `name`, `owner_uid`, `created_at`.
+- **`workspaces/{wId}/members/{uid}`** — Miembros: `role` (`owner` | `supervisor` | `agent`), `subteam_id`.
+- **`workspaces/{wId}/subteams/{id}`** — Subequipos.
+- **`workspaces/{wId}/clients/{id}`** — Clientes con `owner_uid` y `subteam_id`.
+- **`workspaces/{wId}/calls/{id}`** — Llamadas con `owner_uid` y `subteam_id`.
+- **`workspaces/{wId}/goals/{id}`** — Metas de ventas.
+- **`workspaces/{wId}/invitations/{id}`** — Invitaciones por token con expiración de 7 días.
 
 ### Queries por rol
-- `agent`: solo ve sus propios documentos (`owner_uid == uid`)
-- `supervisor`: ve documentos de su equipo (`team_id == team_id`)
-- `admin`: ve todos los documentos
+- `owner`: ve todos los datos del workspace
+- `supervisor`: ve datos de su subequipo (`subteam_id == member.subteam_id`)
+- `agent`: solo ve sus propios datos (`owner_uid == uid`)
 
-### Hooks clave
-- `useUserProfile()` — lee `users/{uid}` y expone `{ role, team_id, roleCtx }`.
-- `useClients()` / `useCalls()` — usan `roleCtx` para queries filtradas por rol.
+### Contexto global
+- `WorkspaceContext` lee `users/{uid}.workspace_id` y carga workspace + member.
+- `useUserProfile()` expone `{ role, workspaceId, wsCtx }`.
+- `useClients()` / `useCalls()` usan `wsCtx` para queries filtradas por rol.
 
-### Inicialización de perfil
-Al hacer login por primera vez, se crea automáticamente el documento
-`users/{uid}` con `role: "agent"` y `team_id: null`.
+### Onboarding
+Al hacer login por primera vez se crea `users/{uid}` con `workspace_id: null`.
+Si no tiene workspace, se redirige a `/onboarding` donde puede crear uno o
+unirse via link de invitación (`/join?token=...&workspace=...`).
 
-### Migración
-El script `scripts/migrate.ts` copia datos de las antiguas subcolecciones
-(`/users/{uid}/clients`, `/users/{uid}/calls`) a las colecciones raíz,
-agregando `owner_uid` y `team_id: null`. No elimina los originales.
+### Rutas de workspace (owner only)
+- `/workspace` — Configuración general
+- `/workspace/miembros` — Gestión de miembros e invitaciones
+- `/workspace/subteams` — Gestión de subequipos
 
 # Nuevo feature - Procesos a contratar
 Agrega el concepto de "proceso" a los clientes. Un proceso representa
@@ -205,4 +221,4 @@ del historial de llamadas.
 
 ## 5. Firestore
 No se requieren cambios en la estructura de Firestore. El campo
-`process` se guarda como string en `users/{uid}/clients/{clientId}`.
+`process` se guarda como string en el documento del cliente.

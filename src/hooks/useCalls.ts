@@ -17,38 +17,38 @@ interface CallFilters {
 }
 
 export function useCalls(filters?: CallFilters) {
-  const { roleCtx } = useUserProfile()
+  const { wsCtx } = useUserProfile()
   return useQuery<Call[]>({
-    queryKey: ['calls', roleCtx?.uid, roleCtx?.globalRole, roleCtx?.activeTeamId, roleCtx?.activeTeamRole, filters],
-    queryFn: () => getCalls(roleCtx!, filters),
-    enabled: !!roleCtx,
+    queryKey: ['calls', wsCtx?.workspaceId, wsCtx?.role, wsCtx?.uid, filters],
+    queryFn: () => getCalls(wsCtx!, filters),
+    enabled: !!wsCtx,
   })
 }
 
 export function useUpcomingCalls(max: number = 5) {
-  const { roleCtx } = useUserProfile()
+  const { wsCtx } = useUserProfile()
   return useQuery<Call[]>({
-    queryKey: ['calls', 'upcoming', roleCtx?.uid, roleCtx?.globalRole, roleCtx?.activeTeamId, roleCtx?.activeTeamRole, max],
-    queryFn: () => getUpcomingCalls(roleCtx!, max),
-    enabled: !!roleCtx,
+    queryKey: ['calls', 'upcoming', wsCtx?.workspaceId, wsCtx?.role, wsCtx?.uid, max],
+    queryFn: () => getUpcomingCalls(wsCtx!, max),
+    enabled: !!wsCtx,
   })
 }
 
 export function useOverdueCalls(max: number = 10) {
-  const { roleCtx } = useUserProfile()
+  const { wsCtx } = useUserProfile()
   return useQuery<Call[]>({
-    queryKey: ['calls', 'overdue', roleCtx?.uid, roleCtx?.globalRole, roleCtx?.activeTeamId, roleCtx?.activeTeamRole, max],
-    queryFn: () => getOverdueCalls(roleCtx!, max),
-    enabled: !!roleCtx,
+    queryKey: ['calls', 'overdue', wsCtx?.workspaceId, wsCtx?.role, wsCtx?.uid, max],
+    queryFn: () => getOverdueCalls(wsCtx!, max),
+    enabled: !!wsCtx,
   })
 }
 
 export function useCreateCall() {
-  const { roleCtx } = useUserProfile()
+  const { wsCtx } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: Omit<Call, 'id' | 'created_at' | 'owner_uid' | 'team_id'>) =>
-      createCall(roleCtx!, data),
+    mutationFn: (data: Omit<Call, 'id' | 'created_at' | 'owner_uid' | 'subteam_id'>) =>
+      createCall(wsCtx!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calls'] })
     },
@@ -56,10 +56,11 @@ export function useCreateCall() {
 }
 
 export function useUpdateCall() {
+  const { workspaceId } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Call> }) =>
-      updateCall(id, data),
+      updateCall(workspaceId!, id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calls'] })
     },

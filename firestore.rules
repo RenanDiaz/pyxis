@@ -1,144 +1,103 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function userExists() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    function getMember(workspaceId) {
+      return get(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)).data;
     }
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+
+    function isWorkspaceMember(workspaceId) {
+      return exists(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
     }
-    function isAdmin() {
-      return userExists() && getUserData().role == "admin";
-    }
-    function isTeamAdmin(teamId) {
-      return teamId != null
-        && exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid))
-        && get(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)).data.role == "admin";
-    }
-    function isTeamMember(teamId) {
-      return teamId != null
-        && exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid));
+
+    function memberRole(workspaceId) {
+      return getMember(workspaceId).role;
     }
 
     match /users/{uid} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
-                   && (request.auth.uid == uid || isAdmin());
+      allow read, write: if request.auth != null
+                         && request.auth.uid == uid;
     }
 
-    match /teams/{teamId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null
-                    && (isAdmin() || isTeamAdmin(teamId));
-      allow delete: if request.auth != null && isAdmin();
-
-      match /members/{uid} {
-        allow read: if request.auth != null && isTeamMember(teamId);
-        allow create: if request.auth != null
-                      && (isAdmin() || isTeamAdmin(teamId) || request.auth.uid == uid);
-        allow update: if request.auth != null
-                      && (isAdmin() || isTeamAdmin(teamId));
-        allow delete: if request.auth != null
-                      && (isAdmin()
-                          || isTeamAdmin(teamId)
-                          || request.auth.uid == uid);
-      }
-    }
-
-    match /clients/{clientId} {
+    match /workspaces/{workspaceId} {
       allow read: if request.auth != null
-                  && (isAdmin()
-                      || resource.data.owner_uid == request.auth.uid
-                      || isTeamAdmin(resource.data.team_id));
+                  && isWorkspaceMember(workspaceId);
       allow create: if request.auth != null;
+      allow update, delete: if request.auth != null
+                            && memberRole(workspaceId) == "owner";
+    }
+
+    match /workspaces/{workspaceId}/members/{uid} {
+      allow read: if request.auth != null
+                  && isWorkspaceMember(workspaceId);
+      allow write: if request.auth != null
+                   && (memberRole(workspaceId) == "owner"
+                       || request.auth.uid == uid);
+    }
+
+    match /workspaces/{workspaceId}/clients/{clientId} {
+      allow read: if request.auth != null
+                  && isWorkspaceMember(workspaceId)
+                  && (memberRole(workspaceId) == "owner"
+                      || (memberRole(workspaceId) == "supervisor"
+                          && resource.data.subteam_id == getMember(workspaceId).subteam_id)
+                      || resource.data.owner_uid == request.auth.uid);
+      allow create: if request.auth != null
+                    && isWorkspaceMember(workspaceId);
       allow update: if request.auth != null
-                    && (isAdmin()
-                        || resource.data.owner_uid == request.auth.uid
-                        || isTeamAdmin(resource.data.team_id));
+                    && isWorkspaceMember(workspaceId)
+                    && (memberRole(workspaceId) == "owner"
+                        || (memberRole(workspaceId) == "supervisor"
+                            && resource.data.subteam_id == getMember(workspaceId).subteam_id)
+                        || resource.data.owner_uid == request.auth.uid);
       allow delete: if request.auth != null
-                    && (isAdmin()
+                    && (memberRole(workspaceId) == "owner"
                         || resource.data.owner_uid == request.auth.uid);
 
       match /documents/{docId} {
         allow read: if request.auth != null
-                    && (isAdmin()
-                        || get(/databases/$(database)/documents/clients/$(clientId)).data.owner_uid == request.auth.uid
-                        || isTeamAdmin(get(/databases/$(database)/documents/clients/$(clientId)).data.team_id));
+                    && isWorkspaceMember(workspaceId);
         allow create: if request.auth != null
-                      && (isAdmin()
-                          || get(/databases/$(database)/documents/clients/$(clientId)).data.owner_uid == request.auth.uid
-                          || isTeamAdmin(get(/databases/$(database)/documents/clients/$(clientId)).data.team_id));
+                      && isWorkspaceMember(workspaceId);
         allow delete: if request.auth != null
-                      && (isAdmin()
-                          || get(/databases/$(database)/documents/clients/$(clientId)).data.owner_uid == request.auth.uid);
+                      && (memberRole(workspaceId) == "owner"
+                          || resource.data.uploaded_by_uid == request.auth.uid);
       }
     }
 
-    match /calls/{callId} {
-      allow read: if request.auth != null
-                  && (isAdmin()
-                      || resource.data.owner_uid == request.auth.uid
-                      || isTeamAdmin(resource.data.team_id));
-      allow create: if request.auth != null;
-      allow update: if request.auth != null
-                    && (isAdmin()
-                        || resource.data.owner_uid == request.auth.uid
-                        || isTeamAdmin(resource.data.team_id));
-      allow delete: if request.auth != null
-                    && (isAdmin()
-                        || resource.data.owner_uid == request.auth.uid);
+    match /workspaces/{workspaceId}/calls/{callId} {
+      allow read, write: if request.auth != null
+                         && isWorkspaceMember(workspaceId);
     }
 
-    match /team_invitations/{invId} {
+    match /workspaces/{workspaceId}/goals/{goalId} {
       allow read: if request.auth != null
-                  && (isAdmin()
-                      || resource.data.email == request.auth.token.email.lower()
-                      || isTeamAdmin(resource.data.team_id)
-                      || isTeamMember(resource.data.team_id));
+                  && isWorkspaceMember(workspaceId);
+      allow write: if request.auth != null
+                   && isWorkspaceMember(workspaceId)
+                   && (memberRole(workspaceId) == "owner"
+                       || memberRole(workspaceId) == "supervisor");
+    }
+
+    match /workspaces/{workspaceId}/subteams/{subteamId} {
+      allow read: if request.auth != null
+                  && isWorkspaceMember(workspaceId);
+      allow write: if request.auth != null
+                   && memberRole(workspaceId) == "owner";
+    }
+
+    match /workspaces/{workspaceId}/invitations/{invId} {
+      allow read: if request.auth != null
+                  && isWorkspaceMember(workspaceId);
       allow create: if request.auth != null
-                    && (isAdmin()
-                        || isTeamAdmin(request.resource.data.team_id));
-      allow update: if request.auth != null
-                    && (isAdmin()
-                        || isTeamAdmin(resource.data.team_id)
-                        || resource.data.email == request.auth.token.email.lower());
+                    && memberRole(workspaceId) == "owner";
+      allow update: if request.auth != null;
       allow delete: if request.auth != null
-                    && (isAdmin()
-                        || isTeamAdmin(resource.data.team_id));
+                    && memberRole(workspaceId) == "owner";
     }
 
-    match /goals/{goalId} {
-      allow read: if request.auth != null
-                  && (isAdmin()
-                      || resource.data.target_uid == request.auth.uid
-                      || resource.data.set_by_uid == request.auth.uid
-                      || isTeamMember(resource.data.team_id));
-      allow create: if request.auth != null;
-      allow update: if request.auth != null
-                    && (isAdmin()
-                        || resource.data.set_by_uid == request.auth.uid
-                        || isTeamAdmin(resource.data.team_id));
-      allow delete: if request.auth != null
-                    && (isAdmin()
-                        || resource.data.set_by_uid == request.auth.uid);
-    }
-
-    match /states/{doc} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
-    }
-
-    match /trades/{doc} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
-    }
-
-    match /glossary/{doc} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
-    }
+    match /states/{doc} { allow read: if request.auth != null; }
+    match /trades/{doc} { allow read: if request.auth != null; }
+    match /glossary/{doc} { allow read: if request.auth != null; }
   }
 }
