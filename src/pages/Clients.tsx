@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useClients } from '@/hooks/useClients'
+import { useUserProfile } from '@/hooks/useUserProfile'
+import { useWorkspaceMembers } from '@/hooks/useWorkspace'
 import StatusBadge from '@/components/clients/StatusBadge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -14,8 +16,8 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Archive, Search, Plus, Phone, Building2, MapPin, ChevronRight, Users } from 'lucide-react'
-import type { ClientStatus } from '@/types'
+import { Archive, Search, Plus, Phone, Building2, MapPin, ChevronRight, Users, UserCircle } from 'lucide-react'
+import type { ClientStatus, WorkspaceMember } from '@/types'
 import { getPrimaryPhoneNumber } from '@/lib/clientUtils'
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
@@ -38,6 +40,16 @@ export default function Clients() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showArchived, setShowArchived] = useState(false)
+  const { role, workspaceId } = useUserProfile()
+
+  const showAgent = role === 'owner' || role === 'supervisor'
+  const { data: members } = useWorkspaceMembers(showAgent ? workspaceId : null)
+  const agentsMap = useMemo(() => {
+    if (!members) return new Map<string, WorkspaceMember>()
+    const map = new Map<string, WorkspaceMember>()
+    for (const m of members) map.set(m.uid, m)
+    return map
+  }, [members])
 
   const { data: clients, isLoading } = useClients({
     status: statusFilter !== 'all' ? (statusFilter as ClientStatus) : undefined,
@@ -169,12 +181,18 @@ export default function Clients() {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center flex-wrap gap-2 mt-2">
                           <StatusBadge status={client.status} />
                           {client.archived && (
                             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
                               <Archive className="h-3 w-3" />
                               Archivado
+                            </span>
+                          )}
+                          {showAgent && (
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                              <UserCircle className="h-3 w-3" />
+                              {agentsMap.get(client.owner_uid)?.display_name || 'Desconocido'}
                             </span>
                           )}
                         </div>

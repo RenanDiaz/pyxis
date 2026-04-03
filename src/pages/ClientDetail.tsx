@@ -17,7 +17,8 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import DocumentGrid from '@/components/documents/DocumentGrid'
-import { ArrowLeft, Pencil, Trash2, Phone, FileDown, Archive, ArchiveRestore } from 'lucide-react'
+import { useWorkspaceMembers } from '@/hooks/useWorkspace'
+import { ArrowLeft, Pencil, Trash2, Phone, FileDown, Archive, ArchiveRestore, UserCircle } from 'lucide-react'
 import type { ClientStatus } from '@/types'
 import { toast } from 'sonner'
 import { exportClientDoc } from '@/lib/exportClientDoc'
@@ -34,6 +35,12 @@ export default function ClientDetail() {
   const updateMutation = useUpdateClient()
   const deleteMutation = useDeleteClient()
   const [notes, setNotes] = useState<string | null>(null)
+
+  const showAgent = role === 'owner' || role === 'supervisor'
+  const { data: members } = useWorkspaceMembers(showAgent ? workspaceId : null)
+  const agentName = showAgent && client && members
+    ? members.find((m) => m.uid === client.owner_uid)?.display_name || 'Desconocido'
+    : null
 
   if (isLoading) {
     return <p className="text-muted-foreground">Cargando...</p>
@@ -197,6 +204,18 @@ export default function ClientDetail() {
                 <p className="text-muted-foreground">Propósito del negocio</p>
                 <p className="font-medium">{client.business_purpose || '—'}</p>
               </div>
+              {agentName && (
+                <>
+                  <Separator />
+                  <div className="text-sm">
+                    <p className="text-muted-foreground">Agente asignado</p>
+                    <p className="font-medium flex items-center gap-1.5">
+                      <UserCircle className="h-4 w-4 text-muted-foreground" />
+                      {agentName}
+                    </p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
