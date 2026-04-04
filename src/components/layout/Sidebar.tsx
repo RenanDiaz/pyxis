@@ -98,7 +98,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const showWorkspaceSection = role === 'owner'
 
   return (
-    <div className="flex h-full flex-col pb-[env(safe-area-inset-bottom)]">
+    <div className="flex h-full flex-col">
       <div className="p-6">
         <div className="flex items-center gap-2.5">
           <PyxisLogo className="h-8 w-8 text-primary" />
