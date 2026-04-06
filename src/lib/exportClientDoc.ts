@@ -18,6 +18,47 @@ function field(label: string, value?: string, tabbed?: boolean): Paragraph {
   })
 }
 
+function partnerSection(partners: Client["partners"]): Paragraph[] {
+  if (!partners || partners.length === 0) return []
+
+  const paragraphs: Paragraph[] = [
+    new Paragraph({ spacing: { after: 100 }, children: [] }),
+    new Paragraph({
+      alignment: AlignmentType.JUSTIFIED,
+      spacing: { after: 100 },
+      children: [
+        new TextRun({ text: `- SOCIOS DE LA LLC (${partners.length}):`, bold: true, font: FONT, size: FONT_SIZE }),
+      ],
+    }),
+  ]
+
+  partners.forEach((partner, i) => {
+    paragraphs.push(
+      new Paragraph({ spacing: { after: 60 }, children: [] }),
+      new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { after: 40 },
+        children: [
+          new TextRun({ text: `\tSOCIO ${i + 1}:`, bold: true, font: FONT, size: FONT_SIZE }),
+        ],
+      }),
+      field("● NOMBRE", partner.first_name, true),
+      field("● APELLIDOS", partner.last_name, true),
+    )
+    if (partner.ssn_itin) {
+      paragraphs.push(field("● SSN O ITIN", partner.ssn_itin, true))
+    }
+    if (partner.address) {
+      paragraphs.push(field("● DIRECCIÓN", partner.address, true))
+    }
+    if (partner.ownership_percentage) {
+      paragraphs.push(field("● PARTICIPACIÓN", `${partner.ownership_percentage}%`, true))
+    }
+  })
+
+  return paragraphs
+}
+
 export function exportClientDoc(client: Client): void {
   const llcName = client.llc_name?.toUpperCase() || "SIN NOMBRE DE LLC"
 
@@ -56,6 +97,7 @@ export function exportClientDoc(client: Client): void {
           field("- CORREO ELECTRÓNICO", client.email),
           field("- DIRECCIÓN COMERCIAL DE LA EMPRESA", client.business_address),
           field("- PROPÓSITO DE LA EMPRESA", client.business_purpose),
+          ...partnerSection(client.partners),
         ],
       },
     ],

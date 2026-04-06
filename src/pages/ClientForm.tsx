@@ -21,11 +21,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 import StateClock from '@/components/states/StateClock'
 import { getStateTimezone } from '@/lib/timezones'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, Plus, X, AlertTriangle } from 'lucide-react'
-import type { Client, ClientStatus, ClientPhone, PhoneLabel } from '@/types'
+import type { Client, ClientStatus, ClientPhone, PhoneLabel, Partner } from '@/types'
 import { inferStatus } from '@/lib/statusUtils'
 import { toast } from 'sonner'
 
@@ -60,6 +61,7 @@ export default function ClientForm() {
   const [phones, setPhones] = useState<ClientPhone[]>([
     { number: '', label: 'personal', is_primary: true },
   ])
+  const [partners, setPartners] = useState<Partner[]>([])
   const [status, setStatus] = useState<ClientStatus>('nuevo')
   const stateManuallySet = useRef(false)
   const [stateAutoDetected, setStateAutoDetected] = useState(false)
@@ -80,6 +82,11 @@ export default function ClientForm() {
         setPhones(existingClient.phones)
       } else if (existingClient.phone) {
         setPhones([{ number: existingClient.phone, label: 'personal', is_primary: true }])
+      }
+
+      // Load partners
+      if (existingClient.partners?.length) {
+        setPartners(existingClient.partners)
       }
     }
   }, [existingClient])
@@ -152,6 +159,19 @@ export default function ClientForm() {
     })
   }
 
+  // Partner CRUD helpers
+  const addPartner = () => {
+    setPartners((prev) => [...prev, { first_name: '', last_name: '' }])
+  }
+
+  const updatePartner = (index: number, field: keyof Partner, value: string | number) => {
+    setPartners((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)))
+  }
+
+  const removePartner = (index: number) => {
+    setPartners((prev) => prev.filter((_, i) => i !== index))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -193,6 +213,18 @@ export default function ClientForm() {
         clientData[field.id] = (formData[field.id] as string).trim()
       }
     }
+
+    // Include partners (only those with at least a name)
+    const validPartners = partners
+      .filter((p) => p.first_name.trim() || p.last_name.trim())
+      .map((p) => ({
+        first_name: p.first_name.trim(),
+        last_name: p.last_name.trim(),
+        ...(p.ssn_itin?.trim() && { ssn_itin: p.ssn_itin.trim() }),
+        ...(p.address?.trim() && { address: p.address.trim() }),
+        ...(p.ownership_percentage != null && p.ownership_percentage > 0 && { ownership_percentage: p.ownership_percentage }),
+      }))
+    clientData.partners = validPartners
 
     try {
       if (isEditing && id) {
@@ -419,6 +451,92 @@ export default function ClientForm() {
                     )}
                   </div>
                 ))}
+              </div>
+
+              {/* Partners section */}
+              <div className="space-y-3">
+                <Separator />
+                <Label>Socios de la LLC</Label>
+                {partners.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Sin socios agregados. Si la LLC tiene más de un dueño, agrega los socios aquí.
+                  </p>
+                )}
+                {partners.map((partner, index) => (
+                  <Card key={index} className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-muted-foreground">Socio {index + 1}</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => removePartner(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor={`partner_first_name_${index}`}>Primer nombre</Label>
+                        <Input
+                          id={`partner_first_name_${index}`}
+                          value={partner.first_name}
+                          onChange={(e) => updatePartner(index, 'first_name', e.target.value)}
+                          className="mt-1.5"
+                          placeholder="Nombre"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`partner_last_name_${index}`}>Apellidos</Label>
+                        <Input
+                          id={`partner_last_name_${index}`}
+                          value={partner.last_name}
+                          onChange={(e) => updatePartner(index, 'last_name', e.target.value)}
+                          className="mt-1.5"
+                          placeholder="Apellidos"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`partner_ssn_${index}`}>SSN o ITIN</Label>
+                        <Input
+                          id={`partner_ssn_${index}`}
+                          value={partner.ssn_itin || ''}
+                          onChange={(e) => updatePartner(index, 'ssn_itin', e.target.value)}
+                          className="mt-1.5"
+                          placeholder="SSN o ITIN"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`partner_pct_${index}`}>% de participación</Label>
+                        <Input
+                          id={`partner_pct_${index}`}
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={partner.ownership_percentage ?? ''}
+                          onChange={(e) => updatePartner(index, 'ownership_percentage', e.target.value ? Number(e.target.value) : 0)}
+                          className="mt-1.5"
+                          placeholder="Ej: 50"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <Label htmlFor={`partner_address_${index}`}>Dirección</Label>
+                        <Input
+                          id={`partner_address_${index}`}
+                          value={partner.address || ''}
+                          onChange={(e) => updatePartner(index, 'address', e.target.value)}
+                          className="mt-1.5"
+                          placeholder="Dirección del socio"
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={addPartner}>
+                  <Plus className="mr-1 h-3 w-3" /> Agregar socio
+                </Button>
               </div>
 
               {!isEditing && (
