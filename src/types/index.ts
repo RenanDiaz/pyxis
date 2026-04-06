@@ -104,6 +104,14 @@ export interface ClientPhone {
   is_primary: boolean
 }
 
+export interface Partner {
+  first_name: string
+  last_name: string
+  ssn_itin?: string
+  address?: string
+  ownership_percentage?: number
+}
+
 export interface Client {
   id: string
   phone: string
@@ -118,6 +126,7 @@ export interface Client {
   email?: string
   business_address?: string
   business_purpose?: string
+  partners?: Partner[]
   payment_total?: number
   payments?: Payment[]
   status: ClientStatus

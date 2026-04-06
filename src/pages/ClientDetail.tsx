@@ -420,6 +420,44 @@ export default function ClientDetail() {
             )
           })()}
 
+          {client.partners && client.partners.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Socios de la LLC ({client.partners.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {client.partners.map((partner, i) => (
+                  <div key={i} className="rounded-md border p-3 space-y-2 text-sm">
+                    <p className="font-medium">
+                      {partner.first_name} {partner.last_name}
+                      {partner.ownership_percentage ? (
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">
+                          {partner.ownership_percentage}%
+                        </span>
+                      ) : null}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {partner.ssn_itin && (
+                        <div>
+                          <p className="text-muted-foreground">SSN/ITIN</p>
+                          <p className="font-medium">••••{partner.ssn_itin.slice(-4)}</p>
+                        </div>
+                      )}
+                      {partner.address && (
+                        <div className="col-span-2">
+                          <p className="text-muted-foreground">Dirección</p>
+                          <p className="font-medium">{partner.address}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Notas</CardTitle>
