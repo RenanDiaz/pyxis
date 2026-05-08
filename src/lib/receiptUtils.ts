@@ -121,7 +121,6 @@ interface ReceiptInput {
   payment: Payment
   paymentIndex: number
   workspace: Workspace
-  emittedBy?: string
 }
 
 export async function generatePaymentReceipt({
@@ -129,7 +128,6 @@ export async function generatePaymentReceipt({
   payment,
   paymentIndex,
   workspace,
-  emittedBy,
 }: ReceiptInput): Promise<void> {
   const payments = client.payments ?? []
   const total = client.payment_total ?? 0
@@ -311,11 +309,8 @@ export async function generatePaymentReceipt({
   doc.text(
     `Emitido el ${format(new Date(), "d 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es })}`,
     margin,
-    pageH - margin - 28
+    pageH - margin - 14
   )
-  if (emittedBy) {
-    doc.text(`Por: ${emittedBy}`, margin, pageH - margin - 14)
-  }
   doc.setTextColor(...text)
   doc.setFont('helvetica', 'bold')
   doc.text('Gracias por su pago.', pageW - margin, pageH - margin - 14, {
