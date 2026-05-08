@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
+import ReceiptBrandingSection from '@/components/workspace/ReceiptBrandingSection'
 
 export default function WorkspaceSettings() {
   const { workspace, workspaceId } = useUserProfile()
@@ -87,6 +88,10 @@ export default function WorkspaceSettings() {
           </Button>
         </CardContent>
       </Card>
+
+      {workspace && workspaceId && (
+        <ReceiptBrandingSection workspace={workspace} workspaceId={workspaceId} />
+      )}
 
       {otherMembers.length > 0 && (
         <Card>

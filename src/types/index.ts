@@ -15,6 +15,9 @@ export interface Workspace {
   name: string
   owner_uid: string
   created_at: Timestamp
+  receipt_company_name?: string
+  receipt_logo_url?: string
+  receipt_logo_path?: string
 }
 
 export interface WorkspaceMember {

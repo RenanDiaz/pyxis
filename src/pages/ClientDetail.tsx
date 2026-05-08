@@ -39,7 +39,7 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { role, workspaceId, profile: member } = useUserProfile()
+  const { role, workspaceId, profile: member, workspace } = useUserProfile()
   const { data: client, isLoading } = useClient(id)
   const { data: calls } = useCalls({ clientId: id })
   const { data: states } = useStates()
@@ -511,6 +511,8 @@ export default function ClientDetail() {
               const st = client.state && states?.find((s) => s.abbreviation === client.state)
               return st && client.process ? getProcessPrice(st, client.process) : null
             })()}
+            workspace={workspace}
+            emittedBy={user?.displayName ?? user?.email ?? undefined}
           />
 
           <DocumentGrid
