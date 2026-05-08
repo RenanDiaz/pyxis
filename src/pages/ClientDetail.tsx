@@ -512,7 +512,6 @@ export default function ClientDetail() {
               return st && client.process ? getProcessPrice(st, client.process) : null
             })()}
             workspace={workspace}
-            emittedBy={user?.displayName ?? user?.email ?? undefined}
           />
 
           <DocumentGrid

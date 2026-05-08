@@ -39,7 +39,6 @@ interface PaymentSectionProps {
   isPending: boolean
   suggestedTotal?: number | null
   workspace?: Workspace | null
-  emittedBy?: string
 }
 
 export default function PaymentSection({
@@ -48,7 +47,6 @@ export default function PaymentSection({
   isPending,
   suggestedTotal,
   workspace,
-  emittedBy,
 }: PaymentSectionProps) {
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null)
 
@@ -61,7 +59,6 @@ export default function PaymentSection({
         payment,
         paymentIndex: index,
         workspace,
-        emittedBy,
       })
     } catch {
       toast.error('Error al generar el recibo')
