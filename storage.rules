@@ -12,6 +12,14 @@ service firebase.storage {
                     && firestore.get(/databases/(default)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)).data.role == "owner";
     }
 
+    // Workspace branding (logo for receipts) — readable by any member, writable by owner only
+    match /workspaces/{workspaceId}/branding/{allPaths=**} {
+      allow read: if request.auth != null
+                  && firestore.exists(/databases/(default)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
+      allow write, delete: if request.auth != null
+                           && firestore.get(/databases/(default)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)).data.role == "owner";
+    }
+
     // Deny everything else by default
     match /{allPaths=**} {
       allow read, write: if false;

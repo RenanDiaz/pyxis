@@ -19,9 +19,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { DollarSign, Plus, CircleCheck, CircleAlert, Clock } from 'lucide-react'
-import type { Client, Payment, PaymentMethod } from '@/types'
+import { DollarSign, Plus, CircleCheck, CircleAlert, Clock, FileDown } from 'lucide-react'
+import type { Client, Payment, PaymentMethod, Workspace } from '@/types'
 import { inferStatus } from '@/lib/statusUtils'
+import { generatePaymentReceipt } from '@/lib/receiptUtils'
+import { toast } from 'sonner'
+import { Link } from 'react-router-dom'
 
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   efectivo: 'Efectivo',
@@ -35,9 +38,38 @@ interface PaymentSectionProps {
   onUpdate: (data: { payment_total?: number; payments?: Payment[]; status?: Client['status'] }) => Promise<void>
   isPending: boolean
   suggestedTotal?: number | null
+  workspace?: Workspace | null
+  emittedBy?: string
 }
 
-export default function PaymentSection({ client, onUpdate, isPending, suggestedTotal }: PaymentSectionProps) {
+export default function PaymentSection({
+  client,
+  onUpdate,
+  isPending,
+  suggestedTotal,
+  workspace,
+  emittedBy,
+}: PaymentSectionProps) {
+  const [generatingIndex, setGeneratingIndex] = useState<number | null>(null)
+
+  const handleDownloadReceipt = async (payment: Payment, index: number) => {
+    if (!workspace) return
+    setGeneratingIndex(index)
+    try {
+      await generatePaymentReceipt({
+        client,
+        payment,
+        paymentIndex: index,
+        workspace,
+        emittedBy,
+      })
+    } catch {
+      toast.error('Error al generar el recibo')
+    } finally {
+      setGeneratingIndex(null)
+    }
+  }
+
   const [showDialog, setShowDialog] = useState(false)
   const [showTotalDialog, setShowTotalDialog] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState('')
@@ -180,17 +212,39 @@ export default function PaymentSection({ client, onUpdate, isPending, suggestedT
                       {p.note && ` · ${p.note}`}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-destructive hover:text-destructive"
-                    onClick={() => handleDeletePayment(i)}
-                    disabled={isPending}
-                  >
-                    Eliminar
-                  </Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => handleDownloadReceipt(p, i)}
+                      disabled={!workspace || generatingIndex !== null}
+                      title={workspace ? 'Generar recibo PDF' : 'Configura el emisor en el workspace'}
+                    >
+                      <FileDown className="mr-1 h-3 w-3" />
+                      {generatingIndex === i ? 'Generando...' : 'Recibo'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-destructive hover:text-destructive"
+                      onClick={() => handleDeletePayment(i)}
+                      disabled={isPending}
+                    >
+                      Eliminar
+                    </Button>
+                  </div>
                 </div>
               ))}
+              {workspace && !workspace.receipt_company_name && !workspace.receipt_logo_url && (
+                <p className="text-xs text-muted-foreground pt-1">
+                  Tip: configura el logo y nombre del emisor en{' '}
+                  <Link to="/workspace" className="underline hover:text-foreground">
+                    ajustes del workspace
+                  </Link>{' '}
+                  para personalizar los recibos.
+                </p>
+              )}
             </div>
           )}
         </CardContent>

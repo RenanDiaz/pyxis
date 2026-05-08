@@ -135,8 +135,16 @@ export function useDeleteSubteam() {
 export function useUpdateWorkspace() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { name?: string; owner_uid?: string } }) =>
-      updateWorkspace(id, data),
+    mutationFn: ({ id, data }: {
+      id: string
+      data: {
+        name?: string
+        owner_uid?: string
+        receipt_company_name?: string
+        receipt_logo_url?: string
+        receipt_logo_path?: string
+      }
+    }) => updateWorkspace(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspace'] })
     },
