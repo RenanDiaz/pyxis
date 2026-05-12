@@ -71,7 +71,8 @@ export default function ClientForm() {
       const data: FormData = {}
       for (const field of clientFormConfig.fields) {
         const value = existingClient[field.id as keyof typeof existingClient]
-        data[field.id] = typeof value === 'string' ? value : ''
+        const str = typeof value === 'string' ? value : ''
+        data[field.id] = field.id === 'llc_name' ? str.toUpperCase() : str
       }
       setFormData(data)
       setStatus(existingClient.status)
@@ -125,7 +126,8 @@ export default function ClientForm() {
 
   const handleChange = (fieldId: string, value: string) => {
     setFormData((prev) => {
-      const next = { ...prev, [fieldId]: value }
+      const nextValue = fieldId === 'llc_name' ? value.toUpperCase() : value
+      const next = { ...prev, [fieldId]: nextValue }
 
       if (fieldId === 'state') {
         stateManuallySet.current = true
@@ -210,7 +212,8 @@ export default function ClientForm() {
     // Only include non-empty optional fields
     for (const field of clientFormConfig.fields) {
       if (formData[field.id]?.trim()) {
-        clientData[field.id] = (formData[field.id] as string).trim()
+        const trimmed = (formData[field.id] as string).trim()
+        clientData[field.id] = field.id === 'llc_name' ? trimmed.toUpperCase() : trimmed
       }
     }
 
