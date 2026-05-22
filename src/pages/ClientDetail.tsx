@@ -35,6 +35,16 @@ import { formatPhoneForWhatsApp } from '@/lib/phoneUtils'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
+const SYSTEM_NOTE_PREFIX_RE = /^\[sistema\]\s?/i
+
+function isSystemNoteLine(line: string): boolean {
+  return SYSTEM_NOTE_PREFIX_RE.test(line)
+}
+
+function stripSystemNotePrefix(line: string): string {
+  return line.replace(SYSTEM_NOTE_PREFIX_RE, '')
+}
+
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -140,7 +150,7 @@ export default function ClientDetail() {
 
     const currentUserName = user?.displayName || user?.email || 'Sistema'
     const dateStr = format(new Date(), "d 'de' MMMM yyyy", { locale: es })
-    const reassignNote = `[Sistema] Cliente reasignado de ${oldAgent?.display_name || 'Desconocido'} a ${newAgent.display_name} por ${currentUserName} el ${dateStr}`
+    const reassignNote = `[SISTEMA] Cliente reasignado de ${oldAgent?.display_name || 'Desconocido'} a ${newAgent.display_name} por ${currentUserName} el ${dateStr}`
     const updatedNotes = client.notes
       ? `${client.notes}\n\n${reassignNote}`
       : reassignNote
@@ -464,25 +474,25 @@ export default function ClientDetail() {
             </CardHeader>
             <CardContent className="space-y-3">
               {/* System notes (reassignment history) */}
-              {currentNotes.split('\n').filter((line) => line.startsWith('[Sistema]')).length > 0 && (
+              {currentNotes.split('\n').filter((line) => isSystemNoteLine(line)).length > 0 && (
                 <div className="space-y-1.5">
                   {currentNotes
                     .split('\n')
-                    .filter((line) => line.startsWith('[Sistema]'))
+                    .filter((line) => isSystemNoteLine(line))
                     .map((line, i) => (
                       <div
                         key={i}
                         className="flex items-start gap-2 rounded-md border border-muted bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
                       >
                         <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                        <span>{line.replace('[Sistema] ', '')}</span>
+                        <span>{stripSystemNotePrefix(line)}</span>
                       </div>
                     ))}
                 </div>
               )}
               <Textarea
                 value={currentNotes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(e) => setNotes(e.target.value.toUpperCase())}
                 placeholder="Escribe notas sobre el cliente..."
                 rows={6}
               />

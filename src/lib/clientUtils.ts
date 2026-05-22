@@ -1,4 +1,4 @@
-import type { Client, ClientPhone } from '@/types'
+import type { Client, ClientPhone, Partner } from '@/types'
 
 /** Returns the primary phone object, or the first phone, or a fallback from legacy `phone` field. */
 export function getPrimaryPhone(client: Client): ClientPhone | null {
@@ -38,4 +38,49 @@ export const PHONE_LABELS: Record<string, string> = {
   whatsapp: 'WhatsApp',
   trabajo: 'Trabajo',
   otro: 'Otro',
+}
+
+/**
+ * Campos de texto del cliente que se almacenan siempre en mayúsculas.
+ * Excluye códigos/enums (state, process, status), teléfonos e IDs.
+ */
+const CLIENT_UPPERCASE_FIELDS = [
+  'first_name',
+  'middle_name',
+  'last_name',
+  'llc_name',
+  'ssn_itin',
+  'email',
+  'business_address',
+  'business_purpose',
+  'notes',
+] as const
+
+const PARTNER_UPPERCASE_FIELDS = ['first_name', 'last_name', 'ssn_itin', 'address'] as const
+
+export const CLIENT_UPPERCASE_FIELD_IDS: ReadonlySet<string> = new Set(CLIENT_UPPERCASE_FIELDS)
+export const PARTNER_UPPERCASE_FIELD_IDS: ReadonlySet<string> = new Set(PARTNER_UPPERCASE_FIELDS)
+
+/** Devuelve una copia del payload con los campos de texto del cliente en mayúsculas. */
+export function uppercaseClientFields<T extends Record<string, unknown>>(data: T): T {
+  const out: Record<string, unknown> = { ...data }
+  for (const key of CLIENT_UPPERCASE_FIELDS) {
+    const value = out[key]
+    if (typeof value === 'string') {
+      out[key] = value.toUpperCase()
+    }
+  }
+  if (Array.isArray(out.partners)) {
+    out.partners = (out.partners as Partner[]).map((partner) => {
+      const next: Partner = { ...partner }
+      for (const key of PARTNER_UPPERCASE_FIELDS) {
+        const value = next[key]
+        if (typeof value === 'string') {
+          next[key] = value.toUpperCase()
+        }
+      }
+      return next
+    })
+  }
+  return out as T
 }

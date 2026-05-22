@@ -31,6 +31,7 @@ import type {
   Goal,
   GoalType,
 } from '@/types'
+import { uppercaseClientFields } from '@/lib/clientUtils'
 
 // ── Workspace context for role-based queries ──
 
@@ -396,7 +397,7 @@ export async function createClient(
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   const now = Timestamp.now()
   const ref = await addDoc(wsCol(ctx.workspaceId, 'clients'), {
-    ...data,
+    ...uppercaseClientFields(data),
     archived: false,
     owner_uid: assignTo?.owner_uid ?? ctx.uid,
     subteam_id: assignTo?.subteam_id ?? ctx.subteamId,
@@ -413,7 +414,7 @@ export async function updateClient(
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   await updateDoc(wsDoc(workspaceId, 'clients', id), {
-    ...data,
+    ...uppercaseClientFields(data),
     updated_at: Timestamp.now(),
   })
 }
