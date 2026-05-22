@@ -9,6 +9,7 @@ import { PROCESSES } from '@/data/processes'
 import { getFieldValue, formatFieldValue } from '@/lib/processUtils'
 import { getStateByAreaCode } from '@/lib/areaCodeMap'
 import { formatPhoneForDisplay, isValidPhone } from '@/lib/phoneUtils'
+import { CLIENT_UPPERCASE_FIELD_IDS, PARTNER_UPPERCASE_FIELD_IDS } from '@/lib/clientUtils'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -72,7 +73,7 @@ export default function ClientForm() {
       for (const field of clientFormConfig.fields) {
         const value = existingClient[field.id as keyof typeof existingClient]
         const str = typeof value === 'string' ? value : ''
-        data[field.id] = field.id === 'llc_name' ? str.toUpperCase() : str
+        data[field.id] = CLIENT_UPPERCASE_FIELD_IDS.has(field.id) ? str.toUpperCase() : str
       }
       setFormData(data)
       setStatus(existingClient.status)
@@ -85,9 +86,17 @@ export default function ClientForm() {
         setPhones([{ number: existingClient.phone, label: 'personal', is_primary: true }])
       }
 
-      // Load partners
+      // Load partners (uppercase text fields for visual consistency with what is saved)
       if (existingClient.partners?.length) {
-        setPartners(existingClient.partners)
+        setPartners(
+          existingClient.partners.map((p) => ({
+            ...p,
+            first_name: p.first_name?.toUpperCase() ?? '',
+            last_name: p.last_name?.toUpperCase() ?? '',
+            ssn_itin: p.ssn_itin?.toUpperCase(),
+            address: p.address?.toUpperCase(),
+          })),
+        )
       }
     }
   }, [existingClient])
@@ -126,7 +135,7 @@ export default function ClientForm() {
 
   const handleChange = (fieldId: string, value: string) => {
     setFormData((prev) => {
-      const nextValue = fieldId === 'llc_name' ? value.toUpperCase() : value
+      const nextValue = CLIENT_UPPERCASE_FIELD_IDS.has(fieldId) ? value.toUpperCase() : value
       const next = { ...prev, [fieldId]: nextValue }
 
       if (fieldId === 'state') {
@@ -167,7 +176,11 @@ export default function ClientForm() {
   }
 
   const updatePartner = (index: number, field: keyof Partner, value: string | number) => {
-    setPartners((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)))
+    const nextValue =
+      typeof value === 'string' && PARTNER_UPPERCASE_FIELD_IDS.has(field as string)
+        ? value.toUpperCase()
+        : value
+    setPartners((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: nextValue } : p)))
   }
 
   const removePartner = (index: number) => {
@@ -213,7 +226,7 @@ export default function ClientForm() {
     for (const field of clientFormConfig.fields) {
       if (formData[field.id]?.trim()) {
         const trimmed = (formData[field.id] as string).trim()
-        clientData[field.id] = field.id === 'llc_name' ? trimmed.toUpperCase() : trimmed
+        clientData[field.id] = CLIENT_UPPERCASE_FIELD_IDS.has(field.id) ? trimmed.toUpperCase() : trimmed
       }
     }
 
