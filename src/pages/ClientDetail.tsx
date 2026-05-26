@@ -5,14 +5,13 @@ import { useCalls, useCreateCall } from '@/hooks/useCalls'
 import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useAuth } from '@/contexts/AuthContext'
-import { PROCESSES } from '@/data/processes'
-import { getFieldValue, formatFieldValue, getProcessPrice } from '@/lib/processUtils'
+import { getClientPaymentSummary } from '@/lib/processUtils'
 import StatusSelect from '@/components/clients/StatusSelect'
-import PaymentSection from '@/components/clients/PaymentSection'
+import ProcessCard from '@/components/clients/ProcessCard'
+import AddProcessDialog from '@/components/clients/AddProcessDialog'
+import type { PaymentEvent } from '@/components/clients/PaymentSection'
 import OutcomeBadge from '@/components/calls/OutcomeBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import StateClock from '@/components/states/StateClock'
-import { getStateTimezone } from '@/lib/timezones'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
@@ -25,8 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft, Pencil, Trash2, Phone, Mail, FileDown, Archive, ArchiveRestore, UserCircle, RefreshCw, Info } from 'lucide-react'
-import type { ClientStatus } from '@/types'
+import { ArrowLeft, Pencil, Trash2, Phone, Mail, FileDown, Archive, ArchiveRestore, UserCircle, RefreshCw, Info, Plus } from 'lucide-react'
+import type { Client, ClientStatus, ClientProcess } from '@/types'
+import { inferStatus } from '@/lib/statusUtils'
 import { Timestamp } from 'firebase/firestore'
 import { toast } from 'sonner'
 import { exportClientDoc } from '@/lib/exportClientDoc'
@@ -72,6 +72,7 @@ export default function ClientDetail() {
   )
   const [showReassign, setShowReassign] = useState(false)
   const [reassignUid, setReassignUid] = useState('')
+  const [showAddProcess, setShowAddProcess] = useState(false)
 
   if (isLoading) {
     return <p className="text-muted-foreground">Cargando...</p>
@@ -169,7 +170,34 @@ export default function ClientDetail() {
     toast.success(`Cliente reasignado a ${newAgent.display_name}`)
   }
 
+  const handleProcessUpdate = async (updated: ClientProcess, event?: PaymentEvent) => {
+    const processes = (client.processes ?? []).map((p) => (p.id === updated.id ? updated : p))
+    const data: Partial<Client> = { processes }
+    if (event) {
+      const summary = getClientPaymentSummary({ ...client, processes })
+      const allPaid = summary.total > 0 && summary.balance <= 0
+      const newStatus = inferStatus(client.status, allPaid ? 'full_payment' : 'partial_payment')
+      if (newStatus) data.status = newStatus
+    }
+    await updateMutation.mutateAsync({ id: client.id, data })
+    toast.success(event ? 'Pago registrado' : 'Proceso actualizado')
+  }
+
+  const handleAddProcess = async (process: ClientProcess) => {
+    const processes = [...(client.processes ?? []), process]
+    await updateMutation.mutateAsync({ id: client.id, data: { processes } })
+    toast.success('Proceso agregado')
+  }
+
+  const handleRemoveProcess = async (processId: string) => {
+    if (!confirm('¿Quitar este proceso? Se eliminarán también sus pagos registrados.')) return
+    const processes = (client.processes ?? []).filter((p) => p.id !== processId)
+    await updateMutation.mutateAsync({ id: client.id, data: { processes } })
+    toast.success('Proceso eliminado')
+  }
+
   const currentNotes = notes ?? client.notes ?? ''
+  const clientProcesses = client.processes ?? []
 
   return (
     <div className="space-y-6">
@@ -290,6 +318,14 @@ export default function ClientDetail() {
         </div>
       </div>
 
+      <AddProcessDialog
+        open={showAddProcess}
+        onOpenChange={setShowAddProcess}
+        states={states}
+        defaultState={client.state}
+        onAdd={handleAddProcess}
+      />
+
       {/* Reassignment modal */}
       {showReassign && assignableMembers && (
         <Card className="border-primary/30 bg-primary/5">
@@ -401,35 +437,6 @@ export default function ClientDetail() {
             </CardContent>
           </Card>
 
-          {client.process && client.state && (() => {
-            const process = PROCESSES.find((p) => p.id === client.process)
-            const state = states?.find((s) => s.abbreviation === client.state)
-            if (!process || !state) return null
-            return (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Proceso contratado
-                  </CardTitle>
-                  <p className="text-sm font-medium">
-                    {process.label} — {state.name} ({state.abbreviation})
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <StateClock timezone={getStateTimezone(state.abbreviation)} />
-                  <dl className="grid gap-3">
-                    {process.fields.map((f) => (
-                      <div key={f.key} className="flex items-center justify-between text-sm">
-                        <dt className="text-muted-foreground">{f.label}</dt>
-                        <dd className="font-semibold">{formatFieldValue(getFieldValue(state, f.key), f.format)}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </CardContent>
-              </Card>
-            )
-          })()}
-
           {client.partners && client.partners.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
@@ -507,22 +514,38 @@ export default function ClientDetail() {
           </Card>
         </div>
 
-        {/* Right column: payments, documents, call history */}
+        {/* Right column: processes (with payments), documents, call history */}
         <div className="lg:col-span-3 space-y-6">
-          <PaymentSection
-            client={client}
-            onUpdate={async (data) => {
-              await updateMutation.mutateAsync({ id: client.id, data })
-              toast.success('Pagos actualizados')
-            }}
-            isPending={updateMutation.isPending}
-            suggestedTotal={(() => {
-              if (client.payment_total) return null
-              const st = client.state && states?.find((s) => s.abbreviation === client.state)
-              return st && client.process ? getProcessPrice(st, client.process) : null
-            })()}
-            workspace={workspace}
-          />
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-muted-foreground">
+              Procesos contratados {clientProcesses.length > 0 && `(${clientProcesses.length})`}
+            </h2>
+            <Button size="sm" variant="outline" onClick={() => setShowAddProcess(true)}>
+              <Plus className="mr-1 h-3 w-3" />
+              Agregar proceso
+            </Button>
+          </div>
+
+          {clientProcesses.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                Sin procesos asignados. Agrega un proceso para registrar pagos y generar recibos.
+              </CardContent>
+            </Card>
+          ) : (
+            clientProcesses.map((process) => (
+              <ProcessCard
+                key={process.id}
+                client={client}
+                process={process}
+                state={process.state ? states?.find((s) => s.abbreviation === process.state) : null}
+                onUpdate={handleProcessUpdate}
+                onRemove={() => handleRemoveProcess(process.id)}
+                isPending={updateMutation.isPending}
+                workspace={workspace}
+              />
+            ))
+          )}
 
           <DocumentGrid
             clientId={client.id}

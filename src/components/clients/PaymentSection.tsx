@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,8 +19,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { DollarSign, Plus, CircleCheck, CircleAlert, Clock, FileDown } from 'lucide-react'
-import type { Client, Payment, PaymentMethod, Workspace } from '@/types'
-import { inferStatus } from '@/lib/statusUtils'
+import type { Client, ClientProcess, Payment, PaymentMethod, Workspace } from '@/types'
+import { getProcessPaid } from '@/lib/processUtils'
 import { generatePaymentReceipt } from '@/lib/receiptUtils'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
@@ -33,9 +32,12 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   otro: 'Otro',
 }
 
+export type PaymentEvent = 'partial' | 'full'
+
 interface PaymentSectionProps {
   client: Client
-  onUpdate: (data: { payment_total?: number; payments?: Payment[]; status?: Client['status'] }) => Promise<void>
+  process: ClientProcess
+  onUpdate: (process: ClientProcess, event?: PaymentEvent) => Promise<void>
   isPending: boolean
   suggestedTotal?: number | null
   workspace?: Workspace | null
@@ -43,6 +45,7 @@ interface PaymentSectionProps {
 
 export default function PaymentSection({
   client,
+  process,
   onUpdate,
   isPending,
   suggestedTotal,
@@ -56,6 +59,7 @@ export default function PaymentSection({
     try {
       await generatePaymentReceipt({
         client,
+        process,
         payment,
         paymentIndex: index,
         workspace,
@@ -74,9 +78,9 @@ export default function PaymentSection({
   const [paymentNote, setPaymentNote] = useState('')
   const [totalInput, setTotalInput] = useState('')
 
-  const payments = client.payments ?? []
-  const total = client.payment_total ?? 0
-  const amountPaid = payments.reduce((sum, p) => sum + p.amount, 0)
+  const payments = process.payments ?? []
+  const total = process.total ?? 0
+  const amountPaid = getProcessPaid(process)
   const balance = total - amountPaid
 
   const getPaymentStatus = () => {
@@ -100,15 +104,9 @@ export default function PaymentSection({
     }
 
     const newPayments = [...payments, newPayment]
-    const newAmountPaid = amountPaid + amount
-    const isFullPayment = total > 0 && newAmountPaid >= total
-    const trigger = isFullPayment ? 'full_payment' as const : 'partial_payment' as const
-    const newStatus = inferStatus(client.status, trigger)
+    const isFullPayment = total > 0 && amountPaid + amount >= total
 
-    await onUpdate({
-      payments: newPayments,
-      ...(newStatus ? { status: newStatus } : {}),
-    })
+    await onUpdate({ ...process, payments: newPayments }, isFullPayment ? 'full' : 'partial')
     setPaymentAmount('')
     setPaymentNote('')
     setShowDialog(false)
@@ -124,12 +122,7 @@ export default function PaymentSection({
       ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
     }
 
-    const newStatus = inferStatus(client.status, 'full_payment')
-
-    await onUpdate({
-      payments: [...payments, newPayment],
-      ...(newStatus ? { status: newStatus } : {}),
-    })
+    await onUpdate({ ...process, payments: [...payments, newPayment] }, 'full')
     setPaymentNote('')
     setShowDialog(false)
   }
@@ -137,115 +130,110 @@ export default function PaymentSection({
   const handleSetTotal = async () => {
     const num = parseFloat(totalInput)
     if (isNaN(num) || num < 0) return
-    await onUpdate({ payment_total: num })
+    await onUpdate({ ...process, total: num })
     setShowTotalDialog(false)
     setTotalInput('')
   }
 
   const handleDeletePayment = async (index: number) => {
     const updated = payments.filter((_, i) => i !== index)
-    await onUpdate({ payments: updated })
+    await onUpdate({ ...process, payments: updated })
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pagos</CardTitle>
-            <PaymentStatusBadge status={status} />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Summary */}
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div>
-              <p className="text-xs text-muted-foreground">Total</p>
-              <p className="text-lg font-bold">{total > 0 ? `$${total.toLocaleString()}` : '—'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Pagado</p>
-              <p className="text-lg font-bold text-green-600">{amountPaid > 0 ? `$${amountPaid.toLocaleString()}` : '$0'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Saldo</p>
-              <p className={`text-lg font-bold ${balance > 0 ? 'text-orange-600' : 'text-muted-foreground'}`}>
-                {total > 0 ? `$${balance.toLocaleString()}` : '—'}
-              </p>
-            </div>
-          </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-muted-foreground">Pagos</p>
+        <PaymentStatusBadge status={status} />
+      </div>
 
-          {/* Actions */}
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setTotalInput(total > 0 ? String(total) : (suggestedTotal ? String(suggestedTotal) : ''))
-                setShowTotalDialog(true)
-              }}
-            >
-              <DollarSign className="mr-1 h-3 w-3" />
-              {total > 0 ? 'Editar total' : 'Definir total'}
-            </Button>
-            {total > 0 && balance > 0 && (
-              <Button size="sm" onClick={() => setShowDialog(true)}>
-                <Plus className="mr-1 h-3 w-3" />
-                Registrar pago
-              </Button>
-            )}
-          </div>
+      {/* Summary */}
+      <div className="grid grid-cols-3 gap-3 text-center">
+        <div>
+          <p className="text-xs text-muted-foreground">Total</p>
+          <p className="text-lg font-bold">{total > 0 ? `$${total.toLocaleString()}` : '—'}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Pagado</p>
+          <p className="text-lg font-bold text-green-600">{amountPaid > 0 ? `$${amountPaid.toLocaleString()}` : '$0'}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Saldo</p>
+          <p className={`text-lg font-bold ${balance > 0 ? 'text-orange-600' : 'text-muted-foreground'}`}>
+            {total > 0 ? `$${balance.toLocaleString()}` : '—'}
+          </p>
+        </div>
+      </div>
 
-          {/* Payment history */}
-          {payments.length > 0 && (
-            <div className="space-y-2 pt-2">
-              <p className="text-xs font-medium text-muted-foreground">Historial de pagos</p>
-              {payments.map((p, i) => (
-                <div key={i} className="flex items-center justify-between gap-2 text-sm border-b pb-2 last:border-0">
-                  <div className="min-w-0">
-                    <p className="font-medium">${p.amount.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {p.date} · {METHOD_LABELS[p.method] ?? p.method}
-                      {p.note && ` · ${p.note}`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                      onClick={() => handleDownloadReceipt(p, i)}
-                      disabled={!workspace || generatingIndex !== null}
-                      title={workspace ? 'Generar recibo PDF' : 'Configura el emisor en el workspace'}
-                    >
-                      <FileDown className="mr-1 h-3 w-3" />
-                      {generatingIndex === i ? 'Generando...' : 'Recibo'}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-destructive hover:text-destructive"
-                      onClick={() => handleDeletePayment(i)}
-                      disabled={isPending}
-                    >
-                      Eliminar
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              {workspace && !workspace.receipt_company_name && !workspace.receipt_logo_url && (
-                <p className="text-xs text-muted-foreground pt-1">
-                  Tip: configura el logo y nombre del emisor en{' '}
-                  <Link to="/workspace" className="underline hover:text-foreground">
-                    ajustes del workspace
-                  </Link>{' '}
-                  para personalizar los recibos.
+      {/* Actions */}
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            setTotalInput(total > 0 ? String(total) : (suggestedTotal ? String(suggestedTotal) : ''))
+            setShowTotalDialog(true)
+          }}
+        >
+          <DollarSign className="mr-1 h-3 w-3" />
+          {total > 0 ? 'Editar total' : 'Definir total'}
+        </Button>
+        {total > 0 && balance > 0 && (
+          <Button size="sm" onClick={() => setShowDialog(true)}>
+            <Plus className="mr-1 h-3 w-3" />
+            Registrar pago
+          </Button>
+        )}
+      </div>
+
+      {/* Payment history */}
+      {payments.length > 0 && (
+        <div className="space-y-2 pt-2">
+          <p className="text-xs font-medium text-muted-foreground">Historial de pagos</p>
+          {payments.map((p, i) => (
+            <div key={i} className="flex items-center justify-between gap-2 text-sm border-b pb-2 last:border-0">
+              <div className="min-w-0">
+                <p className="font-medium">${p.amount.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">
+                  {p.date} · {METHOD_LABELS[p.method] ?? p.method}
+                  {p.note && ` · ${p.note}`}
                 </p>
-              )}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => handleDownloadReceipt(p, i)}
+                  disabled={!workspace || generatingIndex !== null}
+                  title={workspace ? 'Generar recibo PDF' : 'Configura el emisor en el workspace'}
+                >
+                  <FileDown className="mr-1 h-3 w-3" />
+                  {generatingIndex === i ? 'Generando...' : 'Recibo'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-destructive hover:text-destructive"
+                  onClick={() => handleDeletePayment(i)}
+                  disabled={isPending}
+                >
+                  Eliminar
+                </Button>
+              </div>
             </div>
+          ))}
+          {workspace && !workspace.receipt_company_name && !workspace.receipt_logo_url && (
+            <p className="text-xs text-muted-foreground pt-1">
+              Tip: configura el logo y nombre del emisor en{' '}
+              <Link to="/workspace" className="underline hover:text-foreground">
+                ajustes del workspace
+              </Link>{' '}
+              para personalizar los recibos.
+            </p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
       {/* Set total dialog */}
       <Dialog open={showTotalDialog} onOpenChange={setShowTotalDialog}>
@@ -333,7 +321,7 @@ export default function PaymentSection({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }
 

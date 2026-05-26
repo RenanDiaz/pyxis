@@ -116,109 +116,69 @@ unirse via link de invitación (`/join?token=...&workspace=...`).
 - `/workspace/miembros` — Gestión de miembros e invitaciones
 - `/workspace/subteams` — Gestión de subequipos
 
-# Nuevo feature - Procesos a contratar
-Agrega el concepto de "proceso" a los clientes. Un proceso representa
-el servicio que el cliente quiere contratar.
+# Feature - Procesos a contratar (múltiples por cliente)
+Un cliente puede tener **varios procesos** contratados. Cada proceso es un
+servicio con su propio precio, sus propios pagos y recibos, y su propia etapa
+de seguimiento, independiente del resto.
 
-## 1. Modelo de datos
+## 1. Modelo de datos (`src/types/index.ts`)
+```ts
+type ProcessType =
+  | 'registration' | 'annual_report' | 'dissolution' | 'amendment'
+  | 'newspaper_research' | 'newspaper_publication'
 
-Agregar el campo `process` al tipo `Client`:
+type ProcessStage = 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
 
-process: "registration" | "annual_report" | "dissolution" | "amendment" | null
-
-Actualizar `client_form.json` agregando el campo:
-{
-  "id": "process",
-  "label": "Proceso",
-  "type": "select",
-  "required": false
+interface ClientProcess {
+  id: string                 // uuid local
+  type: ProcessType
+  state?: string             // estado asociado (para info/precio derivado)
+  total?: number             // precio acordado de ESTE proceso
+  payments: Payment[]        // pagos de ESTE proceso → sus recibos
+  stage: ProcessStage        // seguimiento independiente del status del cliente
+  notes?: string
+  created_at: Timestamp
 }
+```
+`Client` tiene `processes?: ClientProcess[]`. Los campos `process`,
+`payment_total` y `payments` quedan como **legacy** (`@deprecated`): solo los
+lee el script de migración, ya no se escriben.
 
-## 2. Definición de procesos
-Crear el archivo `src/data/processes.ts`:
+## 2. Definición de procesos (`src/data/processes.ts`)
+Cada `ProcessDef` tiene un **modelo de precio** (`pricing`):
+- `{ mode: 'state', key }` → precio derivado del documento del estado
+  (registration, annual_report, dissolution, amendment).
+- `{ mode: 'fixed', amount }` → precio fijo. **Investigación de periódicos** ($50,
+  requisito de publicación de LLC en NY: ubicar el diario y el semanal).
+- `{ mode: 'manual' }` → precio variable que captura el agente.
+  **Publicaciones en periódicos** (depende de lo que cobren los periódicos).
 
-export const PROCESSES = [
-  {
-    id: "registration",
-    label: "Registro de LLC",
-    fields: [
-      { key: "sale_price",        label: "Precio de venta" },
-      { key: "state_fee",         label: "Fee del estado" },
-      { key: "processing_days",   label: "Días de proceso" }
-    ]
-  },
-  {
-    id: "annual_report",
-    label: "Annual Report",
-    fields: [
-      { key: "annual_report.fee",      label: "Fee" },
-      { key: "annual_report.due_date", label: "Fecha de vencimiento" }
-    ]
-  },
-  {
-    id: "dissolution",
-    label: "Dissolution",
-    fields: [
-      { key: "dissolution.fee",             label: "Fee" },
-      { key: "dissolution.processing_days", label: "Días de proceso" }
-    ]
-  },
-  {
-    id: "amendment",
-    label: "Amendment",
-    fields: [
-      { key: "amendments.fee",       label: "Fee" },
-      { key: "amendments.available", label: "Disponible" }
-    ]
-  }
-]
+Los `fields` (solo para procesos `state`) definen qué datos del estado se
+muestran en el card informativo. Helpers en `src/lib/processUtils.ts`:
+`getFieldValue` (dot notation), `getSuggestedPrice`, `getProcessLabel`,
+`getProcessPaid`, `getClientPayments`, `getClientPaymentSummary` (agregados con
+fallback a legacy).
 
-Los `fields` definen qué datos del estado se muestran para cada proceso,
-mapeando directamente a las keys del objeto de estado en Firestore.
-Los fields con notación de punto (ej. `annual_report.fee`) acceden a
-campos anidados. Crear un helper `getFieldValue(state, key)` en
-`src/lib/processUtils.ts` que resuelva tanto keys simples como anidadas
-con dot notation.
+## 3. Formulario de cliente (`ClientForm.tsx`)
+Sección "Procesos contratados" donde se agregan/quitan procesos
+(`AddProcessDialog`: tipo + estado). Por cada proceso con estado y fields
+derivados se muestra un card informativo flotante (derecha en desktop, abajo en
+mobile). Los pagos NO se gestionan en el formulario, sino en el detalle.
 
-## 3. Formulario de cliente (nuevo y editar)
+## 4. Detalle del cliente (`ClientDetail.tsx`)
+Lista de `ProcessCard`, uno por proceso, cada uno con: etiqueta + estado,
+selector de etapa, info derivada del estado, y su propio bloque de pagos
+(`PaymentSection`, ahora por proceso) con generación de recibo por pago. Botón
+"Agregar proceso" y quitar proceso. El status del cliente se mantiene como antes:
+un pago dispara `partial_payment`/`full_payment` (este último solo cuando el
+saldo agregado de todos los procesos llega a 0).
 
-Agregar un dropdown "Proceso" después del campo "Estado" con estas
-opciones en orden:
-- (vacío) Sin proceso asignado
-- Registro de LLC
-- Annual Report
-- Dissolution
-- Amendment
+## 5. Recibos (`receiptUtils.ts`)
+`generatePaymentReceipt` recibe el `ClientProcess`: el servicio, total y saldo
+del recibo salen del proceso, no del cliente.
 
-### Panel informativo flotante
-Cuando el usuario tenga seleccionado tanto un Estado como un Proceso,
-mostrar un card a la derecha del formulario (o debajo en mobile) con
-la información relevante del proceso para ese estado.
-
-Comportamiento:
-- Si no hay estado o proceso seleccionado: no mostrar el card
-- Si hay ambos: mostrar el card con los fields definidos en PROCESSES
-- El card se actualiza en tiempo real al cambiar estado o proceso
-- Los datos se leen desde Firestore (colección `states`) usando el
-  estado seleccionado
-
-Diseño del card:
-- Título: nombre del proceso + nombre del estado
-- Cada field en una fila: label a la izquierda, valor destacado a la derecha
-- Borde o acento visual que lo diferencie del formulario
-- En desktop: posicionado a la derecha del formulario (layout de 2 columnas)
-- En mobile: debajo del formulario
-
-## 4. Vista de detalle del cliente
-
-Agregar una sección "Proceso contratado" visible solo si el cliente
-tiene `process` y `state` asignados. Debe mostrar:
-- Nombre del proceso y nombre del estado
-- Los fields del proceso con el mismo diseño que el card del formulario
-
-Ubicación: después de la información principal del cliente, antes
-del historial de llamadas.
-
-## 5. Firestore
-No se requieren cambios en la estructura de Firestore. El campo
-`process` se guarda como string en el documento del cliente.
+## 6. Firestore y migración
+`processes` se guarda como array dentro del documento del cliente (sin cambios
+de estructura de colecciones). Migrar datos legacy con:
+`npx tsx scripts/migrate-to-multi-process.ts [--dry-run]` — crea un proceso a
+partir de `process`+`payment_total`+`payments`, sin borrar los campos viejos.

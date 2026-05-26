@@ -88,7 +88,15 @@ export interface Trade {
 
 export type ClientStatus = 'nuevo' | 'contactado' | 'en_proceso' | 'cerrado' | 'perdido' | 'deuda_pendiente'
 
-export type ProcessType = 'registration' | 'annual_report' | 'dissolution' | 'amendment'
+export type ProcessType =
+  | 'registration'
+  | 'annual_report'
+  | 'dissolution'
+  | 'amendment'
+  | 'newspaper_research'
+  | 'newspaper_publication'
+
+export type ProcessStage = 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
 
 export type PaymentMethod = 'efectivo' | 'zelle' | 'transferencia' | 'otro'
 
@@ -97,6 +105,18 @@ export interface Payment {
   method: PaymentMethod
   date: string // ISO date string
   note?: string
+}
+
+/** Un proceso/servicio contratado por el cliente, con su propio precio, pagos y seguimiento. */
+export interface ClientProcess {
+  id: string
+  type: ProcessType
+  state?: string
+  total?: number
+  payments: Payment[]
+  stage: ProcessStage
+  notes?: string
+  created_at: Timestamp
 }
 
 export type PhoneLabel = 'personal' | 'whatsapp' | 'trabajo' | 'otro'
@@ -121,7 +141,9 @@ export interface Client {
   phones?: ClientPhone[]
   llc_name?: string
   state?: string
+  /** @deprecated reemplazado por `processes`. Se mantiene solo para migración. */
   process?: ProcessType
+  processes?: ClientProcess[]
   first_name?: string
   middle_name?: string
   last_name?: string
@@ -130,7 +152,9 @@ export interface Client {
   business_address?: string
   business_purpose?: string
   partners?: Partner[]
+  /** @deprecated los pagos ahora viven por proceso en `processes`. Solo para migración. */
   payment_total?: number
+  /** @deprecated los pagos ahora viven por proceso en `processes`. Solo para migración. */
   payments?: Payment[]
   status: ClientStatus
   archived: boolean
