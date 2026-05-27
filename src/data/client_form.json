@@ -32,12 +32,6 @@
       "required": false
     },
     {
-      "id": "process",
-      "label": "Proceso",
-      "type": "select",
-      "required": false
-    },
-    {
       "id": "ssn_itin",
       "label": "SSN o ITIN",
       "type": "text",

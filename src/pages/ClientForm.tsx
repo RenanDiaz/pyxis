@@ -5,8 +5,14 @@ import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useAssignableMembers } from '@/hooks/useWorkspace'
 import clientFormConfig from '@/data/client_form.json'
-import { PROCESSES } from '@/data/processes'
-import { getFieldValue, formatFieldValue } from '@/lib/processUtils'
+import {
+  getProcessLabel,
+  getProcessDef,
+  getFieldValue,
+  formatFieldValue,
+  getSuggestedPrice,
+} from '@/lib/processUtils'
+import AddProcessDialog from '@/components/clients/AddProcessDialog'
 import { getStateByAreaCode } from '@/lib/areaCodeMap'
 import { formatPhoneForDisplay, isValidPhone } from '@/lib/phoneUtils'
 import { CLIENT_UPPERCASE_FIELD_IDS, PARTNER_UPPERCASE_FIELD_IDS } from '@/lib/clientUtils'
@@ -27,7 +33,7 @@ import StateClock from '@/components/states/StateClock'
 import { getStateTimezone } from '@/lib/timezones'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, Plus, X, AlertTriangle } from 'lucide-react'
-import type { Client, ClientStatus, ClientPhone, PhoneLabel, Partner } from '@/types'
+import type { Client, ClientStatus, ClientPhone, PhoneLabel, Partner, ClientProcess } from '@/types'
 import { inferStatus } from '@/lib/statusUtils'
 import { toast } from 'sonner'
 
@@ -63,6 +69,8 @@ export default function ClientForm() {
     { number: '', label: 'personal', is_primary: true },
   ])
   const [partners, setPartners] = useState<Partner[]>([])
+  const [processes, setProcesses] = useState<ClientProcess[]>([])
+  const [showAddProcess, setShowAddProcess] = useState(false)
   const [status, setStatus] = useState<ClientStatus>('nuevo')
   const stateManuallySet = useRef(false)
   const [stateAutoDetected, setStateAutoDetected] = useState(false)
@@ -84,6 +92,10 @@ export default function ClientForm() {
         setPhones(existingClient.phones)
       } else if (existingClient.phone) {
         setPhones([{ number: existingClient.phone, label: 'personal', is_primary: true }])
+      }
+
+      if (existingClient.processes?.length) {
+        setProcesses(existingClient.processes)
       }
 
       // Load partners (uppercase text fields for visual consistency with what is saved)
@@ -241,6 +253,7 @@ export default function ClientForm() {
         ...(p.ownership_percentage != null && p.ownership_percentage > 0 && { ownership_percentage: p.ownership_percentage }),
       }))
     clientData.partners = validPartners
+    clientData.processes = processes
 
     try {
       if (isEditing && id) {
@@ -278,8 +291,13 @@ export default function ClientForm() {
     return <p className="text-muted-foreground">Cargando...</p>
   }
 
-  const selectedState = states?.find((s) => s.abbreviation === formData.state)
-  const selectedProcess = PROCESSES.find((p) => p.id === formData.process)
+  const addProcess = (process: ClientProcess) => {
+    setProcesses((prev) => [...prev, process])
+  }
+
+  const removeProcess = (processId: string) => {
+    setProcesses((prev) => prev.filter((p) => p.id !== processId))
+  }
 
   return (
     <div className="space-y-6">
@@ -430,23 +448,6 @@ export default function ClientForm() {
                           </SelectContent>
                         </Select>
                       </>
-                    ) : field.type === 'select' && field.id === 'process' ? (
-                      <Select
-                        value={formData[field.id] || '_none'}
-                        onValueChange={(v) => handleChange(field.id, v === '_none' ? '' : v)}
-                      >
-                        <SelectTrigger className="mt-1.5">
-                          <SelectValue placeholder="Sin proceso asignado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none">Sin proceso asignado</SelectItem>
-                          {PROCESSES.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     ) : field.type === 'textarea' ? (
                       <Textarea
                         id={field.id}
@@ -467,6 +468,51 @@ export default function ClientForm() {
                     )}
                   </div>
                 ))}
+              </div>
+
+              {/* Processes section */}
+              <div className="space-y-3">
+                <Separator />
+                <Label>Procesos contratados</Label>
+                {processes.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Sin procesos asignados. Agrega los servicios que el cliente quiere contratar.
+                  </p>
+                )}
+                {processes.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between gap-2 rounded-md border p-3 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium">
+                        {getProcessLabel(p.type)}
+                        {p.state ? ` — ${p.state}` : ''}
+                      </p>
+                      {(() => {
+                        const st = p.state ? states?.find((s) => s.abbreviation === p.state) : null
+                        const price = getSuggestedPrice(p.type, st)
+                        return (
+                          <p className="text-xs text-muted-foreground">
+                            {price != null ? `Precio sugerido: $${price.toLocaleString()}` : 'Precio a definir'}
+                          </p>
+                        )
+                      })()}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      onClick={() => removeProcess(p.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowAddProcess(true)}>
+                  <Plus className="mr-1 h-3 w-3" /> Agregar proceso
+                </Button>
               </div>
 
               {/* Partners section */}
@@ -587,30 +633,48 @@ export default function ClientForm() {
           </CardContent>
         </Card>
 
-        {selectedState && selectedProcess && (
-          <Card className="h-fit md:sticky md:top-6">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">
-                {selectedProcess.label}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">
-                {selectedState.name} ({selectedState.abbreviation})
-              </p>
-              <StateClock timezone={getStateTimezone(selectedState.abbreviation)} />
-            </CardHeader>
-            <CardContent>
-              <dl className="space-y-3">
-                {selectedProcess.fields.map((f) => (
-                  <div key={f.key} className="flex items-center justify-between text-sm">
-                    <dt className="text-muted-foreground">{f.label}</dt>
-                    <dd className="font-semibold">{formatFieldValue(getFieldValue(selectedState, f.key), f.format)}</dd>
-                  </div>
-                ))}
-              </dl>
-            </CardContent>
-          </Card>
+        {processes.some((p) => {
+          const def = getProcessDef(p.type)
+          return p.state && def && def.fields.length > 0
+        }) && (
+          <div className="h-fit md:sticky md:top-6 space-y-4">
+            {processes.map((p) => {
+              const def = getProcessDef(p.type)
+              const st = p.state ? states?.find((s) => s.abbreviation === p.state) : null
+              if (!def || !def.fields.length || !st) return null
+              return (
+                <Card key={p.id}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">{def.label}</CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      {st.name} ({st.abbreviation})
+                    </p>
+                    <StateClock timezone={getStateTimezone(st.abbreviation)} />
+                  </CardHeader>
+                  <CardContent>
+                    <dl className="space-y-3">
+                      {def.fields.map((f) => (
+                        <div key={f.key} className="flex items-center justify-between text-sm">
+                          <dt className="text-muted-foreground">{f.label}</dt>
+                          <dd className="font-semibold">{formatFieldValue(getFieldValue(st, f.key), f.format)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
         )}
       </div>
+
+      <AddProcessDialog
+        open={showAddProcess}
+        onOpenChange={setShowAddProcess}
+        states={states}
+        defaultState={formData.state}
+        onAdd={addProcess}
+      />
     </div>
   )
 }

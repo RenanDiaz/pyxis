@@ -21,6 +21,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { getClientDisplayName } from '@/lib/clientUtils'
+import { getClientPayments, getClientPaymentSummary } from '@/lib/processUtils'
 import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
 import { formatInTimeZone } from 'date-fns-tz'
 import { isToday } from 'date-fns'
@@ -55,8 +56,7 @@ export default function Home() {
   }).length
 
   const paymentsToday = allClients.reduce((sum, c) => {
-    if (!c.payments) return sum
-    const todayPayments = c.payments.filter((p) => {
+    const todayPayments = getClientPayments(c).filter((p) => {
       try {
         return isToday(new Date(p.date))
       } catch {
@@ -234,11 +234,15 @@ export default function Home() {
                     {client.llc_name && (
                       <p className="text-muted-foreground truncate">{client.llc_name}</p>
                     )}
-                    {client.payment_total != null && (
-                      <p className="text-amber-600 dark:text-amber-400 font-medium">
-                        Pendiente: ${client.payment_total.toLocaleString('en-US')}
-                      </p>
-                    )}
+                    {(() => {
+                      const { balance, total } = getClientPaymentSummary(client)
+                      if (total <= 0 || balance <= 0) return null
+                      return (
+                        <p className="text-amber-600 dark:text-amber-400 font-medium">
+                          Pendiente: ${balance.toLocaleString('en-US')}
+                        </p>
+                      )
+                    })()}
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-2">
                     <Button variant="ghost" size="sm" asChild>

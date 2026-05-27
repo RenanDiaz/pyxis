@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Archive, Phone, Building2, MapPin, ChevronRight, Users, DollarSign, Mail } from 'lucide-react'
 import type { Client, WorkspaceMember } from '@/types'
 import { getPrimaryPhoneNumber } from '@/lib/clientUtils'
+import { getClientPaymentSummary } from '@/lib/processUtils'
 import { formatPhoneForWhatsApp } from '@/lib/phoneUtils'
 
 interface ClientsTableProps {
@@ -169,9 +170,9 @@ export default function ClientsTable({
                           Archivado
                         </span>
                       )}
-                      {client.payment_total != null && client.payment_total > 0 && (() => {
-                        const paid = (client.payments ?? []).reduce((s, p) => s + p.amount, 0)
-                        const bal = client.payment_total - paid
+                      {(() => {
+                        const { total, paid, balance: bal } = getClientPaymentSummary(client)
+                        if (total <= 0) return null
                         if (bal <= 0) return (
                           <span className="inline-flex items-center gap-0.5 text-xs text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full dark:bg-green-900/30 dark:text-green-300">
                             <DollarSign className="h-3 w-3" /> Pagado

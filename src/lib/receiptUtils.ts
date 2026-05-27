@@ -8,9 +8,9 @@ import { jsPDF } from 'jspdf'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { storage, isFirebaseConfigured } from '@/lib/firebase'
-import { PROCESSES } from '@/data/processes'
+import { getProcessLabel } from '@/lib/processUtils'
 import { getClientDisplayName } from '@/lib/clientUtils'
-import type { Client, Payment, PaymentMethod, Workspace } from '@/types'
+import type { Client, ClientProcess, Payment, PaymentMethod, Workspace } from '@/types'
 
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   efectivo: 'Efectivo',
@@ -74,12 +74,9 @@ function getRecipientName(client: Client): string {
   return getClientDisplayName(client)
 }
 
-function getServiceLabel(client: Client): string {
-  if (!client.process) return 'Servicio'
-  const process = PROCESSES.find((p) => p.id === client.process)
-  if (!process) return 'Servicio'
-  if (client.state) return `${process.label} — ${client.state}`
-  return process.label
+function getServiceLabel(process: ClientProcess): string {
+  const label = getProcessLabel(process.type)
+  return process.state ? `${label} — ${process.state}` : label
 }
 
 async function fetchImageAsDataUrl(url: string): Promise<{
@@ -109,15 +106,22 @@ async function fetchImageAsDataUrl(url: string): Promise<{
   }
 }
 
-function buildReceiptNumber(client: Client, paymentIndex: number, payment: Payment): string {
+function buildReceiptNumber(
+  client: Client,
+  process: ClientProcess,
+  paymentIndex: number,
+  payment: Payment,
+): string {
   const clientPart = client.id.slice(-4).toUpperCase()
+  const processPart = process.id.slice(-3).toUpperCase()
   const datePart = (payment.date || '').replace(/-/g, '').slice(2) // YYMMDD
   const seq = String(paymentIndex + 1).padStart(2, '0')
-  return `R-${datePart}-${clientPart}-${seq}`
+  return `R-${datePart}-${clientPart}${processPart}-${seq}`
 }
 
 interface ReceiptInput {
   client: Client
+  process: ClientProcess
   payment: Payment
   paymentIndex: number
   workspace: Workspace
@@ -125,12 +129,13 @@ interface ReceiptInput {
 
 export async function generatePaymentReceipt({
   client,
+  process,
   payment,
   paymentIndex,
   workspace,
 }: ReceiptInput): Promise<void> {
-  const payments = client.payments ?? []
-  const total = client.payment_total ?? 0
+  const payments = process.payments ?? []
+  const total = process.total ?? 0
   const paidUpToThis = payments
     .slice(0, paymentIndex + 1)
     .reduce((sum, p) => sum + p.amount, 0)
@@ -182,7 +187,7 @@ export async function generatePaymentReceipt({
 
   doc.setTextColor(...muted)
   doc.setFontSize(9)
-  const receiptNumber = buildReceiptNumber(client, paymentIndex, payment)
+  const receiptNumber = buildReceiptNumber(client, process, paymentIndex, payment)
   doc.text(`N° ${receiptNumber}`, pageW - margin, y + 54, { align: 'right' })
 
   const paymentDate = payment.date
@@ -232,7 +237,7 @@ export async function generatePaymentReceipt({
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(12)
   doc.setTextColor(...text)
-  doc.text(getServiceLabel(client), margin, y)
+  doc.text(getServiceLabel(process), margin, y)
 
   y += 28
 
