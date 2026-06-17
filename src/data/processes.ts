@@ -66,4 +66,10 @@ export const PROCESSES: ProcessDef[] = [
     pricing: { mode: 'manual' },
     fields: [],
   },
+  {
+    id: 'sale_tax_license',
+    label: 'Sale Tax License',
+    pricing: { mode: 'manual' },
+    fields: [],
+  },
 ]
