@@ -95,6 +95,7 @@ export type ProcessType =
   | 'amendment'
   | 'newspaper_research'
   | 'newspaper_publication'
+  | 'sale_tax_license'
 
 export type ProcessStage = 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
 
