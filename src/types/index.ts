@@ -117,6 +117,11 @@ export interface ClientProcess {
   total?: number
   payments: Payment[]
   stage: ProcessStage
+  /**
+   * Solo aplica a procesos de tipo `registration`. Indica si la LLC incluye
+   * Registered Agent. `undefined` o `true` = sí (valor por defecto); `false` = no.
+   */
+  has_registered_agent?: boolean
   notes?: string
   created_at: Timestamp
 }
