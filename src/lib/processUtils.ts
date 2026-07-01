@@ -104,20 +104,35 @@ export function localMonthKey(d: Date): string {
 }
 
 /**
- * Convierte la fecha elegida en un `<input type="date">` (`yyyy-MM-dd`) al
- * formato de guardado (ISO con hora):
- *  - Si la fecha elegida es hoy, usa la hora actual real (`new Date()`).
- *  - Si es otra fecha, usa mediodía local (12:00) para no cruzar de día en
- *    ninguna zona horaria al serializar.
+ * Convierte la fecha (y opcionalmente la hora) elegidas en el formulario al
+ * formato de guardado (ISO con hora), interpretando los inputs en hora LOCAL:
+ *  - Si se pasa `timeInput` (`HH:mm` de un `<input type="time">`), combina la
+ *    fecha con esa hora local.
+ *  - Si no hay hora y la fecha elegida es hoy, usa la hora actual real.
+ *  - Si no hay hora y es otra fecha, usa mediodía local (12:00) para no cruzar
+ *    de día en ninguna zona horaria al serializar.
  */
-export function paymentInputToISO(dateInput: string): string {
+export function paymentInputToISO(dateInput: string, timeInput?: string): string {
   const now = new Date()
   const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
     now.getDate(),
   ).padStart(2, '0')}`
-  if (!dateInput || dateInput === todayKey) return now.toISOString()
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateInput)
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateInput || '')
   if (!m) return now.toISOString()
+
+  const tm = /^(\d{2}):(\d{2})$/.exec(timeInput || '')
+  if (tm) {
+    return new Date(
+      Number(m[1]),
+      Number(m[2]) - 1,
+      Number(m[3]),
+      Number(tm[1]),
+      Number(tm[2]),
+      0,
+    ).toISOString()
+  }
+
+  if (dateInput === todayKey) return now.toISOString()
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0).toISOString()
 }
 
