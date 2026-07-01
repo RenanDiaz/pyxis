@@ -21,16 +21,13 @@ import ExportReportDialog, {
   type ExportSettings,
 } from '@/components/reports/ExportReportDialog'
 import { buildReportInput, previewReport } from '@/lib/salesReportData'
+import { formatMoney } from '@/lib/format'
 import type { Client } from '@/types'
 
 const ALL_AGENTS = 'all'
 
 function fmtCurrency(value: number): string {
-  return value.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 2,
-  })
+  return `$${formatMoney(value)}`
 }
 
 export default function Reports() {

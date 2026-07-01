@@ -22,6 +22,7 @@ import { DollarSign, Plus, CircleCheck, CircleAlert, Clock, FileDown } from 'luc
 import type { Client, ClientProcess, Payment, PaymentMethod, Workspace } from '@/types'
 import { getProcessPaid, parsePaymentDateParts, paymentInputToISO } from '@/lib/processUtils'
 import { generatePaymentReceipt } from '@/lib/receiptUtils'
+import { formatMoney } from '@/lib/format'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
@@ -172,16 +173,16 @@ export default function PaymentSection({
       <div className="grid grid-cols-3 gap-3 text-center">
         <div>
           <p className="text-xs text-muted-foreground">Total</p>
-          <p className="text-lg font-bold">{total > 0 ? `$${total.toLocaleString()}` : '—'}</p>
+          <p className="text-lg font-bold">{total > 0 ? `$${formatMoney(total)}` : '—'}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Pagado</p>
-          <p className="text-lg font-bold text-green-600">{amountPaid > 0 ? `$${amountPaid.toLocaleString()}` : '$0'}</p>
+          <p className="text-lg font-bold text-green-600">{amountPaid > 0 ? `$${formatMoney(amountPaid)}` : '$0'}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Saldo</p>
           <p className={`text-lg font-bold ${balance > 0 ? 'text-orange-600' : 'text-muted-foreground'}`}>
-            {total > 0 ? `$${balance.toLocaleString()}` : '—'}
+            {total > 0 ? `$${formatMoney(balance)}` : '—'}
           </p>
         </div>
       </div>
@@ -221,7 +222,7 @@ export default function PaymentSection({
           {payments.map((p, i) => (
             <div key={i} className="flex items-center justify-between gap-2 text-sm border-b pb-2 last:border-0">
               <div className="min-w-0">
-                <p className="font-medium">${p.amount.toLocaleString()}</p>
+                <p className="font-medium">${formatMoney(p.amount)}</p>
                 <p className="text-xs text-muted-foreground">
                   {formatPaymentDate(p.date)} · {METHOD_LABELS[p.method] ?? p.method}
                   {p.note && ` · ${p.note}`}
@@ -296,7 +297,7 @@ export default function PaymentSection({
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="text-sm text-muted-foreground">
-              Saldo pendiente: <span className="font-semibold text-foreground">${balance.toLocaleString()}</span>
+              Saldo pendiente: <span className="font-semibold text-foreground">${formatMoney(balance)}</span>
             </div>
 
             <div className="space-y-1.5">
@@ -364,7 +365,7 @@ export default function PaymentSection({
           <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button variant="outline" onClick={() => setShowDialog(false)}>Cancelar</Button>
             <Button variant="secondary" onClick={handlePayFull} disabled={isPending}>
-              Pago completo (${balance.toLocaleString()})
+              Pago completo (${formatMoney(balance)})
             </Button>
             <Button onClick={handleRegisterPayment} disabled={isPending || !paymentAmount}>
               Registrar parcial
