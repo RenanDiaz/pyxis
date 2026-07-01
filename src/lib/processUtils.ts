@@ -108,6 +108,14 @@ export function getClientPaymentSummary(client: Client): ClientPaymentSummary {
   }
 }
 
+/**
+ * Un Registro de LLC tiene Registered Agent por defecto. Solo cuando el agente
+ * lo marca explícitamente como `false` se considera que no lo incluye.
+ */
+export function hasRegisteredAgent(process: ClientProcess): boolean {
+  return process.has_registered_agent !== false
+}
+
 export const PROCESS_STAGE_LABELS: Record<ProcessStage, string> = {
   pendiente: 'Pendiente',
   en_proceso: 'En proceso',

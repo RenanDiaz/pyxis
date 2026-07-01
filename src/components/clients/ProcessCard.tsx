@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -20,6 +22,7 @@ import {
   getFieldValue,
   formatFieldValue,
   getSuggestedPrice,
+  hasRegisteredAgent,
   PROCESS_STAGE_LABELS,
 } from '@/lib/processUtils'
 import type { Client, ClientProcess, ProcessStage, StateInfo, Workspace } from '@/types'
@@ -93,6 +96,30 @@ export default function ProcessCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {process.type === 'registration' && (
+          <>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <Label htmlFor={`registered-agent-${process.id}`} className="text-sm font-medium">
+                  Registered Agent
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {hasRegisteredAgent(process) ? 'Incluido en el registro' : 'No incluido'}
+                </p>
+              </div>
+              <Switch
+                id={`registered-agent-${process.id}`}
+                checked={hasRegisteredAgent(process)}
+                disabled={isPending}
+                onCheckedChange={(checked) =>
+                  onUpdate({ ...process, has_registered_agent: checked })
+                }
+              />
+            </div>
+            <Separator />
+          </>
+        )}
+
         {showStateInfo && state && (
           <>
             <StateClock timezone={getStateTimezone(state.abbreviation)} />
