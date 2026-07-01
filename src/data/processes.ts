@@ -72,4 +72,10 @@ export const PROCESSES: ProcessDef[] = [
     pricing: { mode: 'manual' },
     fields: [],
   },
+  {
+    id: 'resale_certificate',
+    label: 'Resale Certificate',
+    pricing: { mode: 'manual' },
+    fields: [],
+  },
 ]
