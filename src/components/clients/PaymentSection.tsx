@@ -92,6 +92,7 @@ export default function PaymentSection({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('zelle')
   const [paymentNote, setPaymentNote] = useState('')
   const [paymentDate, setPaymentDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
+  const [paymentTime, setPaymentTime] = useState(() => format(new Date(), 'HH:mm'))
   const [totalInput, setTotalInput] = useState('')
 
   const today = format(new Date(), 'yyyy-MM-dd')
@@ -117,7 +118,7 @@ export default function PaymentSection({
     const newPayment: Payment = {
       amount,
       method: paymentMethod,
-      date: paymentInputToISO(paymentDate || today),
+      date: paymentInputToISO(paymentDate || today, paymentTime),
       ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
     }
 
@@ -137,7 +138,7 @@ export default function PaymentSection({
     const newPayment: Payment = {
       amount: balance,
       method: paymentMethod,
-      date: paymentInputToISO(paymentDate || today),
+      date: paymentInputToISO(paymentDate || today, paymentTime),
       ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
     }
 
@@ -203,6 +204,7 @@ export default function PaymentSection({
             size="sm"
             onClick={() => {
               setPaymentDate(today)
+              setPaymentTime(format(new Date(), 'HH:mm'))
               setShowDialog(true)
             }}
           >
@@ -310,15 +312,26 @@ export default function PaymentSection({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="pay-date">Fecha del pago</Label>
-              <Input
-                id="pay-date"
-                type="date"
-                max={today}
-                value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="pay-date">Fecha del pago</Label>
+                <Input
+                  id="pay-date"
+                  type="date"
+                  max={today}
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pay-time">Hora del pago</Label>
+                <Input
+                  id="pay-time"
+                  type="time"
+                  value={paymentTime}
+                  onChange={(e) => setPaymentTime(e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
