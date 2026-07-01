@@ -25,6 +25,7 @@ import {
 import { getClientDisplayName, getPrimaryPhoneNumber } from '@/lib/clientUtils'
 import { getClientPayments, getClientPaymentSummary, parsePaymentDate } from '@/lib/processUtils'
 import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
+import { formatMoney } from '@/lib/format'
 import { formatLocalTime } from '@/lib/callTime'
 import { isToday, isYesterday, formatDistanceToNow, format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -44,7 +45,7 @@ function Delta({ diff, prefix = '' }: { diff: number; prefix?: string }) {
     >
       {up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
       {prefix}
-      {Math.abs(diff).toLocaleString('en-US')} vs. ayer
+      {formatMoney(Math.abs(diff))} vs. ayer
     </span>
   )
 }
@@ -167,7 +168,7 @@ export default function Home() {
                 : nextScheduled
                   ? format(nextScheduled, "d MMM · h:mm a", { locale: es })
                   : 'Sin fecha'}
-              {nextBalance > 0 && ` · saldo pendiente $${nextBalance.toLocaleString('en-US')}`}
+              {nextBalance > 0 && ` · saldo pendiente $${formatMoney(nextBalance)}`}
             </p>
           </div>
           <div className="flex gap-2">
@@ -242,7 +243,7 @@ export default function Home() {
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Pagos recibidos hoy</p>
             <p className="mt-1 text-3xl font-extrabold tracking-tight">
-              ${paymentsToday.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+              ${formatMoney(paymentsToday)}
             </p>
             <p className="mt-1.5">
               <Delta diff={paymentsToday - paymentsYesterday} prefix="$" />
@@ -339,7 +340,7 @@ export default function Home() {
                       <div className="flex shrink-0 items-center gap-2">
                         {showBalance && (
                           <span className="font-bold text-amber-700 dark:text-amber-400">
-                            ${balance.toLocaleString('en-US')}
+                            ${formatMoney(balance)}
                           </span>
                         )}
                         <Button

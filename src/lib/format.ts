@@ -22,6 +22,19 @@ export function formatDays(value: string): string {
 }
 
 /**
+ * Formatea un monto para mostrar. Si el valor no tiene decimales, se muestra
+ * sin ellos (p. ej. `350`); si los tiene, se fija a 2 cifras (p. ej. `350.50`).
+ * No incluye el símbolo `$` — agregarlo en el sitio de uso.
+ */
+export function formatMoney(value: number): string {
+  const hasDecimals = Math.round(value * 100) % 100 !== 0
+  return value.toLocaleString('en-US', {
+    minimumFractionDigits: hasDecimals ? 2 : 0,
+    maximumFractionDigits: 2,
+  })
+}
+
+/**
  * Formats YES/NO or SI/NO for display.
  */
 export function formatYesNo(value: string): { label: string; positive: boolean } {

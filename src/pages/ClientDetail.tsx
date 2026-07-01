@@ -6,6 +6,7 @@ import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useAuth } from '@/contexts/AuthContext'
 import { getClientPaymentSummary } from '@/lib/processUtils'
+import { formatMoney } from '@/lib/format'
 import StatusSelect from '@/components/clients/StatusSelect'
 import ProcessCard from '@/components/clients/ProcessCard'
 import AddProcessDialog from '@/components/clients/AddProcessDialog'
@@ -312,13 +313,13 @@ export default function ClientDetail() {
               <span className="text-muted-foreground">
                 Pagado{' '}
                 <strong className="text-green-600 dark:text-green-400">
-                  ${balance.paid.toLocaleString('en-US')}
+                  ${formatMoney(balance.paid)}
                 </strong>{' '}
-                de ${balance.total.toLocaleString('en-US')}
+                de ${formatMoney(balance.total)}
               </span>
               {balance.balance > 0 ? (
                 <span className="font-bold text-amber-600 dark:text-amber-400">
-                  Pendiente ${balance.balance.toLocaleString('en-US')}
+                  Pendiente ${formatMoney(balance.balance)}
                 </span>
               ) : (
                 <span className="font-bold text-green-600 dark:text-green-400">Pagado completo</span>

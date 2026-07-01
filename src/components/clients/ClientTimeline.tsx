@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { OUTCOME_CONFIG } from '@/components/calls/OutcomeBadge'
 import { getClientPayments, getProcessLabel, parsePaymentDateParts } from '@/lib/processUtils'
+import { formatMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Call, Client } from '@/types'
 import { isToday, isYesterday, format } from 'date-fns'
@@ -59,7 +60,7 @@ export default function ClientTimeline({ client, calls }: { client: Client; call
         entries.push({
           date: parsed.date,
           dateOnly: parsed.dateOnly,
-          title: `Pago recibido · $${p.amount.toLocaleString('en-US')}`,
+          title: `Pago recibido · $${formatMoney(p.amount)}`,
           detail: [label, p.note].filter(Boolean).join(' · ') || undefined,
           tone: 'green',
         })
@@ -73,7 +74,7 @@ export default function ClientTimeline({ client, calls }: { client: Client; call
       entries.push({
         date: parsed.date,
         dateOnly: parsed.dateOnly,
-        title: `Pago recibido · $${p.amount.toLocaleString('en-US')}`,
+        title: `Pago recibido · $${formatMoney(p.amount)}`,
         detail: p.note || undefined,
         tone: 'green',
       })

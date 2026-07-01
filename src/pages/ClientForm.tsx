@@ -12,6 +12,7 @@ import {
   formatFieldValue,
   getSuggestedPrice,
 } from '@/lib/processUtils'
+import { formatMoney } from '@/lib/format'
 import AddProcessDialog from '@/components/clients/AddProcessDialog'
 import { getStateByAreaCode } from '@/lib/areaCodeMap'
 import { formatPhoneForDisplay, isValidPhone } from '@/lib/phoneUtils'
@@ -494,7 +495,7 @@ export default function ClientForm() {
                         const price = getSuggestedPrice(p.type, st)
                         return (
                           <p className="text-xs text-muted-foreground">
-                            {price != null ? `Precio sugerido: $${price.toLocaleString()}` : 'Precio a definir'}
+                            {price != null ? `Precio sugerido: $${formatMoney(price)}` : 'Precio a definir'}
                           </p>
                         )
                       })()}

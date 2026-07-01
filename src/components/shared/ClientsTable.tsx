@@ -5,6 +5,7 @@ import { Archive, Phone, Building2, MapPin, ChevronRight, Users, DollarSign, Mai
 import type { Client, WorkspaceMember } from '@/types'
 import { getPrimaryPhoneNumber } from '@/lib/clientUtils'
 import { getClientPaymentSummary } from '@/lib/processUtils'
+import { formatMoney } from '@/lib/format'
 import { formatPhoneForWhatsApp } from '@/lib/phoneUtils'
 
 interface ClientsTableProps {
@@ -180,7 +181,7 @@ export default function ClientsTable({
                         )
                         if (paid > 0) return (
                           <span className="inline-flex items-center gap-0.5 text-xs text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded-full dark:bg-orange-900/30 dark:text-orange-300">
-                            <DollarSign className="h-3 w-3" /> Debe ${bal.toLocaleString()}
+                            <DollarSign className="h-3 w-3" /> Debe ${formatMoney(bal)}
                           </span>
                         )
                         return (
