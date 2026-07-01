@@ -5,9 +5,13 @@
  * entrada del reporte de ventas (`ReportInput`) para un mes concreto.
  *
  * Reglas de mapeo (ver decisiones en el SPEC):
- *  - Una "cuenta" del reporte = un PROCESO contratado con al menos un pago en el
- *    mes seleccionado ("una cuenta = una venta").
- *  - Solo se incluyen los pagos cuya fecha cae dentro del mes (`yyyy-MM`).
+ *  - Una "cuenta" del reporte = un PROCESO contratado ("una cuenta = una venta").
+ *  - La venta cuenta en el mes en que EMPEZÓ el proceso, es decir el mes de su
+ *    PRIMER pago. Un proceso se incluye en el reporte de un mes solo si su primer
+ *    pago cae en ese mes (`yyyy-MM`).
+ *  - Una vez que el proceso pertenece al mes, se incluyen TODOS sus pagos, aunque
+ *    alguno se haya hecho en un mes posterior (ese pago es parte de la misma
+ *    venta y no debe contarse aparte en el mes en que se cobró).
  *  - `stateFee` se deriva del documento del estado (states.json).
  *  - `registeredAgent` no se registra en el CRM → 0.
  *  - `stripeFee` solo se calcula para los pagos cuyo método es `stripe`; se deja
@@ -47,21 +51,35 @@ function parseMoney(raw: string | undefined): number {
 }
 
 /**
- * Pagos del proceso que caen en el mes objetivo (comparado en hora LOCAL, no
- * por `slice` del string: un ISO en UTC puede caer en el mes vecino cerca de la
- * frontera). Cada pago llega con su `Date` ya parseada y quedan ordenados.
+ * Todos los pagos del proceso con su `Date` ya parseada, ordenados por fecha.
+ * Se descartan los pagos sin fecha válida. La comparación de mes se hace en hora
+ * LOCAL (no por `slice` del string: un ISO en UTC puede caer en el mes vecino
+ * cerca de la frontera).
+ */
+function sortedPaymentsOf(
+  process: ClientProcess,
+): Array<{ payment: Payment; date: Date }> {
+  return (process.payments ?? [])
+    .map((payment) => ({ payment, date: parsePaymentDate(payment.date) }))
+    .filter((x): x is { payment: Payment; date: Date } => x.date !== null)
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+}
+
+/**
+ * Pagos que hacen que el proceso pertenezca al mes `monthKey`: si su PRIMER pago
+ * (el que marca el inicio de la venta) cae en ese mes, devuelve TODOS los pagos
+ * del proceso; si no, devuelve `[]` (el proceso pertenece a otro mes).
  */
 function monthPaymentsOf(
   process: ClientProcess,
   monthKey: string,
 ): Array<{ payment: Payment; date: Date }> {
-  return (process.payments ?? [])
-    .map((payment) => ({ payment, date: parsePaymentDate(payment.date) }))
-    .filter(
-      (x): x is { payment: Payment; date: Date } =>
-        x.date !== null && localMonthKey(x.date) === monthKey,
-    )
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
+  const payments = sortedPaymentsOf(process)
+  if (payments.length === 0) return []
+  // La venta cuenta en el mes de su primer pago; si no arrancó en este mes, no
+  // se incluye (y así el segundo pago tampoco reaparece en el mes en que se hizo).
+  if (localMonthKey(payments[0].date) !== monthKey) return []
+  return payments
 }
 
 function estimateStripeFee(charge: number, mode: StripeFeeMode): number {
