@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { OUTCOME_CONFIG } from '@/components/calls/OutcomeBadge'
-import { getClientPayments } from '@/lib/processUtils'
+import { getClientPayments, getProcessLabel } from '@/lib/processUtils'
 import { cn } from '@/lib/utils'
 import type { Call, Client } from '@/types'
 import { isToday, isYesterday, format } from 'date-fns'
@@ -10,6 +10,8 @@ type Tone = 'green' | 'blue' | 'gray'
 
 interface TimelineEntry {
   date: Date
+  /** El dato de origen es solo fecha (sin hora); no mostrar hora ni desfase de zona. */
+  dateOnly: boolean
   title: string
   detail?: string
   tone: Tone
@@ -21,10 +23,27 @@ const DOT: Record<Tone, string> = {
   gray: 'bg-muted-foreground',
 }
 
-function formatWhen(date: Date): string {
-  if (isToday(date)) return `Hoy ${format(date, 'h:mm a', { locale: es })}`
-  if (isYesterday(date)) return `Ayer ${format(date, 'h:mm a', { locale: es })}`
-  return format(date, "d 'de' MMM · h:mm a", { locale: es })
+/**
+ * Parsea la fecha de un pago. Los pagos se guardan como cadena `yyyy-MM-dd`
+ * (solo fecha): hay que interpretarla en hora local, no UTC, o `new Date`
+ * la corre un día hacia atrás en zonas horarias con offset negativo.
+ */
+function parsePaymentDate(value: string): { date: Date; dateOnly: boolean } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (m) {
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    return isNaN(d.getTime()) ? null : { date: d, dateOnly: true }
+  }
+  const d = new Date(value)
+  return isNaN(d.getTime()) ? null : { date: d, dateOnly: false }
+}
+
+function formatWhen(date: Date, dateOnly: boolean): string {
+  const time = dateOnly ? '' : ` ${format(date, 'h:mm a', { locale: es })}`
+  if (isToday(date)) return dateOnly ? 'Hoy' : `Hoy${time}`
+  if (isYesterday(date)) return dateOnly ? 'Ayer' : `Ayer${time}`
+  const day = format(date, "d 'de' MMM", { locale: es })
+  return dateOnly ? day : `${day} ·${time}`
 }
 
 /**
@@ -34,15 +53,46 @@ function formatWhen(date: Date): string {
 export default function ClientTimeline({ client, calls }: { client: Client; calls?: Call[] }) {
   const entries: TimelineEntry[] = []
 
-  for (const p of getClientPayments(client)) {
-    const d = new Date(p.date)
-    if (isNaN(d.getTime())) continue
-    entries.push({
-      date: d,
-      title: `Pago recibido · $${p.amount.toLocaleString('en-US')}`,
-      detail: p.note || undefined,
-      tone: 'green',
-    })
+  // Pagos y contratación de cada proceso, etiquetados con el servicio.
+  if (client.processes?.length) {
+    for (const process of client.processes) {
+      const label = getProcessLabel(process.type)
+
+      const contracted = process.created_at?.toDate?.()
+      if (contracted) {
+        entries.push({
+          date: contracted,
+          dateOnly: false,
+          title: `Proceso contratado · ${label}`,
+          tone: 'gray',
+        })
+      }
+
+      for (const p of process.payments ?? []) {
+        const parsed = parsePaymentDate(p.date)
+        if (!parsed) continue
+        entries.push({
+          date: parsed.date,
+          dateOnly: parsed.dateOnly,
+          title: `Pago recibido · $${p.amount.toLocaleString('en-US')}`,
+          detail: [label, p.note].filter(Boolean).join(' · ') || undefined,
+          tone: 'green',
+        })
+      }
+    }
+  } else {
+    // Fallback legacy: pagos sueltos sin procesos.
+    for (const p of getClientPayments(client)) {
+      const parsed = parsePaymentDate(p.date)
+      if (!parsed) continue
+      entries.push({
+        date: parsed.date,
+        dateOnly: parsed.dateOnly,
+        title: `Pago recibido · $${p.amount.toLocaleString('en-US')}`,
+        detail: p.note || undefined,
+        tone: 'green',
+      })
+    }
   }
 
   for (const call of calls ?? []) {
@@ -51,6 +101,7 @@ export default function ClientTimeline({ client, calls }: { client: Client; call
     const outcome = OUTCOME_CONFIG[call.outcome]?.label ?? call.outcome
     entries.push({
       date: d,
+      dateOnly: false,
       title: `Llamada · ${outcome}`,
       detail: call.notes || undefined,
       tone: 'blue',
@@ -59,7 +110,7 @@ export default function ClientTimeline({ client, calls }: { client: Client; call
 
   const created = client.created_at?.toDate?.()
   if (created) {
-    entries.push({ date: created, title: 'Cliente creado', tone: 'gray' })
+    entries.push({ date: created, dateOnly: false, title: 'Cliente creado', tone: 'gray' })
   }
 
   entries.sort((a, b) => b.date.getTime() - a.date.getTime())
@@ -82,7 +133,7 @@ export default function ClientTimeline({ client, calls }: { client: Client; call
               <div className="min-w-0">
                 <p className="text-sm font-semibold">{e.title}</p>
                 <p className="text-xs text-muted-foreground/70">
-                  {formatWhen(e.date)}
+                  {formatWhen(e.date, e.dateOnly)}
                   {e.detail ? ` · ${e.detail}` : ''}
                 </p>
               </div>
