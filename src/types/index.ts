@@ -100,7 +100,7 @@ export type ProcessType =
 
 export type ProcessStage = 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
 
-export type PaymentMethod = 'efectivo' | 'zelle' | 'transferencia' | 'otro'
+export type PaymentMethod = 'efectivo' | 'zelle' | 'transferencia' | 'stripe' | 'otro'
 
 export interface Payment {
   amount: number

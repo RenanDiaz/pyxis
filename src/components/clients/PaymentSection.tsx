@@ -30,6 +30,7 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   efectivo: 'Efectivo',
   zelle: 'Zelle',
   transferencia: 'Transferencia',
+  stripe: 'Stripe',
   otro: 'Otro',
 }
 
@@ -295,6 +296,7 @@ export default function PaymentSection({
                   <SelectItem value="efectivo">Efectivo</SelectItem>
                   <SelectItem value="zelle">Zelle</SelectItem>
                   <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="stripe">Stripe</SelectItem>
                   <SelectItem value="otro">Otro</SelectItem>
                 </SelectContent>
               </Select>

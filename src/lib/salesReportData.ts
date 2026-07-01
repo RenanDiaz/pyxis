@@ -10,8 +10,9 @@
  *  - Solo se incluyen los pagos cuya fecha cae dentro del mes (`yyyy-MM`).
  *  - `stateFee` se deriva del documento del estado (states.json).
  *  - `registeredAgent` no se registra en el CRM → 0.
- *  - `stripeFee` no se registra en el CRM → 0 o estimado (2.9% + $0.30) según
- *    `stripeFeeMode`.
+ *  - `stripeFee` solo se calcula para los pagos cuyo método es `stripe`; se deja
+ *    en 0 o se estima (2.9% + $0.30) según `stripeFeeMode`. Los pagos hechos con
+ *    cualquier otro método nunca tienen comisión de Stripe.
  * -----------------------------------------------------------------------------
  */
 
@@ -95,7 +96,8 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
         payments: monthPayments.map((p) => ({
           date: parsePaymentDate(p.date),
           charge: p.amount,
-          stripeFee: estimateStripeFee(p.amount, stripeFeeMode),
+          // La comisión de Stripe solo aplica a los pagos hechos con Stripe.
+          stripeFee: p.method === 'stripe' ? estimateStripeFee(p.amount, stripeFeeMode) : 0,
         })),
       })
     }

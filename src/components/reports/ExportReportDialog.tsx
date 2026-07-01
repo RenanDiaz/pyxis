@@ -264,7 +264,7 @@ export default function ExportReportDialog({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              El CRM no registra la comisión real de Stripe; se estima o se deja en cero.
+              Solo se aplica a los pagos hechos con el método Stripe; se estima o se deja en cero.
             </p>
           </div>
 
