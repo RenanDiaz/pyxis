@@ -105,7 +105,10 @@ export type PaymentMethod = 'efectivo' | 'zelle' | 'transferencia' | 'stripe' | 
 export interface Payment {
   amount: number
   method: PaymentMethod
-  date: string // ISO date string
+  // Fecha del pago. Nuevos: ISO datetime con hora (`2026-06-23T19:00:00.000Z`).
+  // Legacy: `yyyy-MM-dd` (solo fecha). Los lectores toleran ambos vía
+  // `parsePaymentDate` (src/lib/processUtils.ts).
+  date: string
   note?: string
 }
 

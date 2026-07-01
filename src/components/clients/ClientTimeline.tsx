@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { OUTCOME_CONFIG } from '@/components/calls/OutcomeBadge'
-import { getClientPayments, getProcessLabel } from '@/lib/processUtils'
+import { getClientPayments, getProcessLabel, parsePaymentDateParts } from '@/lib/processUtils'
 import { cn } from '@/lib/utils'
 import type { Call, Client } from '@/types'
 import { isToday, isYesterday, format } from 'date-fns'
@@ -21,21 +21,6 @@ const DOT: Record<Tone, string> = {
   green: 'bg-green-500',
   blue: 'bg-blue-500',
   gray: 'bg-muted-foreground',
-}
-
-/**
- * Parsea la fecha de un pago. Los pagos se guardan como cadena `yyyy-MM-dd`
- * (solo fecha): hay que interpretarla en hora local, no UTC, o `new Date`
- * la corre un día hacia atrás en zonas horarias con offset negativo.
- */
-function parsePaymentDate(value: string): { date: Date; dateOnly: boolean } | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
-  if (m) {
-    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
-    return isNaN(d.getTime()) ? null : { date: d, dateOnly: true }
-  }
-  const d = new Date(value)
-  return isNaN(d.getTime()) ? null : { date: d, dateOnly: false }
 }
 
 function formatWhen(date: Date, dateOnly: boolean): string {
@@ -69,7 +54,7 @@ export default function ClientTimeline({ client, calls }: { client: Client; call
       }
 
       for (const p of process.payments ?? []) {
-        const parsed = parsePaymentDate(p.date)
+        const parsed = parsePaymentDateParts(p.date)
         if (!parsed) continue
         entries.push({
           date: parsed.date,
@@ -83,7 +68,7 @@ export default function ClientTimeline({ client, calls }: { client: Client; call
   } else {
     // Fallback legacy: pagos sueltos sin procesos.
     for (const p of getClientPayments(client)) {
-      const parsed = parsePaymentDate(p.date)
+      const parsed = parsePaymentDateParts(p.date)
       if (!parsed) continue
       entries.push({
         date: parsed.date,

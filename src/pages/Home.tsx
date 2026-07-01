@@ -23,7 +23,7 @@ import {
   CalendarClock,
 } from 'lucide-react'
 import { getClientDisplayName, getPrimaryPhoneNumber } from '@/lib/clientUtils'
-import { getClientPayments, getClientPaymentSummary } from '@/lib/processUtils'
+import { getClientPayments, getClientPaymentSummary, parsePaymentDate } from '@/lib/processUtils'
 import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
 import { formatLocalTime } from '@/lib/callTime'
 import { isToday, isYesterday, formatDistanceToNow, format } from 'date-fns'
@@ -86,11 +86,8 @@ export default function Home() {
   const sumPaymentsFor = (predicate: (d: Date) => boolean) =>
     allClients.reduce((sum, c) => {
       const matching = getClientPayments(c).filter((p) => {
-        try {
-          return predicate(new Date(p.date))
-        } catch {
-          return false
-        }
+        const d = parsePaymentDate(p.date)
+        return d ? predicate(d) : false
       })
       return sum + matching.reduce((s, p) => s + p.amount, 0)
     }, 0)

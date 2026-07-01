@@ -8,7 +8,7 @@ import { jsPDF } from 'jspdf'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { storage, isFirebaseConfigured } from '@/lib/firebase'
-import { getProcessLabel } from '@/lib/processUtils'
+import { getProcessLabel, parsePaymentDate } from '@/lib/processUtils'
 import { getClientDisplayName } from '@/lib/clientUtils'
 import type { Client, ClientProcess, Payment, PaymentMethod, Workspace } from '@/types'
 
@@ -115,7 +115,8 @@ function buildReceiptNumber(
 ): string {
   const clientPart = client.id.slice(-4).toUpperCase()
   const processPart = process.id.slice(-3).toUpperCase()
-  const datePart = (payment.date || '').replace(/-/g, '').slice(2) // YYMMDD
+  const parsed = parsePaymentDate(payment.date)
+  const datePart = parsed ? format(parsed, 'yyMMdd') : '' // YYMMDD (fecha local)
   const seq = String(paymentIndex + 1).padStart(2, '0')
   return `R-${datePart}-${clientPart}${processPart}-${seq}`
 }
@@ -191,8 +192,9 @@ export async function generatePaymentReceipt({
   const receiptNumber = buildReceiptNumber(client, process, paymentIndex, payment)
   doc.text(`N° ${receiptNumber}`, pageW - margin, y + 54, { align: 'right' })
 
-  const paymentDate = payment.date
-    ? format(new Date(`${payment.date}T00:00:00`), "d 'de' MMMM 'de' yyyy", { locale: es })
+  const parsedPaymentDate = parsePaymentDate(payment.date)
+  const paymentDate = parsedPaymentDate
+    ? format(parsedPaymentDate, "d 'de' MMMM 'de' yyyy", { locale: es })
     : '—'
   doc.text(`Fecha: ${paymentDate}`, pageW - margin, y + 68, { align: 'right' })
 
