@@ -22,6 +22,7 @@ import { DollarSign, Plus, CircleCheck, CircleAlert, Clock, FileDown } from 'luc
 import type { Client, ClientProcess, Payment, PaymentMethod, Workspace } from '@/types'
 import { getProcessPaid } from '@/lib/processUtils'
 import { generatePaymentReceipt } from '@/lib/receiptUtils'
+import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
 
@@ -99,7 +100,7 @@ export default function PaymentSection({
     const newPayment: Payment = {
       amount,
       method: paymentMethod,
-      date: new Date().toISOString().split('T')[0],
+      date: format(new Date(), 'yyyy-MM-dd'),
       ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
     }
 
@@ -118,7 +119,7 @@ export default function PaymentSection({
     const newPayment: Payment = {
       amount: balance,
       method: paymentMethod,
-      date: new Date().toISOString().split('T')[0],
+      date: format(new Date(), 'yyyy-MM-dd'),
       ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
     }
 
