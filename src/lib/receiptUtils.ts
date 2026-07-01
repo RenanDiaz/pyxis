@@ -16,6 +16,7 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   efectivo: 'Efectivo',
   zelle: 'Zelle',
   transferencia: 'Transferencia',
+  stripe: 'Stripe',
   otro: 'Otro',
 }
 
