@@ -9,6 +9,7 @@ import {
   UsersRound,
   Settings,
   Network,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUserProfile } from '@/hooks/useUserProfile'
@@ -26,6 +27,7 @@ const agentNavItems: NavItem[] = [
   { to: '/glosario', label: 'Glosario', icon: BookOpen },
   { to: '/clientes', label: 'Clientes', icon: Users },
   { to: '/agenda', label: 'Agenda', icon: Calendar },
+  { to: '/reportes', label: 'Reportes', icon: FileSpreadsheet },
 ]
 
 const workspaceNavItems: NavItem[] = [
