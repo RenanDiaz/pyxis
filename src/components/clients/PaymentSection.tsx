@@ -78,7 +78,10 @@ export default function PaymentSection({
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('zelle')
   const [paymentNote, setPaymentNote] = useState('')
+  const [paymentDate, setPaymentDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [totalInput, setTotalInput] = useState('')
+
+  const today = format(new Date(), 'yyyy-MM-dd')
 
   const payments = process.payments ?? []
   const total = process.total ?? 0
@@ -101,7 +104,7 @@ export default function PaymentSection({
     const newPayment: Payment = {
       amount,
       method: paymentMethod,
-      date: format(new Date(), 'yyyy-MM-dd'),
+      date: paymentDate || today,
       ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
     }
 
@@ -111,6 +114,7 @@ export default function PaymentSection({
     await onUpdate({ ...process, payments: newPayments }, isFullPayment ? 'full' : 'partial')
     setPaymentAmount('')
     setPaymentNote('')
+    setPaymentDate(today)
     setShowDialog(false)
   }
 
@@ -120,12 +124,13 @@ export default function PaymentSection({
     const newPayment: Payment = {
       amount: balance,
       method: paymentMethod,
-      date: format(new Date(), 'yyyy-MM-dd'),
+      date: paymentDate || today,
       ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
     }
 
     await onUpdate({ ...process, payments: [...payments, newPayment] }, 'full')
     setPaymentNote('')
+    setPaymentDate(today)
     setShowDialog(false)
   }
 
@@ -181,7 +186,13 @@ export default function PaymentSection({
           {total > 0 ? 'Editar total' : 'Definir total'}
         </Button>
         {total > 0 && balance > 0 && (
-          <Button size="sm" onClick={() => setShowDialog(true)}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setPaymentDate(today)
+              setShowDialog(true)
+            }}
+          >
             <Plus className="mr-1 h-3 w-3" />
             Registrar pago
           </Button>
@@ -283,6 +294,17 @@ export default function PaymentSection({
                 value={paymentAmount}
                 onChange={(e) => setPaymentAmount(e.target.value)}
                 placeholder="Monto del pago"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="pay-date">Fecha del pago</Label>
+              <Input
+                id="pay-date"
+                type="date"
+                max={today}
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
               />
             </div>
 
