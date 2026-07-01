@@ -58,6 +58,7 @@ Ver los esquemas completos en los archivos `src/data/*.json` y los types en el c
 | `/glosario` | Glosario | Términos de negocio, legales y fiscales con traducción y definición. Filtro por categoría, diseño flashcard |
 | `/clientes` | Clientes | CRM liviano: lista, detalle, formulario nuevo/editar, historial de llamadas, exportar registro como .docx |
 | `/agenda` | Agenda | Gestión de llamadas programadas con filtros y modal de creación |
+| `/reportes` | Reportes | Exporta el reporte mensual de ventas a Excel (.xlsx) replicando el formato original. Selección de mes y agente; sección de gastos configurable |
 | `/workspace` | Workspace | Configuración del workspace (owner only) |
 | `/workspace/miembros` | Miembros | Gestión de miembros e invitaciones (owner only) |
 | `/workspace/subteams` | Subequipos | Gestión de subequipos (owner only) |

@@ -15,6 +15,7 @@ import Clients from '@/pages/Clients'
 import ClientDetail from '@/pages/ClientDetail'
 import ClientForm from '@/pages/ClientForm'
 import Schedule from '@/pages/Schedule'
+import Reports from '@/pages/Reports'
 import Glossary from '@/pages/Glossary'
 import Onboarding from '@/pages/Onboarding'
 import JoinWorkspace from '@/pages/JoinWorkspace'
@@ -68,6 +69,7 @@ export default function App() {
                 <Route path="clientes/:id" element={<ClientDetail />} />
                 <Route path="clientes/:id/editar" element={<ClientForm />} />
                 <Route path="agenda" element={<Schedule />} />
+                <Route path="reportes" element={<Reports />} />
                 <Route path="glosario" element={<Glossary />} />
 
                 {/* Workspace management — owner only */}
