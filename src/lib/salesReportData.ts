@@ -16,8 +16,8 @@
  * -----------------------------------------------------------------------------
  */
 
-import type { Client, StateInfo } from '@/types'
-import { getProcessLabel } from '@/lib/processUtils'
+import type { Client, ClientProcess, Payment, StateInfo } from '@/types'
+import { getProcessLabel, localMonthKey, parsePaymentDate } from '@/lib/processUtils'
 import { getClientDisplayName } from '@/lib/clientUtils'
 import type { ExpenseConfig, ReportAccount, ReportInput } from '@/lib/generateSalesReport'
 
@@ -46,9 +46,22 @@ function parseMoney(raw: string | undefined): number {
   return Number.isNaN(num) ? 0 : num
 }
 
-/** Parsea una fecha ISO (`yyyy-MM-dd`) del CRM a Date local (medianoche local). */
-function parsePaymentDate(iso: string): Date {
-  return new Date(`${iso}T00:00:00`)
+/**
+ * Pagos del proceso que caen en el mes objetivo (comparado en hora LOCAL, no
+ * por `slice` del string: un ISO en UTC puede caer en el mes vecino cerca de la
+ * frontera). Cada pago llega con su `Date` ya parseada y quedan ordenados.
+ */
+function monthPaymentsOf(
+  process: ClientProcess,
+  monthKey: string,
+): Array<{ payment: Payment; date: Date }> {
+  return (process.payments ?? [])
+    .map((payment) => ({ payment, date: parsePaymentDate(payment.date) }))
+    .filter(
+      (x): x is { payment: Payment; date: Date } =>
+        x.date !== null && localMonthKey(x.date) === monthKey,
+    )
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
 }
 
 function estimateStripeFee(charge: number, mode: StripeFeeMode): number {
@@ -77,9 +90,7 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
     const processes = client.processes ?? []
     for (const process of processes) {
       // Pagos del proceso que caen en el mes objetivo, ordenados por fecha.
-      const monthPayments = (process.payments ?? [])
-        .filter((p) => typeof p.date === 'string' && p.date.slice(0, 7) === monthKey)
-        .sort((a, b) => a.date.localeCompare(b.date))
+      const monthPayments = monthPaymentsOf(process, monthKey)
 
       if (monthPayments.length === 0) continue
 
@@ -93,11 +104,12 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
         stateFee,
         registeredAgent: 0,
         owner: getClientDisplayName(client),
-        payments: monthPayments.map((p) => ({
-          date: parsePaymentDate(p.date),
-          charge: p.amount,
+        payments: monthPayments.map(({ payment, date }) => ({
+          date,
+          charge: payment.amount,
           // La comisión de Stripe solo aplica a los pagos hechos con Stripe.
-          stripeFee: p.method === 'stripe' ? estimateStripeFee(p.amount, stripeFeeMode) : 0,
+          stripeFee:
+            payment.method === 'stripe' ? estimateStripeFee(payment.amount, stripeFeeMode) : 0,
         })),
       })
     }
@@ -131,13 +143,11 @@ export function previewReport(
 
   for (const client of clients) {
     for (const process of client.processes ?? []) {
-      const monthPayments = (process.payments ?? []).filter(
-        (p) => typeof p.date === 'string' && p.date.slice(0, 7) === monthKey
-      )
+      const monthPayments = monthPaymentsOf(process, monthKey)
       if (monthPayments.length === 0) continue
       accountCount += 1
       paymentCount += monthPayments.length
-      totalCharge += monthPayments.reduce((sum, p) => sum + p.amount, 0)
+      totalCharge += monthPayments.reduce((sum, { payment }) => sum + payment.amount, 0)
     }
   }
 

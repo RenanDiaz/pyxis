@@ -20,9 +20,10 @@ import {
 } from '@/components/ui/dialog'
 import { DollarSign, Plus, CircleCheck, CircleAlert, Clock, FileDown } from 'lucide-react'
 import type { Client, ClientProcess, Payment, PaymentMethod, Workspace } from '@/types'
-import { getProcessPaid } from '@/lib/processUtils'
+import { getProcessPaid, parsePaymentDateParts, paymentInputToISO } from '@/lib/processUtils'
 import { generatePaymentReceipt } from '@/lib/receiptUtils'
 import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
 
@@ -32,6 +33,18 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   transferencia: 'Transferencia',
   stripe: 'Stripe',
   otro: 'Otro',
+}
+
+/**
+ * Formatea la fecha de un pago para el historial. Los pagos nuevos guardan
+ * fecha+hora (ISO) → se muestra la hora; los legacy (`yyyy-MM-dd`) solo la fecha.
+ */
+function formatPaymentDate(value: string): string {
+  const parts = parsePaymentDateParts(value)
+  if (!parts) return value
+  return parts.dateOnly
+    ? format(parts.date, "d 'de' MMM yyyy", { locale: es })
+    : format(parts.date, "d 'de' MMM yyyy, h:mm a", { locale: es })
 }
 
 export type PaymentEvent = 'partial' | 'full'
@@ -104,7 +117,7 @@ export default function PaymentSection({
     const newPayment: Payment = {
       amount,
       method: paymentMethod,
-      date: paymentDate || today,
+      date: paymentInputToISO(paymentDate || today),
       ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
     }
 
@@ -124,7 +137,7 @@ export default function PaymentSection({
     const newPayment: Payment = {
       amount: balance,
       method: paymentMethod,
-      date: paymentDate || today,
+      date: paymentInputToISO(paymentDate || today),
       ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
     }
 
@@ -208,7 +221,7 @@ export default function PaymentSection({
               <div className="min-w-0">
                 <p className="font-medium">${p.amount.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">
-                  {p.date} · {METHOD_LABELS[p.method] ?? p.method}
+                  {formatPaymentDate(p.date)} · {METHOD_LABELS[p.method] ?? p.method}
                   {p.note && ` · ${p.note}`}
                 </p>
               </div>

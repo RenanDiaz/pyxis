@@ -68,6 +68,59 @@ export function getProcessPaid(process: ClientProcess): number {
   return (process.payments ?? []).reduce((sum, p) => sum + p.amount, 0)
 }
 
+// ── Fechas de pago ──
+
+/**
+ * Parsea la fecha de un pago a `Date` en hora local, tolerando ambos formatos:
+ *  - `yyyy-MM-dd` (legacy, solo fecha) → medianoche LOCAL (nunca UTC, para no
+ *    correr un día en zonas con offset negativo); `dateOnly: true`.
+ *  - ISO con hora (`2026-06-23T19:00:00.000Z`) → `new Date(value)`; `dateOnly: false`.
+ * Devuelve `null` si el valor no es parseable.
+ *
+ * Único punto de parseo de fechas de pago: usarlo en todos los lectores
+ * (timeline, home, reporte, recibos) elimina la clase de bug de desfase UTC.
+ */
+export function parsePaymentDateParts(
+  value: string | undefined | null,
+): { date: Date; dateOnly: boolean } | null {
+  if (!value || typeof value !== 'string') return null
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (m) {
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    return isNaN(d.getTime()) ? null : { date: d, dateOnly: true }
+  }
+  const d = new Date(value)
+  return isNaN(d.getTime()) ? null : { date: d, dateOnly: false }
+}
+
+/** Igual que `parsePaymentDateParts` pero devuelve solo la `Date` (o `null`). */
+export function parsePaymentDate(value: string | undefined | null): Date | null {
+  return parsePaymentDateParts(value)?.date ?? null
+}
+
+/** Clave de mes (`yyyy-MM`) en hora LOCAL de una fecha. */
+export function localMonthKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/**
+ * Convierte la fecha elegida en un `<input type="date">` (`yyyy-MM-dd`) al
+ * formato de guardado (ISO con hora):
+ *  - Si la fecha elegida es hoy, usa la hora actual real (`new Date()`).
+ *  - Si es otra fecha, usa mediodía local (12:00) para no cruzar de día en
+ *    ninguna zona horaria al serializar.
+ */
+export function paymentInputToISO(dateInput: string): string {
+  const now = new Date()
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+    now.getDate(),
+  ).padStart(2, '0')}`
+  if (!dateInput || dateInput === todayKey) return now.toISOString()
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateInput)
+  if (!m) return now.toISOString()
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0).toISOString()
+}
+
 /** Todos los pagos del cliente (de todos sus procesos), con fallback al modelo legacy. */
 export function getClientPayments(client: Client): Payment[] {
   if (client.processes?.length) {
