@@ -30,6 +30,7 @@ import type {
   WorkspaceInvitation,
   Goal,
   GoalType,
+  StateInfo,
 } from '@/types'
 import { uppercaseClientFields } from '@/lib/clientUtils'
 
@@ -580,4 +581,20 @@ export async function getRecentClients(ctx: WorkspaceCtx, max: number = 5): Prom
   const q = query(wsCol(ctx.workspaceId, 'clients'), ...constraints)
   const snapshot = await getDocs(q)
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Client))
+}
+
+// ── States (referencia global) ──
+
+export async function getStates(): Promise<StateInfo[]> {
+  if (!isFirebaseConfigured || !db) return []
+  const snapshot = await getDocs(collection(db, 'states'))
+  return snapshot.docs.map((d) => d.data() as StateInfo)
+}
+
+export async function updateState(
+  abbreviation: string,
+  data: Partial<StateInfo>
+): Promise<void> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  await setDoc(doc(db, 'states', abbreviation), data, { merge: true })
 }

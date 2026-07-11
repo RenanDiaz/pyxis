@@ -33,6 +33,9 @@ Los JSON también sirven como fallback local si Firestore no responde.
 
 ### Colecciones estáticas (globales)
 - **`states`** — 50 docs (doc ID = abbreviation). Precio, fees, días de proceso, annual report, disolución, amendments, business purpose, link de name check.
+  **Editable desde la app**: `useStates()` lee de Firestore (merge sobre `states.json`
+  como fallback) y los owners de workspace editan cada estado desde su detalle
+  (`StateEditDialog`). La escritura está restringida a owners en `firestore.rules`.
 - **`trades`** — 25 docs (oficios). Categoría, nombre EN/ES, descripción.
 - **`glossary`** — Términos de negocio/legales/fiscales. Término, nombre completo, traducción, definición, categoría.
 
