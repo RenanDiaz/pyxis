@@ -97,6 +97,7 @@ export type ProcessType =
   | 'newspaper_publication'
   | 'sale_tax_license'
   | 'resale_certificate'
+  | 'ein'
 
 export type ProcessStage = 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
 
