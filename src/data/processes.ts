@@ -80,7 +80,13 @@ export const PROCESSES: ProcessDef[] = [
   },
   {
     id: 'ein',
-    label: 'Obtención de EIN',
+    label: 'EIN',
+    pricing: { mode: 'manual' },
+    fields: [],
+  },
+  {
+    id: 'boi',
+    label: 'BOI',
     pricing: { mode: 'manual' },
     fields: [],
   },
