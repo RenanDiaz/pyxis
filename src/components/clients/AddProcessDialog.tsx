@@ -8,6 +8,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -17,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { PROCESSES } from '@/data/processes'
+import { getSuggestedPrice } from '@/lib/processUtils'
 import type { ClientProcess, ProcessType, StateInfo } from '@/types'
 
 interface AddProcessDialogProps {
@@ -36,14 +38,20 @@ export default function AddProcessDialog({
 }: AddProcessDialogProps) {
   const [type, setType] = useState<ProcessType | ''>('')
   const [stateAbbr, setStateAbbr] = useState<string>(defaultState ?? '')
+  const [totalInput, setTotalInput] = useState('')
+
+  const selectedState = states?.find((s) => s.abbreviation === stateAbbr) ?? null
+  const suggestedPrice = type ? getSuggestedPrice(type, selectedState) : null
 
   const reset = () => {
     setType('')
     setStateAbbr(defaultState ?? '')
+    setTotalInput('')
   }
 
   const handleAdd = () => {
     if (!type) return
+    const total = parseFloat(totalInput)
     const process: ClientProcess = {
       id: crypto.randomUUID(),
       type,
@@ -51,6 +59,7 @@ export default function AddProcessDialog({
       stage: 'pendiente',
       created_at: Timestamp.now(),
       ...(stateAbbr ? { state: stateAbbr } : {}),
+      ...(Number.isFinite(total) && total > 0 ? { total } : {}),
     }
     onAdd(process)
     reset()
@@ -104,6 +113,25 @@ export default function AddProcessDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="process-total">Precio ($)</Label>
+            <Input
+              id="process-total"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              placeholder={suggestedPrice ? String(suggestedPrice) : '0.00'}
+              value={totalInput}
+              onChange={(e) => setTotalInput(e.target.value)}
+            />
+            {suggestedPrice != null && (
+              <p className="text-xs text-muted-foreground">
+                Sugerido: ${suggestedPrice.toLocaleString('en-US')}
+              </p>
+            )}
           </div>
         </div>
         <DialogFooter>

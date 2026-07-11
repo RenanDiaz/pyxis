@@ -48,7 +48,7 @@ export const PROCESSES: ProcessDef[] = [
   {
     id: 'amendment',
     label: 'Amendment',
-    pricing: { mode: 'state', key: 'amendments.fee' },
+    pricing: { mode: 'manual' },
     fields: [
       { key: 'amendments.fee',       label: 'Fee',        format: 'currency' },
       { key: 'amendments.available', label: 'Disponible', format: 'text' },

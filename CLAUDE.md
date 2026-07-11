@@ -151,21 +151,24 @@ lee el script de migración, ya no se escriben.
 ## 2. Definición de procesos (`src/data/processes.ts`)
 Cada `ProcessDef` tiene un **modelo de precio** (`pricing`):
 - `{ mode: 'state', key }` → precio derivado del documento del estado
-  (registration, annual_report, dissolution, amendment).
+  (registration, annual_report, dissolution).
 - `{ mode: 'fixed', amount }` → precio fijo. **Investigación de periódicos** ($50,
   requisito de publicación de LLC en NY: ubicar el diario y el semanal).
-- `{ mode: 'manual' }` → precio variable que captura el agente.
-  **Publicaciones en periódicos** (depende de lo que cobren los periódicos).
+- `{ mode: 'manual' }` → precio variable que captura el agente al agregar el
+  proceso. **Publicaciones en periódicos**, **Sale Tax License**,
+  **Resale Certificate** y **Amendment** (disponible para todos los estados;
+  su card informativo sigue mostrando el fee estatal y la disponibilidad como
+  referencia).
 
-Los `fields` (solo para procesos `state`) definen qué datos del estado se
-muestran en el card informativo. Helpers en `src/lib/processUtils.ts`:
+Los `fields` definen qué datos del estado se muestran en el card informativo. Helpers en `src/lib/processUtils.ts`:
 `getFieldValue` (dot notation), `getSuggestedPrice`, `getProcessLabel`,
 `getProcessPaid`, `getClientPayments`, `getClientPaymentSummary` (agregados con
 fallback a legacy).
 
 ## 3. Formulario de cliente (`ClientForm.tsx`)
 Sección "Procesos contratados" donde se agregan/quitan procesos
-(`AddProcessDialog`: tipo + estado). Por cada proceso con estado y fields
+(`AddProcessDialog`: tipo + estado + precio opcional, con sugerencia cuando se
+puede derivar del estado). Por cada proceso con estado y fields
 derivados se muestra un card informativo flotante (derecha en desktop, abajo en
 mobile). Los pagos NO se gestionan en el formulario, sino en el detalle.
 
