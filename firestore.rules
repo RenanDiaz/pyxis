@@ -96,7 +96,17 @@ service cloud.firestore {
                     && memberRole(workspaceId) == "owner";
     }
 
-    match /states/{doc} { allow read: if request.auth != null; }
+    // La info de estados es referencia global editable solo por owners de workspace
+    function isWorkspaceOwner() {
+      let wsId = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.workspace_id;
+      return wsId != null
+             && get(/databases/$(database)/documents/workspaces/$(wsId)/members/$(request.auth.uid)).data.role == "owner";
+    }
+
+    match /states/{doc} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isWorkspaceOwner();
+    }
     match /trades/{doc} { allow read: if request.auth != null; }
     match /glossary/{doc} { allow read: if request.auth != null; }
   }

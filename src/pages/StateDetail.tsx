@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useStateByAbbreviation, useStates } from '@/hooks/useStates'
+import { useUserProfile } from '@/hooks/useUserProfile'
 import { formatPrice, formatDays, formatYesNo } from '@/lib/format'
 import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
 import { useNow } from '@/hooks/useNow'
 import { isGoodCallTime, getCallTimeLabel, formatLocalTime } from '@/lib/callTime'
+import { isFirebaseConfigured } from '@/lib/firebase'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -12,15 +15,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import StateEditDialog from '@/components/states/StateEditDialog'
 import { cn } from '@/lib/utils'
-import { ArrowLeft, ExternalLink, Search } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Pencil, Search } from 'lucide-react'
 
 export default function StateDetail() {
   const { abbreviation } = useParams<{ abbreviation: string }>()
   const navigate = useNavigate()
   const { data: state, isLoading } = useStateByAbbreviation(abbreviation)
   const { data: states } = useStates()
+  const { role } = useUserProfile()
+  const [editOpen, setEditOpen] = useState(false)
   const now = useNow(1000)
+
+  const canEdit = isFirebaseConfigured && role === 'owner'
 
   if (isLoading) {
     return <p className="text-muted-foreground">Cargando...</p>
@@ -118,6 +126,16 @@ export default function StateDetail() {
                 </SelectContent>
               </Select>
             </div>
+            {canEdit && (
+              <Button
+                variant="outline"
+                className="h-10 rounded-xl"
+                onClick={() => setEditOpen(true)}
+              >
+                <Pencil className="mr-1 h-4 w-4" />
+                Editar
+              </Button>
+            )}
             <Button asChild className="h-10 rounded-xl shadow-md shadow-primary/30">
               <a href={state.name_check_link} target="_blank" rel="noopener noreferrer">
                 Verificar nombre
@@ -265,6 +283,10 @@ export default function StateDetail() {
           </p>
         </div>
       </div>
+
+      {canEdit && editOpen && (
+        <StateEditDialog state={state} open={editOpen} onOpenChange={setEditOpen} />
+      )}
     </div>
   )
 }
