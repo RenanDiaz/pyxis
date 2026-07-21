@@ -81,7 +81,6 @@ export default function Reports() {
         monthKey: month,
         monthLabel,
         expenses: settings.expenses,
-        subtractRegisteredAgent: settings.subtractRegisteredAgent,
         stripeFeeMode: settings.stripeFeeMode,
       })
       // Carga diferida: ExcelJS es pesado y solo se necesita al exportar.

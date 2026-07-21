@@ -29,6 +29,8 @@ export interface ReportAccount {
   state: string
   stateFee: number
   registeredAgent: number
+  /** true = TAX y NET de esta cuenta restan el Registered Agent (H). Ver SPEC §4. */
+  hasRegisteredAgent: boolean
   owner: string
   payments: ReportPayment[] // 1 o 2 (el algoritmo soporta N)
 }
@@ -45,8 +47,6 @@ export interface ReportInput {
   monthLabel: string
   accounts: ReportAccount[]
   expenses: ExpenseConfig
-  /** true = TAX y NET restan el Registered Agent (H). Ver SPEC §4. */
-  subtractRegisteredAgent: boolean
 }
 
 /* ============================== Constantes ================================= */
@@ -152,10 +152,10 @@ function writeAccounts(ws: ExcelJS.Worksheet, input: ReportInput): number {
       const r = startRow + k
       setCell(ws, `B${r}`, normalizeDate(p.date), { font: FONT_DATA, numFmt: FMT_DATE })
       setCell(ws, `F${r}`, p.charge, { font: FONT_DATA, numFmt: FMT_NUM })
-      setCell(ws, `I${r}`, { formula: taxFormula(r, startRow, input.subtractRegisteredAgent) },
+      setCell(ws, `I${r}`, { formula: taxFormula(r, startRow, account.hasRegisteredAgent) },
         { font: FONT_DATA, numFmt: FMT_NUM })
       setCell(ws, `J${r}`, p.stripeFee, { font: FONT_DATA, numFmt: FMT_NUM })
-      setCell(ws, `K${r}`, { formula: netFormula(r, startRow, input.subtractRegisteredAgent) },
+      setCell(ws, `K${r}`, { formula: netFormula(r, startRow, account.hasRegisteredAgent) },
         { font: FONT_DATA, numFmt: FMT_NUM })
     })
 
