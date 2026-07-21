@@ -13,7 +13,9 @@
  *    alguno se haya hecho en un mes posterior (ese pago es parte de la misma
  *    venta y no debe contarse aparte en el mes en que se cobró).
  *  - `stateFee` se deriva del documento del estado (states.json).
- *  - `registeredAgent` no se registra en el CRM → 0.
+ *  - El costo del Registered Agent no se registra en el CRM → columna H en 0;
+ *    si el proceso incluye Registered Agent (`has_registered_agent`), las
+ *    fórmulas de TAX y NET de esa cuenta restan H (se puede completar en Excel).
  *  - `stripeFee` solo se calcula para los pagos cuyo método es `stripe`; se deja
  *    en 0 o se estima (2.9% + $0.30) según `stripeFeeMode`. Los pagos hechos con
  *    cualquier otro método nunca tienen comisión de Stripe.
@@ -21,7 +23,12 @@
  */
 
 import type { Client, ClientProcess, Payment, StateInfo } from '@/types'
-import { getProcessLabel, localMonthKey, parsePaymentDate } from '@/lib/processUtils'
+import {
+  getProcessLabel,
+  hasRegisteredAgent,
+  localMonthKey,
+  parsePaymentDate,
+} from '@/lib/processUtils'
 import { getClientDisplayName } from '@/lib/clientUtils'
 import type { ExpenseConfig, ReportAccount, ReportInput } from '@/lib/generateSalesReport'
 
@@ -39,7 +46,6 @@ export interface BuildReportParams {
   /** Rótulo de la hoja, ej. "June" o "Junio 2025". */
   monthLabel: string
   expenses: ExpenseConfig
-  subtractRegisteredAgent: boolean
   stripeFeeMode: StripeFeeMode
 }
 
@@ -94,8 +100,7 @@ function estimateStripeFee(charge: number, mode: StripeFeeMode): number {
  * en ese orden por el generador.
  */
 export function buildReportInput(params: BuildReportParams): ReportInput {
-  const { clients, states, monthKey, monthLabel, expenses, subtractRegisteredAgent, stripeFeeMode } =
-    params
+  const { clients, states, monthKey, monthLabel, expenses, stripeFeeMode } = params
 
   const stateFeeByAbbr = new Map<string, number>()
   for (const s of states) {
@@ -121,6 +126,7 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
         state: process.state || client.state || '',
         stateFee,
         registeredAgent: 0,
+        hasRegisteredAgent: hasRegisteredAgent(process),
         owner: getClientDisplayName(client),
         payments: monthPayments.map(({ payment, date }) => ({
           date,
@@ -138,7 +144,7 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
     (a, b) => a.payments[0].date.getTime() - b.payments[0].date.getTime()
   )
 
-  return { monthLabel, accounts, expenses, subtractRegisteredAgent }
+  return { monthLabel, accounts, expenses }
 }
 
 /**

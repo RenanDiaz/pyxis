@@ -124,7 +124,7 @@ export interface ClientProcess {
   stage: ProcessStage
   /**
    * Solo aplica a procesos de tipo `registration`. Indica si la LLC incluye
-   * Registered Agent. `undefined` o `true` = sí (valor por defecto); `false` = no.
+   * Registered Agent. `undefined` o `false` = no (valor por defecto); `true` = sí.
    */
   has_registered_agent?: boolean
   notes?: string

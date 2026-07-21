@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -25,7 +24,6 @@ import type { StripeFeeMode } from '@/lib/salesReportData'
 /** Config completa de exportación: gastos + opciones de cálculo. */
 export interface ExportSettings {
   expenses: ExpenseConfig
-  subtractRegisteredAgent: boolean
   stripeFeeMode: StripeFeeMode
 }
 
@@ -44,7 +42,6 @@ function defaultSettings(employeeName: string): ExportSettings {
         { label: 'Zoom Phone', amount: 0 },
       ],
     },
-    subtractRegisteredAgent: true,
     stripeFeeMode: 'estimate',
   }
 }
@@ -266,24 +263,6 @@ export default function ExportReportDialog({
             <p className="text-xs text-muted-foreground">
               Solo se aplica a los pagos hechos con el método Stripe; se estima o se deja en cero.
             </p>
-          </div>
-
-          <div className="flex items-start justify-between gap-4 rounded-md border p-3">
-            <div className="space-y-0.5">
-              <Label className="cursor-pointer" htmlFor="subtract-ra">
-                Restar Registered Agent
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Descuenta el costo del agente registrado en el impuesto y la utilidad neta.
-              </p>
-            </div>
-            <Switch
-              id="subtract-ra"
-              checked={settings.subtractRegisteredAgent}
-              onCheckedChange={(checked) =>
-                setSettings((s) => ({ ...s, subtractRegisteredAgent: checked }))
-              }
-            />
           </div>
         </div>
 
