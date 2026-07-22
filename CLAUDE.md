@@ -130,12 +130,16 @@ de seguimiento, independiente del resto.
 type ProcessType =
   | 'registration' | 'annual_report' | 'dissolution' | 'amendment'
   | 'newspaper_research' | 'newspaper_publication'
+  | 'sale_tax_license' | 'resale_certificate' | 'ein' | 'boi'
+  | 'statement_of_formation'
+  | 'custom' // proceso extraordinario con nombre libre (custom_label)
 
 type ProcessStage = 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
 
 interface ClientProcess {
   id: string                 // uuid local
   type: ProcessType
+  custom_label?: string      // solo `custom`: nombre libre del proceso extraordinario
   state?: string             // estado asociado (para info/precio derivado)
   total?: number             // precio acordado de ESTE proceso
   payments: Payment[]        // pagos de ESTE proceso → sus recibos
@@ -155,7 +159,13 @@ Cada `ProcessDef` tiene un **modelo de precio** (`pricing`):
 - `{ mode: 'fixed', amount }` → precio fijo. **Investigación de periódicos** ($50,
   requisito de publicación de LLC en NY: ubicar el diario y el semanal).
 - `{ mode: 'manual' }` → precio variable que captura el agente.
-  **Publicaciones en periódicos** (depende de lo que cobren los periódicos).
+  **Publicaciones en periódicos** (depende de lo que cobren los periódicos),
+  Sale Tax License, Resale Certificate, EIN, BOI, Statement of Formation.
+
+Además existe el tipo **`custom`** (no vive en `PROCESSES`): un proceso
+extraordinario con nombre libre (`custom_label`) que el agente captura en
+`AddProcessDialog` para un solo cliente, sin registrarlo en el catálogo.
+Precio manual y sin fields derivados del estado.
 
 Los `fields` (solo para procesos `state`) definen qué datos del estado se
 muestran en el card informativo. Helpers en `src/lib/processUtils.ts`:

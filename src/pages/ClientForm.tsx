@@ -487,7 +487,7 @@ export default function ClientForm() {
                   >
                     <div className="min-w-0">
                       <p className="font-medium">
-                        {getProcessLabel(p.type)}
+                        {getProcessLabel(p)}
                         {p.state ? ` — ${p.state}` : ''}
                       </p>
                       {(() => {

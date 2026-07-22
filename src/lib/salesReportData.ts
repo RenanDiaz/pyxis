@@ -122,7 +122,7 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
 
       accounts.push({
         company: client.llc_name?.trim() || getClientDisplayName(client),
-        purchase: getProcessLabel(process.type),
+        purchase: getProcessLabel(process),
         state: process.state || client.state || '',
         stateFee,
         registeredAgent: 0,

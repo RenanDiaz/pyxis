@@ -90,4 +90,10 @@ export const PROCESSES: ProcessDef[] = [
     pricing: { mode: 'manual' },
     fields: [],
   },
+  {
+    id: 'statement_of_formation',
+    label: 'Statement of Formation',
+    pricing: { mode: 'manual' },
+    fields: [],
+  },
 ]
