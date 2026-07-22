@@ -99,6 +99,8 @@ export type ProcessType =
   | 'resale_certificate'
   | 'ein'
   | 'boi'
+  | 'statement_of_formation'
+  | 'custom'
 
 export type ProcessStage = 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
 
@@ -118,6 +120,11 @@ export interface Payment {
 export interface ClientProcess {
   id: string
   type: ProcessType
+  /**
+   * Solo para procesos de tipo `custom`: nombre libre del proceso extraordinario
+   * que captura el agente (no queda registrado en el catálogo de procesos).
+   */
+  custom_label?: string
   state?: string
   total?: number
   payments: Payment[]

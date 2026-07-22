@@ -76,7 +76,7 @@ function getRecipientName(client: Client): string {
 }
 
 function getServiceLabel(process: ClientProcess): string {
-  const label = getProcessLabel(process.type)
+  const label = getProcessLabel(process)
   return process.state ? `${label} — ${process.state}` : label
 }
 

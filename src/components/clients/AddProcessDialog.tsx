@@ -8,6 +8,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -35,21 +36,27 @@ export default function AddProcessDialog({
   onAdd,
 }: AddProcessDialogProps) {
   const [type, setType] = useState<ProcessType | ''>('')
+  const [customLabel, setCustomLabel] = useState('')
   const [stateAbbr, setStateAbbr] = useState<string>(defaultState ?? '')
+
+  const isCustom = type === 'custom'
+  const canAdd = !!type && (!isCustom || customLabel.trim().length > 0)
 
   const reset = () => {
     setType('')
+    setCustomLabel('')
     setStateAbbr(defaultState ?? '')
   }
 
   const handleAdd = () => {
-    if (!type) return
+    if (!canAdd || !type) return
     const process: ClientProcess = {
       id: crypto.randomUUID(),
       type,
       payments: [],
       stage: 'pendiente',
       created_at: Timestamp.now(),
+      ...(isCustom ? { custom_label: customLabel.trim() } : {}),
       ...(stateAbbr ? { state: stateAbbr } : {}),
     }
     onAdd(process)
@@ -82,9 +89,26 @@ export default function AddProcessDialog({
                     {p.label}
                   </SelectItem>
                 ))}
+                <SelectItem value="custom">Otro (proceso personalizado)</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {isCustom && (
+            <div className="space-y-1.5">
+              <Label htmlFor="custom-process-name">Nombre del proceso</Label>
+              <Input
+                id="custom-process-name"
+                value={customLabel}
+                onChange={(e) => setCustomLabel(e.target.value)}
+                placeholder="Ej: Certificado de buena conducta"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                Proceso extraordinario: solo aplica a este cliente, no queda en la lista de procesos.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label>Estado</Label>
@@ -108,7 +132,7 @@ export default function AddProcessDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleAdd} disabled={!type}>Agregar</Button>
+          <Button onClick={handleAdd} disabled={!canAdd}>Agregar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

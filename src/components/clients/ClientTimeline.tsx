@@ -42,7 +42,7 @@ export default function ClientTimeline({ client, calls }: { client: Client; call
   // Pagos y contratación de cada proceso, etiquetados con el servicio.
   if (client.processes?.length) {
     for (const process of client.processes) {
-      const label = getProcessLabel(process.type)
+      const label = getProcessLabel(process)
 
       const contracted = process.created_at?.toDate?.()
       if (contracted) {

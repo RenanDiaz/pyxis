@@ -61,7 +61,7 @@ export default function ProcessCard({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <CardTitle className="text-sm font-medium">
-              {getProcessLabel(process.type)}
+              {getProcessLabel(process)}
               {process.state ? ` — ${process.state}` : ''}
             </CardTitle>
           </div>

@@ -5,8 +5,15 @@ export function getProcessDef(type: string) {
   return PROCESSES.find((p) => p.id === type)
 }
 
-export function getProcessLabel(type: string): string {
-  return getProcessDef(type)?.label ?? type
+/**
+ * Etiqueta visible de un proceso. Para procesos `custom` (extraordinarios, no
+ * listados en el catálogo) usa el nombre libre que capturó el agente.
+ */
+export function getProcessLabel(process: { type: string; custom_label?: string }): string {
+  if (process.type === 'custom') {
+    return process.custom_label?.trim() || 'Proceso personalizado'
+  }
+  return getProcessDef(process.type)?.label ?? process.type
 }
 
 /**
