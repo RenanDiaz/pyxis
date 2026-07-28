@@ -490,6 +490,11 @@ export default function ClientForm() {
                         {getProcessLabel(p)}
                         {p.state ? ` — ${p.state}` : ''}
                       </p>
+                      {p.type === 'registration' && (
+                        <p className="text-xs text-muted-foreground">
+                          {p.llc_name || formData.llc_name || 'Compañía sin nombre'}
+                        </p>
+                      )}
                       {(() => {
                         const st = p.state ? states?.find((s) => s.abbreviation === p.state) : null
                         const price = getSuggestedPrice(p.type, st)
@@ -674,6 +679,7 @@ export default function ClientForm() {
         onOpenChange={setShowAddProcess}
         states={states}
         defaultState={formData.state}
+        defaultLlcName={formData.llc_name}
         onAdd={addProcess}
       />
     </div>

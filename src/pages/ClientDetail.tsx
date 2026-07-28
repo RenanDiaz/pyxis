@@ -31,7 +31,19 @@ import type { Client, ClientStatus, ClientProcess } from '@/types'
 import { inferStatus } from '@/lib/statusUtils'
 import { Timestamp } from 'firebase/firestore'
 import { toast } from 'sonner'
-import { exportClientDoc } from '@/lib/exportClientDoc'
+import {
+  exportClientDoc,
+  exportRegistrationDoc,
+  getProcessCompanyName,
+  getRegistrationProcesses,
+} from '@/lib/exportClientDoc'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { getClientDisplayName, getAllPhones, getPrimaryPhoneNumber, PHONE_LABELS } from '@/lib/clientUtils'
 import { formatPhoneForWhatsApp } from '@/lib/phoneUtils'
 import { format } from 'date-fns'
@@ -198,8 +210,29 @@ export default function ClientDetail() {
     toast.success('Proceso eliminado')
   }
 
+  const handleExportAllDocs = async () => {
+    try {
+      const count = await exportClientDoc(client)
+      if (count > 1) {
+        toast.success(`${count} documentos generados, uno por compañía`)
+      }
+    } catch {
+      toast.error('No se pudieron generar los documentos')
+    }
+  }
+
+  const handleExportRegistration = async (process: ClientProcess) => {
+    try {
+      await exportRegistrationDoc(client, process)
+    } catch {
+      toast.error('No se pudo generar el documento')
+    }
+  }
+
   const currentNotes = notes ?? client.notes ?? ''
   const clientProcesses = client.processes ?? []
+  // Un documento Word por compañía: cada proceso de registro es una compañía.
+  const registrations = getRegistrationProcesses(client)
 
   const fullName =
     client.first_name || client.last_name
@@ -333,10 +366,36 @@ export default function ClientDetail() {
 
         {/* Acciones secundarias */}
         <div className="flex flex-wrap items-center gap-1.5 border-t pt-3">
-          <Button variant="ghost" size="sm" onClick={() => exportClientDoc(client)}>
-            <FileDown className="mr-1 h-3 w-3" />
-            <span className="hidden sm:inline">Exportar</span> .docx
-          </Button>
+          {registrations.length > 1 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <FileDown className="mr-1 h-3 w-3" />
+                  <span className="hidden sm:inline">Exportar</span> .docx ({registrations.length})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={handleExportAllDocs}>
+                  Descargar los {registrations.length} documentos
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {registrations.map((process, i) => (
+                  <DropdownMenuItem
+                    key={process.id}
+                    onClick={() => handleExportRegistration(process)}
+                  >
+                    {getProcessCompanyName(client, process) || `Compañía ${i + 1}`}
+                    {process.state ? ` — ${process.state}` : ''}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={handleExportAllDocs}>
+              <FileDown className="mr-1 h-3 w-3" />
+              <span className="hidden sm:inline">Exportar</span> .docx
+            </Button>
+          )}
           <Button asChild variant="ghost" size="sm">
             <Link to={`/clientes/${client.id}/editar`}>
               <Pencil className="mr-1 h-3 w-3" />
@@ -386,6 +445,7 @@ export default function ClientDetail() {
         onOpenChange={setShowAddProcess}
         states={states}
         defaultState={client.state}
+        defaultLlcName={client.llc_name}
         onAdd={handleAddProcess}
       />
 

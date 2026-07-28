@@ -144,6 +144,12 @@ interface ClientProcess {
   total?: number             // precio acordado de ESTE proceso
   payments: Payment[]        // pagos de ESTE proceso → sus recibos
   stage: ProcessStage        // seguimiento independiente del status del cliente
+  // Solo `registration` — datos de LA COMPAÑÍA de este registro. Vacíos =
+  // heredan del cliente. Un cliente puede registrar varias LLC.
+  has_registered_agent?: boolean
+  llc_name?: string
+  business_address?: string
+  business_purpose?: string
   notes?: string
   created_at: Timestamp
 }
@@ -175,7 +181,8 @@ fallback a legacy).
 
 ## 3. Formulario de cliente (`ClientForm.tsx`)
 Sección "Procesos contratados" donde se agregan/quitan procesos
-(`AddProcessDialog`: tipo + estado). Por cada proceso con estado y fields
+(`AddProcessDialog`: tipo + estado, y nombre de la LLC cuando el tipo es
+`registration`). Por cada proceso con estado y fields
 derivados se muestra un card informativo flotante (derecha en desktop, abajo en
 mobile). Los pagos NO se gestionan en el formulario, sino en el detalle.
 
@@ -187,9 +194,25 @@ selector de etapa, info derivada del estado, y su propio bloque de pagos
 un pago dispara `partial_payment`/`full_payment` (este último solo cuando el
 saldo agregado de todos los procesos llega a 0).
 
+Los procesos de tipo `registration` muestran además un bloque "Datos de la
+compañía" (nombre de la LLC, dirección comercial, propósito) y un botón
+`.docx` que exporta el documento Word de ESA compañía.
+
 ## 5. Recibos (`receiptUtils.ts`)
 `generatePaymentReceipt` recibe el `ClientProcess`: el servicio, total y saldo
 del recibo salen del proceso, no del cliente.
+
+## 5b. Documento Word — uno por compañía (`exportClientDoc.ts`)
+Cada proceso de tipo `registration` es **una compañía** y genera **su propio
+.docx**. Los datos de la compañía salen del proceso (`llc_name`, `state`,
+`business_address`, `business_purpose`) con fallback a los campos del cliente
+cuando el proceso no los tiene (datos previos a los registros múltiples).
+- `exportRegistrationDoc(client, process)` — el .docx de una compañía.
+- `exportClientDoc(client)` — un .docx por cada registro (con pausa entre
+  descargas y sufijo numérico si dos compañías comparten nombre); si el cliente
+  no tiene registros, exporta un único documento con los datos del cliente.
+En `ClientDetail` el botón "Exportar .docx" se convierte en un menú (descargar
+todos / una compañía a la vez) cuando hay más de un registro.
 
 ## 6. Firestore y migración
 `processes` se guarda como array dentro del documento del cliente (sin cambios

@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { toast } from 'sonner'
 import type { ClientDocument } from '@/types'
 import {
   Dialog,
@@ -6,6 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { downloadFile } from '@/lib/storageUtils'
 import { Download, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface Props {
@@ -16,7 +19,23 @@ interface Props {
 }
 
 export default function DocumentViewer({ doc, allImages, onClose, onNavigate }: Props) {
+  const [downloading, setDownloading] = useState(false)
+
   if (!doc) return null
+
+  const handleDownload = async () => {
+    setDownloading(true)
+    try {
+      const result = await downloadFile(doc.download_url, doc.name)
+      if (result === 'opened') {
+        toast.warning('No se pudo descargar directamente. El archivo se abrió en otra pestaña.')
+      } else if (result === 'blocked') {
+        toast.error('El navegador bloqueó la descarga. Permite las ventanas emergentes e intenta de nuevo.')
+      }
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   const currentIndex = allImages.findIndex((d) => d.id === doc.id)
   const hasPrev = currentIndex > 0
@@ -77,11 +96,9 @@ export default function DocumentViewer({ doc, allImages, onClose, onNavigate }: 
         </div>
 
         <div className="flex justify-end pt-2">
-          <Button asChild variant="outline" size="sm">
-            <a href={doc.download_url} target="_blank" rel="noopener noreferrer" download>
-              <Download className="mr-2 h-3 w-3" />
-              Descargar
-            </a>
+          <Button variant="outline" size="sm" onClick={handleDownload} disabled={downloading}>
+            <Download className="mr-2 h-3 w-3" />
+            {downloading ? 'Descargando...' : 'Descargar'}
           </Button>
         </div>
       </DialogContent>
