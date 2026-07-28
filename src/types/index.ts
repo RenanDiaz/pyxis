@@ -134,6 +134,16 @@ export interface ClientProcess {
    * Registered Agent. `undefined` o `false` = no (valor por defecto); `true` = sí.
    */
   has_registered_agent?: boolean
+  /**
+   * Solo `registration`: nombre de la compañía de ESTE registro. Un cliente
+   * puede registrar varias LLC, cada una con su propio documento Word.
+   * Si está vacío se usa `client.llc_name`.
+   */
+  llc_name?: string
+  /** Solo `registration`: dirección comercial de esta compañía. Fallback: `client.business_address`. */
+  business_address?: string
+  /** Solo `registration`: propósito de esta compañía. Fallback: `client.business_purpose`. */
+  business_purpose?: string
   notes?: string
   created_at: Timestamp
 }

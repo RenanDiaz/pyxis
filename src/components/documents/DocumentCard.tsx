@@ -1,8 +1,11 @@
+import { useState } from 'react'
+import { toast } from 'sonner'
 import type { ClientDocument, WorkspaceRole } from '@/types'
 import {
   getFileIcon,
   getFileIconColor,
   formatFileSize,
+  downloadFile,
 } from '@/lib/storageUtils'
 import { Button } from '@/components/ui/button'
 import {
@@ -35,6 +38,21 @@ export default function DocumentCard({
   const iconColor = getFileIconColor(doc.type)
   const canDelete = currentRole === 'owner' || doc.uploaded_by_uid === currentUid
   const uploadDate = doc.uploaded_at?.toDate?.()
+  const [downloading, setDownloading] = useState(false)
+
+  const handleDownload = async () => {
+    setDownloading(true)
+    try {
+      const result = await downloadFile(doc.download_url, doc.name)
+      if (result === 'opened') {
+        toast.warning('No se pudo descargar directamente. El archivo se abrió en otra pestaña.')
+      } else if (result === 'blocked') {
+        toast.error('El navegador bloqueó la descarga. Permite las ventanas emergentes e intenta de nuevo.')
+      }
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   return (
     <div className="group relative flex flex-col rounded-lg border bg-card p-3 transition-shadow hover:shadow-md">
@@ -94,11 +112,9 @@ export default function DocumentCard({
               <Eye className="mr-2 h-4 w-4" />
               Abrir
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <a href={doc.download_url} target="_blank" rel="noopener noreferrer" download>
-                <Download className="mr-2 h-4 w-4" />
-                Descargar
-              </a>
+            <DropdownMenuItem onClick={handleDownload} disabled={downloading}>
+              <Download className="mr-2 h-4 w-4" />
+              {downloading ? 'Descargando...' : 'Descargar'}
             </DropdownMenuItem>
             {canDelete && (
               <>

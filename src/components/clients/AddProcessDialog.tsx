@@ -25,6 +25,8 @@ interface AddProcessDialogProps {
   onOpenChange: (open: boolean) => void
   states?: StateInfo[]
   defaultState?: string
+  /** Nombre de LLC del cliente, usado como sugerencia para el primer registro. */
+  defaultLlcName?: string
   onAdd: (process: ClientProcess) => void
 }
 
@@ -33,19 +35,23 @@ export default function AddProcessDialog({
   onOpenChange,
   states,
   defaultState,
+  defaultLlcName,
   onAdd,
 }: AddProcessDialogProps) {
   const [type, setType] = useState<ProcessType | ''>('')
   const [customLabel, setCustomLabel] = useState('')
   const [stateAbbr, setStateAbbr] = useState<string>(defaultState ?? '')
+  const [llcName, setLlcName] = useState('')
 
   const isCustom = type === 'custom'
+  const isRegistration = type === 'registration'
   const canAdd = !!type && (!isCustom || customLabel.trim().length > 0)
 
   const reset = () => {
     setType('')
     setCustomLabel('')
     setStateAbbr(defaultState ?? '')
+    setLlcName('')
   }
 
   const handleAdd = () => {
@@ -58,6 +64,7 @@ export default function AddProcessDialog({
       created_at: Timestamp.now(),
       ...(isCustom ? { custom_label: customLabel.trim() } : {}),
       ...(stateAbbr ? { state: stateAbbr } : {}),
+      ...(isRegistration && llcName.trim() ? { llc_name: llcName.trim() } : {}),
     }
     onAdd(process)
     reset()
@@ -106,6 +113,22 @@ export default function AddProcessDialog({
               />
               <p className="text-xs text-muted-foreground">
                 Proceso extraordinario: solo aplica a este cliente, no queda en la lista de procesos.
+              </p>
+            </div>
+          )}
+
+          {isRegistration && (
+            <div className="space-y-1.5">
+              <Label htmlFor="process-llc-name">Nombre de la LLC</Label>
+              <Input
+                id="process-llc-name"
+                value={llcName}
+                onChange={(e) => setLlcName(e.target.value)}
+                placeholder={defaultLlcName || 'Ej: SUNRISE SERVICES LLC'}
+              />
+              <p className="text-xs text-muted-foreground">
+                Cada registro es una compañía distinta y genera su propio documento Word.
+                {defaultLlcName ? ` Si lo dejas vacío se usa "${defaultLlcName}".` : ''}
               </p>
             </div>
           )}

@@ -12,6 +12,7 @@ import {
   doc,
   Timestamp,
 } from 'firebase/firestore'
+import { saveAs } from 'file-saver'
 import { storage, db, isFirebaseConfigured } from '@/lib/firebase'
 import type { DocFileType } from '@/types'
 import { FileText, FileSpreadsheet, FileImage, File } from 'lucide-react'
@@ -71,6 +72,35 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+// ── Descarga ──
+
+export type DownloadResult = 'downloaded' | 'opened' | 'blocked'
+
+/**
+ * Descarga un archivo de Storage al disco del usuario.
+ *
+ * El atributo `download` de un `<a>` es ignorado por el navegador cuando el
+ * href es de otro origen (Firebase Storage lo es), así que Chrome se limitaba a
+ * abrir la imagen en una pestaña en vez de descargarla. Traemos el archivo como
+ * blob y lo guardamos desde el mismo origen, que sí respeta el nombre y abre el
+ * diálogo de descarga.
+ *
+ * Si el fetch falla (CORS del bucket sin configurar, red caída) caemos a abrir
+ * la URL en una pestaña nueva — `'opened'` — y si el navegador bloquea el popup
+ * devolvemos `'blocked'`.
+ */
+export async function downloadFile(url: string, filename: string): Promise<DownloadResult> {
+  try {
+    const response = await fetch(url, { mode: 'cors', credentials: 'omit' })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    saveAs(await response.blob(), filename)
+    return 'downloaded'
+  } catch {
+    const win = window.open(url, '_blank', 'noopener,noreferrer')
+    return win ? 'opened' : 'blocked'
+  }
 }
 
 // ── Upload / Delete ──

@@ -77,6 +77,21 @@ VITE_FIREBASE_APP_ID=
 
 ---
 
+## CORS del bucket de Storage
+
+Subir y **descargar** documentos desde el navegador requiere que el bucket tenga
+CORS habilitado para el origen de la app. La configuración vive en `cors.json`
+y se aplica una sola vez:
+
+```bash
+gcloud storage buckets update gs://<VITE_FIREBASE_STORAGE_BUCKET> --cors-file=cors.json
+```
+
+Sin esto, la descarga de archivos cae al modo alterno (abrir en una pestaña
+nueva) en lugar de guardar el archivo en disco.
+
+---
+
 ## Scripts disponibles
 
 | Comando | Descripción |
