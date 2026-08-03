@@ -31,12 +31,12 @@ import type { Client, ClientStatus, ClientProcess } from '@/types'
 import { inferStatus } from '@/lib/statusUtils'
 import { Timestamp } from 'firebase/firestore'
 import { toast } from 'sonner'
+import { exportClientDoc, exportRegistrationDoc } from '@/lib/exportClientDoc'
 import {
-  exportClientDoc,
-  exportRegistrationDoc,
+  backfillFirstRegistrationCompany,
   getProcessCompanyName,
   getRegistrationProcesses,
-} from '@/lib/exportClientDoc'
+} from '@/lib/companyUtils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -198,7 +198,12 @@ export default function ClientDetail() {
   }
 
   const handleAddProcess = async (process: ClientProcess) => {
-    const processes = [...(client.processes ?? []), process]
+    // Al pasar a más de un registro, el primero deja de heredar los datos de
+    // compañía del cliente: se los copiamos para que conserve su identidad.
+    const processes = backfillFirstRegistrationCompany(client, [
+      ...(client.processes ?? []),
+      process,
+    ])
     await updateMutation.mutateAsync({ id: client.id, data: { processes } })
     toast.success('Proceso agregado')
   }
@@ -446,6 +451,7 @@ export default function ClientDetail() {
         states={states}
         defaultState={client.state}
         defaultLlcName={client.llc_name}
+        existingRegistrations={registrations.length}
         onAdd={handleAddProcess}
       />
 

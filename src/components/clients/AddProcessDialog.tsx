@@ -27,6 +27,8 @@ interface AddProcessDialogProps {
   defaultState?: string
   /** Nombre de LLC del cliente, usado como sugerencia para el primer registro. */
   defaultLlcName?: string
+  /** Cuántos registros de LLC tiene ya el cliente. */
+  existingRegistrations?: number
   onAdd: (process: ClientProcess) => void
 }
 
@@ -36,6 +38,7 @@ export default function AddProcessDialog({
   states,
   defaultState,
   defaultLlcName,
+  existingRegistrations = 0,
   onAdd,
 }: AddProcessDialogProps) {
   const [type, setType] = useState<ProcessType | ''>('')
@@ -45,7 +48,13 @@ export default function AddProcessDialog({
 
   const isCustom = type === 'custom'
   const isRegistration = type === 'registration'
-  const canAdd = !!type && (!isCustom || customLabel.trim().length > 0)
+  // El primer registro puede heredar el nombre del cliente; a partir del
+  // segundo cada compañía necesita el suyo para no confundirse con la anterior.
+  const isFirstRegistration = existingRegistrations === 0
+  const canAdd =
+    !!type &&
+    (!isCustom || customLabel.trim().length > 0) &&
+    (!isRegistration || isFirstRegistration || llcName.trim().length > 0)
 
   const reset = () => {
     setType('')
@@ -119,16 +128,26 @@ export default function AddProcessDialog({
 
           {isRegistration && (
             <div className="space-y-1.5">
-              <Label htmlFor="process-llc-name">Nombre de la LLC</Label>
+              <Label htmlFor="process-llc-name">
+                Nombre de la LLC
+                {!isFirstRegistration && <span className="text-destructive ml-1">*</span>}
+              </Label>
               <Input
                 id="process-llc-name"
                 value={llcName}
                 onChange={(e) => setLlcName(e.target.value)}
-                placeholder={defaultLlcName || 'Ej: SUNRISE SERVICES LLC'}
+                placeholder={
+                  (isFirstRegistration ? defaultLlcName : '') || 'Ej: SUNRISE SERVICES LLC'
+                }
+                autoFocus={!isFirstRegistration}
               />
               <p className="text-xs text-muted-foreground">
                 Cada registro es una compañía distinta y genera su propio documento Word.
-                {defaultLlcName ? ` Si lo dejas vacío se usa "${defaultLlcName}".` : ''}
+                {isFirstRegistration
+                  ? defaultLlcName
+                    ? ` Si lo dejas vacío se usa "${defaultLlcName}".`
+                    : ''
+                  : ` El cliente ya tiene ${existingRegistrations === 1 ? 'un registro' : `${existingRegistrations} registros`}: escribe el nombre de esta nueva compañía.`}
               </p>
             </div>
           )}

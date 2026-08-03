@@ -13,6 +13,11 @@ import {
   getSuggestedPrice,
 } from '@/lib/processUtils'
 import { formatMoney } from '@/lib/format'
+import {
+  backfillFirstRegistrationCompany,
+  getProcessCompanyName,
+  type CompanyClient,
+} from '@/lib/companyUtils'
 import AddProcessDialog from '@/components/clients/AddProcessDialog'
 import { getStateByAreaCode } from '@/lib/areaCodeMap'
 import { formatPhoneForDisplay, isValidPhone } from '@/lib/phoneUtils'
@@ -292,8 +297,25 @@ export default function ClientForm() {
     return <p className="text-muted-foreground">Cargando...</p>
   }
 
+  // Vista del cliente en borrador para resolver la compañía de cada registro.
+  const companyClient: CompanyClient = {
+    llc_name: formData.llc_name,
+    state: formData.state,
+    business_address: formData.business_address,
+    business_purpose: formData.business_purpose,
+    processes,
+  }
+  const registrationCount = processes.filter((p) => p.type === 'registration').length
+
   const addProcess = (process: ClientProcess) => {
-    setProcesses((prev) => [...prev, process])
+    // Con más de un registro, el primero deja de heredar los datos de compañía
+    // del cliente: se los copiamos para no perder la compañía original.
+    setProcesses((prev) =>
+      backfillFirstRegistrationCompany(
+        { ...companyClient, processes: prev },
+        [...prev, process],
+      ),
+    )
   }
 
   const removeProcess = (processId: string) => {
@@ -475,6 +497,12 @@ export default function ClientForm() {
               <div className="space-y-3">
                 <Separator />
                 <Label>Procesos contratados</Label>
+                {registrationCount > 1 && (
+                  <p className="text-xs text-muted-foreground">
+                    Este cliente tiene {registrationCount} compañías. El nombre, dirección y
+                    propósito de cada una se editan en su registro, desde el detalle del cliente.
+                  </p>
+                )}
                 {processes.length === 0 && (
                   <p className="text-sm text-muted-foreground">
                     Sin procesos asignados. Agrega los servicios que el cliente quiere contratar.
@@ -492,7 +520,7 @@ export default function ClientForm() {
                       </p>
                       {p.type === 'registration' && (
                         <p className="text-xs text-muted-foreground">
-                          {p.llc_name || formData.llc_name || 'Compañía sin nombre'}
+                          {getProcessCompanyName(companyClient, p) || 'Compañía sin nombre'}
                         </p>
                       )}
                       {(() => {
@@ -680,6 +708,7 @@ export default function ClientForm() {
         states={states}
         defaultState={formData.state}
         defaultLlcName={formData.llc_name}
+        existingRegistrations={registrationCount}
         onAdd={addProcess}
       />
     </div>

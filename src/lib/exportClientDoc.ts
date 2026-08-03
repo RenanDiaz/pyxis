@@ -2,20 +2,17 @@ import { Document, Packer, Paragraph, TextRun, AlignmentType } from "docx"
 import { saveAs } from "file-saver"
 import type { Client, ClientProcess } from "@/types"
 import { getPrimaryPhoneNumber } from "@/lib/clientUtils"
+import {
+  getProcessCompany,
+  getRegistrationProcesses,
+  type CompanyInfo,
+} from "@/lib/companyUtils"
 
 const FONT = "Quattrocento Sans"
 const FONT_SIZE = 24 // half-points (12pt)
 
 /** Pausa entre descargas consecutivas para que el navegador no las descarte. */
 const MULTI_DOWNLOAD_DELAY_MS = 500
-
-/** Datos de la compañía (LLC) que se imprimen en el documento. */
-interface CompanyInfo {
-  llc_name?: string
-  state?: string
-  business_address?: string
-  business_purpose?: string
-}
 
 function field(label: string, value?: string, tabbed?: boolean): Paragraph {
   const prefix = tabbed ? "\t" : ""
@@ -125,29 +122,6 @@ async function saveDoc(doc: Document, fileName: string): Promise<void> {
 
 // ── Compañías del cliente ──
 
-/** Los procesos de registro de LLC del cliente: una compañía por proceso. */
-export function getRegistrationProcesses(client: Client): ClientProcess[] {
-  return (client.processes ?? []).filter((p) => p.type === "registration")
-}
-
-/**
- * Nombre de la compañía de un proceso de registro. Cae al `llc_name` del
- * cliente cuando el proceso todavía no tiene nombre propio (datos previos a
- * los registros múltiples).
- */
-export function getProcessCompanyName(client: Client, process: ClientProcess): string {
-  return (process.llc_name || "").trim() || (client.llc_name || "").trim()
-}
-
-function companyFromProcess(client: Client, process: ClientProcess): CompanyInfo {
-  return {
-    llc_name: getProcessCompanyName(client, process),
-    state: process.state || client.state,
-    business_address: (process.business_address || "").trim() || client.business_address,
-    business_purpose: (process.business_purpose || "").trim() || client.business_purpose,
-  }
-}
-
 function companyFromClient(client: Client): CompanyInfo {
   return {
     llc_name: client.llc_name,
@@ -168,7 +142,7 @@ export async function exportRegistrationDoc(
   client: Client,
   process: ClientProcess,
 ): Promise<void> {
-  const company = companyFromProcess(client, process)
+  const company = getProcessCompany(client, process)
   await saveDoc(buildDoc(client, company), `${baseFileName(company)}.docx`)
 }
 
@@ -192,7 +166,7 @@ export async function exportClientDoc(client: Client): Promise<number> {
   const usedNames = new Map<string, number>()
 
   for (let i = 0; i < registrations.length; i++) {
-    const company = companyFromProcess(client, registrations[i])
+    const company = getProcessCompany(client, registrations[i])
     const base = baseFileName(company)
     const seen = usedNames.get(base) ?? 0
     usedNames.set(base, seen + 1)
