@@ -30,6 +30,7 @@ import {
   parsePaymentDate,
 } from '@/lib/processUtils'
 import { getClientDisplayName } from '@/lib/clientUtils'
+import { getProcessCompanyName } from '@/lib/companyUtils'
 import type { ExpenseConfig, ReportAccount, ReportInput } from '@/lib/generateSalesReport'
 
 export type StripeFeeMode = 'none' | 'estimate'
@@ -121,7 +122,12 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
       const stateFee = stateAbbr ? stateFeeByAbbr.get(stateAbbr) ?? 0 : 0
 
       accounts.push({
-        company: client.llc_name?.trim() || getClientDisplayName(client),
+        // Cada registro de LLC es una compañía distinta: se reporta la del
+        // proceso, no la del cliente.
+        company:
+          getProcessCompanyName(client, process) ||
+          client.llc_name?.trim() ||
+          getClientDisplayName(client),
         purchase: getProcessLabel(process),
         state: process.state || client.state || '',
         stateFee,

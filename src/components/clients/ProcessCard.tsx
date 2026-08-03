@@ -27,15 +27,18 @@ import {
   hasRegisteredAgent,
   PROCESS_STAGE_LABELS,
 } from '@/lib/processUtils'
-import { exportRegistrationDoc, getProcessCompanyName } from '@/lib/exportClientDoc'
+import { exportRegistrationDoc } from '@/lib/exportClientDoc'
+import {
+  COMPANY_KEYS,
+  getProcessCompanyName,
+  inheritsClientCompany,
+  type CompanyKey,
+} from '@/lib/companyUtils'
 import type { Client, ClientProcess, ProcessStage, StateInfo, Workspace } from '@/types'
 
 const STAGE_ORDER: ProcessStage[] = ['pendiente', 'en_proceso', 'completado', 'cancelado']
 
-/** Campos de compañía que un registro de LLC puede sobrescribir del cliente. */
-const COMPANY_KEYS = ['llc_name', 'business_address', 'business_purpose'] as const
-
-type CompanyDraft = Record<(typeof COMPANY_KEYS)[number], string>
+type CompanyDraft = Record<CompanyKey, string>
 
 interface ProcessCardProps {
   client: Client
@@ -60,11 +63,14 @@ export default function ProcessCard({
   const stateFields = def?.fields ?? []
   const showStateInfo = stateFields.length > 0 && !!state
   const isRegistration = process.type === 'registration'
+  // Solo el primer registro hereda los datos de compañía del cliente; los demás
+  // muestran únicamente los suyos para no repetir la misma compañía en cada card.
+  const inheritsCompany = inheritsClientCompany(client, process)
 
   const [notes, setNotes] = useState<string | null>(null)
   const currentNotes = notes ?? process.notes ?? ''
 
-  // Datos de la compañía de ESTE registro. Vacío = hereda los del cliente.
+  // Datos de la compañía de ESTE registro.
   const [company, setCompany] = useState<CompanyDraft | null>(null)
   const currentCompany: CompanyDraft = company ?? {
     llc_name: process.llc_name ?? '',
@@ -168,7 +174,9 @@ export default function ProcessCard({
                   id={`llc-name-${process.id}`}
                   value={currentCompany.llc_name}
                   onChange={(e) => setCompany({ ...currentCompany, llc_name: e.target.value })}
-                  placeholder={client.llc_name || 'Ej: SUNRISE SERVICES LLC'}
+                  placeholder={
+                    (inheritsCompany ? client.llc_name : '') || 'Ej: SUNRISE SERVICES LLC'
+                  }
                 />
               </div>
               <div className="space-y-1.5">
@@ -179,7 +187,9 @@ export default function ProcessCard({
                   id={`business-address-${process.id}`}
                   value={currentCompany.business_address}
                   onChange={(e) => setCompany({ ...currentCompany, business_address: e.target.value })}
-                  placeholder={client.business_address || 'Dirección de esta compañía'}
+                  placeholder={
+                    (inheritsCompany ? client.business_address : '') || 'Dirección de esta compañía'
+                  }
                   rows={2}
                 />
               </div>
@@ -191,13 +201,16 @@ export default function ProcessCard({
                   id={`business-purpose-${process.id}`}
                   value={currentCompany.business_purpose}
                   onChange={(e) => setCompany({ ...currentCompany, business_purpose: e.target.value })}
-                  placeholder={client.business_purpose || 'Propósito de esta compañía'}
+                  placeholder={
+                    (inheritsCompany ? client.business_purpose : '') || 'Propósito de esta compañía'
+                  }
                   rows={2}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Si dejas un campo vacío se usa el dato del cliente. Estos datos son los que salen
-                en el documento Word de esta compañía.
+                {inheritsCompany
+                  ? 'Si dejas un campo vacío se usa el dato del cliente. Estos datos son los que salen en el documento Word de esta compañía.'
+                  : 'Estos datos son solo de esta compañía y son los que salen en su documento Word.'}
               </p>
               <Button
                 size="sm"

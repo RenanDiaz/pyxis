@@ -10,6 +10,7 @@ import { es } from 'date-fns/locale'
 import { storage, isFirebaseConfigured } from '@/lib/firebase'
 import { getProcessLabel, parsePaymentDate } from '@/lib/processUtils'
 import { getClientDisplayName } from '@/lib/clientUtils'
+import { getProcessCompanyName } from '@/lib/companyUtils'
 import type { Client, ClientProcess, Payment, PaymentMethod, Workspace } from '@/types'
 
 const METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -70,9 +71,14 @@ function fmtCurrency(value: number): string {
   })
 }
 
-function getRecipientName(client: Client): string {
-  if (client.llc_name) return client.llc_name
-  return getClientDisplayName(client)
+/**
+ * Nombre del receptor del recibo: la compañía de ESTE proceso cuando es un
+ * registro de LLC (un cliente puede tener varias), la del cliente para los
+ * demás procesos, y el nombre de la persona si no hay compañía.
+ */
+function getRecipientName(client: Client, process: ClientProcess): string {
+  const company = getProcessCompanyName(client, process) || client.llc_name?.trim()
+  return company || getClientDisplayName(client)
 }
 
 function getServiceLabel(process: ClientProcess): string {
@@ -216,9 +222,11 @@ export async function generatePaymentReceipt({
   doc.setFontSize(13)
   doc.setTextColor(...text)
   y += 18
-  doc.text(getRecipientName(client), margin, y)
+  const recipientName = getRecipientName(client, process)
+  doc.text(recipientName, margin, y)
 
-  if (client.llc_name && client.first_name) {
+  // Si el receptor es la compañía, se agrega abajo el nombre de la persona.
+  if (recipientName !== getClientDisplayName(client) && client.first_name) {
     y += 16
     doc.setFontSize(11)
     doc.setTextColor(...muted)

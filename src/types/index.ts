@@ -137,12 +137,13 @@ export interface ClientProcess {
   /**
    * Solo `registration`: nombre de la compañía de ESTE registro. Un cliente
    * puede registrar varias LLC, cada una con su propio documento Word.
-   * Si está vacío se usa `client.llc_name`.
+   * Si está vacío, solo el PRIMER registro del cliente cae a `client.llc_name`
+   * (datos previos a los registros múltiples); los demás quedan sin nombre.
    */
   llc_name?: string
-  /** Solo `registration`: dirección comercial de esta compañía. Fallback: `client.business_address`. */
+  /** Solo `registration`: dirección comercial de esta compañía. Fallback (primer registro): `client.business_address`. */
   business_address?: string
-  /** Solo `registration`: propósito de esta compañía. Fallback: `client.business_purpose`. */
+  /** Solo `registration`: propósito de esta compañía. Fallback (primer registro): `client.business_purpose`. */
   business_purpose?: string
   notes?: string
   created_at: Timestamp

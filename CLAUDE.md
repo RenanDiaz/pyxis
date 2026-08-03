@@ -198,15 +198,30 @@ Los procesos de tipo `registration` muestran además un bloque "Datos de la
 compañía" (nombre de la LLC, dirección comercial, propósito) y un botón
 `.docx` que exporta el documento Word de ESA compañía.
 
+## 4b. Datos de compañía y herencia (`companyUtils.ts`)
+Los campos de compañía (`llc_name`, `state`, `business_address`,
+`business_purpose`) viven **en el proceso de registro**. Los campos homónimos del
+cliente son datos legacy (de cuando un cliente tenía una sola compañía) y
+**solo los hereda el PRIMER registro**: si los heredaran todos, la misma
+compañía se vería repetida en cada registro del cliente y el .docx saldría
+duplicado. Helpers: `getProcessCompany`, `getProcessCompanyName`,
+`inheritsClientCompany`, `getRegistrationProcesses`,
+`backfillFirstRegistrationCompany`.
+
+Al agregar un registro cuando ya existe otro (`ClientDetail` y `ClientForm`) se
+llama `backfillFirstRegistrationCompany`: baja los datos del cliente al primer
+registro para que conserve su identidad y no dependa de la herencia. Por eso
+`AddProcessDialog` exige el nombre de la LLC a partir del segundo registro.
+
 ## 5. Recibos (`receiptUtils.ts`)
 `generatePaymentReceipt` recibe el `ClientProcess`: el servicio, total y saldo
-del recibo salen del proceso, no del cliente.
+del recibo salen del proceso, no del cliente. El receptor es la compañía de ESE
+registro (con el nombre de la persona debajo).
 
 ## 5b. Documento Word — uno por compañía (`exportClientDoc.ts`)
 Cada proceso de tipo `registration` es **una compañía** y genera **su propio
-.docx**. Los datos de la compañía salen del proceso (`llc_name`, `state`,
-`business_address`, `business_purpose`) con fallback a los campos del cliente
-cuando el proceso no los tiene (datos previos a los registros múltiples).
+.docx**. Los datos de la compañía se resuelven con `getProcessCompany`
+(ver 4b: solo el primer registro cae a los campos del cliente).
 - `exportRegistrationDoc(client, process)` — el .docx de una compañía.
 - `exportClientDoc(client)` — un .docx por cada registro (con pausa entre
   descargas y sufijo numérico si dos compañías comparten nombre); si el cliente
@@ -219,3 +234,7 @@ todos / una compañía a la vez) cuando hay más de un registro.
 de estructura de colecciones). Migrar datos legacy con:
 `npx tsx scripts/migrate-to-multi-process.ts [--dry-run]` — crea un proceso a
 partir de `process`+`payment_total`+`payments`, sin borrar los campos viejos.
+
+Clientes que ya tenían 2+ registros antes de la regla de herencia (ver 4b):
+`npx tsx scripts/backfill-registration-company.ts [--dry-run]` — copia los datos
+de compañía del cliente al primer registro que los estaba heredando.
