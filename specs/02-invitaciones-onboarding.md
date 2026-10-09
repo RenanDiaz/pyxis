@@ -1,6 +1,6 @@
 # 02 — Invitaciones y onboarding
 
-**Prioridad:** 🔴 Crítica · **Estado:** propuesto · **Depende de:** [01](01-seguridad-reglas.md) (se despliegan juntos)
+**Prioridad:** 🔴 Crítica · **Estado:** parcial (con el hotfix de 01) · **Depende de:** [01](01-seguridad-reglas.md) (se despliegan juntos)
 
 ## Problema
 Sumar agentes es el flujo principal de crecimiento y hoy está roto o depende de un hueco de seguridad.
@@ -17,6 +17,17 @@ Sumar agentes es el flujo principal de crecimiento y hoy está roto o depende de
   crear un segundo o aceptar otra invitación y dejar huérfano su member anterior.
 - `JoinWorkspace` muestra el rol crudo en inglés (`agent`).
 - `WorkspaceMembers`: invitaciones pendientes sin fecha de expiración visible ni opción de copiar el link otra vez; email sin validar.
+
+## Implementado con el hotfix de 01
+- Requisitos 1 (link por token = doc ID, se mantiene `&workspace=`), 2 (volver al link después del login), 4 y 5 (aceptación en batch validada por reglas, email obligatorio).
+- Pantalla de unirse: nombre del workspace denormalizado, rol en español,
+  estados de expirada/usada, y email que no coincide con botón "Cerrar sesión y cambiar de cuenta".
+- La aceptación concurrente quedó cubierta: las reglas exigen `pending → accepted`,
+  así que la segunda aceptación del mismo token falla.
+
+**Pendiente:** 3 (quién invitó), 6 (bloquear `/onboarding` y `/join` con workspace),
+7 (unirse pegando el link en Onboarding), 8 (gestión de invitaciones pendientes) y P2.
+P1 se resolvió por defecto como nominal; confirmar con negocio.
 
 ## Objetivo
 Un agente invitado abre el link, inicia sesión (o se registra) y queda dentro

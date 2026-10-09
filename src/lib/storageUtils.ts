@@ -128,7 +128,9 @@ export async function uploadClientFile(
 
   const downloadUrl = await new Promise<string>((resolve, reject) => {
     const task = uploadBytesResumable(storageRef, file, {
-      contentType: file.type,
+      contentType: file.type || 'application/octet-stream',
+      // storage.rules usa `uploaded_by` para dejar borrar el archivo a quien lo subió.
+      customMetadata: { uploaded_by: uploaderUid },
     })
 
     task.on(

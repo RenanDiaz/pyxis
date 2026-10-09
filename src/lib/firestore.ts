@@ -45,7 +45,9 @@ export interface WorkspaceCtx {
 
 function addWorkspaceRoleConstraints(ctx: WorkspaceCtx): QueryConstraint[] {
   if (ctx.role === 'owner') return []
-  if (ctx.role === 'supervisor') {
+  // Un supervisor sin subequipo solo ve lo suyo (las reglas no le dejan ver
+  // los registros sin subequipo de otros).
+  if (ctx.role === 'supervisor' && ctx.subteamId) {
     return [where('subteam_id', '==', ctx.subteamId)]
   }
   return [where('owner_uid', '==', ctx.uid)]
@@ -231,6 +233,7 @@ export async function deleteSubteam(workspaceId: string, subteamId: string): Pro
 export async function createInvitation(
   workspaceId: string,
   data: {
+    workspace_name: string
     email: string
     role: 'supervisor' | 'agent'
     subteam_id: string | null
@@ -255,6 +258,8 @@ export async function createInvitation(
   const expiresAt = Timestamp.fromMillis(now.toMillis() + 7 * 24 * 60 * 60 * 1000) // 7 days
 
   const invData = {
+    // Denormalizado: el invitado no puede leer el workspace hasta unirse.
+    workspace_name: data.workspace_name,
     email: data.email.toLowerCase().trim(),
     role: data.role,
     subteam_id: data.subteam_id,
@@ -265,8 +270,10 @@ export async function createInvitation(
     expires_at: expiresAt,
   }
 
-  const ref = await addDoc(wsCol(workspaceId, 'invitations'), invData)
-  return { id: ref.id, ...invData }
+  // El doc ID es el token: las reglas dejan leer una invitación por ID a quien
+  // tenga el link, sin permitir listar las del workspace.
+  await setDoc(wsDoc(workspaceId, 'invitations', token), invData)
+  return { id: token, ...invData }
 }
 
 export async function getInvitations(workspaceId: string): Promise<WorkspaceInvitation[]> {
@@ -285,15 +292,9 @@ export async function getInvitationByToken(
   token: string
 ): Promise<WorkspaceInvitation | null> {
   if (!isFirebaseConfigured || !db) return null
-  const q = query(
-    wsCol(workspaceId, 'invitations'),
-    where('token', '==', token),
-    limit(1)
-  )
-  const snapshot = await getDocs(q)
-  if (snapshot.empty) return null
-  const d = snapshot.docs[0]
-  return { id: d.id, ...d.data() } as WorkspaceInvitation
+  const snap = await getDoc(wsDoc(workspaceId, 'invitations', token))
+  if (!snap.exists()) return null
+  return { id: snap.id, ...snap.data() } as WorkspaceInvitation
 }
 
 export async function acceptInvitation(
@@ -309,16 +310,22 @@ export async function acceptInvitation(
   const invitation = invSnap.data() as Omit<WorkspaceInvitation, 'id'>
 
   if (invitation.status !== 'pending') throw new Error('Esta invitación ya no está pendiente')
-
-  const now = Timestamp.now()
-  if (invitation.expires_at.toMillis() < now.toMillis()) {
-    await updateDoc(invRef, { status: 'expired' })
+  if (invitation.expires_at.toMillis() < Date.now()) {
     throw new Error('Esta invitación ha expirado')
   }
+  if (invitation.email && invitation.email.toLowerCase() !== user.email.toLowerCase()) {
+    throw new Error(`Esta invitación es para ${invitation.email}`)
+  }
 
+  // Todo en un batch: las reglas validan que el member se crea con el rol y
+  // subequipo de una invitación pendiente que pasa a aceptada por este usuario.
   const batch = writeBatch(db)
 
-  batch.update(invRef, { status: 'accepted' })
+  batch.update(invRef, {
+    status: 'accepted',
+    accepted_by: user.uid,
+    accepted_at: serverTimestamp(),
+  })
 
   const memberRef = wsDoc(workspaceId, 'members', user.uid)
   batch.set(memberRef, {
@@ -327,6 +334,7 @@ export async function acceptInvitation(
     email: user.email,
     role: invitation.role,
     subteam_id: invitation.subteam_id,
+    invitation_id: invitationId,
     joined_at: serverTimestamp(),
   })
 
@@ -584,6 +592,12 @@ export async function getRecentClients(ctx: WorkspaceCtx, max: number = 5): Prom
 }
 
 // ── States (referencia global) ──
+
+export async function isGlobalAdmin(uid: string): Promise<boolean> {
+  if (!isFirebaseConfigured || !db) return false
+  const snap = await getDoc(doc(db, 'admins', uid))
+  return snap.exists()
+}
 
 export async function getStates(): Promise<StateInfo[]> {
   if (!isFirebaseConfigured || !db) return []

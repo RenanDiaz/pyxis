@@ -1,0 +1,48 @@
+name: Tests de reglas
+
+# Corre los tests de firestore.rules / storage.rules contra los emuladores de
+# Firebase (que necesitan Java). Solo cuando cambian las reglas o sus tests.
+on:
+  pull_request:
+    paths:
+      - firestore.rules
+      - storage.rules
+      - firebase.json
+      - tests/rules/**
+      - package.json
+      - package-lock.json
+      - .github/workflows/rules-tests.yml
+  push:
+    branches: [main]
+    paths:
+      - firestore.rules
+      - storage.rules
+      - firebase.json
+      - tests/rules/**
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # Los .jar de los emuladores (~100 MB) se descargan una vez y se reutilizan.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('package.json') }}
+
+      - run: npm ci
+
+      - run: npm run test:rules

@@ -2,25 +2,67 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Workspace-scoped client files
+    function memberDoc(workspaceId) {
+      return firestore.get(/databases/(default)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
+    }
+
+    function isMember(workspaceId) {
+      return request.auth != null
+             && firestore.exists(/databases/(default)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
+    }
+
+    function isOwner(workspaceId) {
+      return isMember(workspaceId) && memberDoc(workspaceId).data.role == "owner";
+    }
+
+    // Mismo alcance que el cliente en firestore.rules (canSee): owner todo ·
+    // supervisor su subequipo · cualquiera sus propios clientes.
+    function canSeeClient(workspaceId, clientId) {
+      let m = memberDoc(workspaceId).data;
+      let sub = m.get("subteam_id", null);
+      let client = firestore.get(/databases/(default)/documents/workspaces/$(workspaceId)/clients/$(clientId)).data;
+      return m.role == "owner"
+             || client.owner_uid == request.auth.uid
+             || (m.role == "supervisor" && sub != null && client.subteam_id == sub);
+    }
+
+    // Tipos que acepta DocumentGrid. HEIC y algunos Office llegan sin MIME
+    // desde ciertos navegadores: se admiten como octet-stream (no se sirven
+    // como HTML, que es lo que importa).
+    function isAllowedClientFile() {
+      return request.resource.size <= 20 * 1024 * 1024
+             && request.resource.contentType.matches(
+               'image/.*|application/pdf|application/msword|application/vnd[.]ms-excel|application/vnd[.]openxmlformats-officedocument[.].*|application/octet-stream'
+             )
+             && !request.resource.contentType.matches('image/svg.*');
+    }
+
+    // Archivos de clientes
     match /workspaces/{workspaceId}/clients/{clientId}/{allPaths=**} {
-      allow read: if request.auth != null
-                  && firestore.exists(/databases/(default)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
-      allow write: if request.auth != null
-                   && firestore.exists(/databases/(default)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
-      allow delete: if request.auth != null
-                    && firestore.get(/databases/(default)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)).data.role == "owner";
+      allow read: if isMember(workspaceId) && canSeeClient(workspaceId, clientId);
+      // `resource == null`: subir sobre un path existente también cuenta como
+      // create; cada subida usa un path nuevo, así que no se sobrescribe nada.
+      allow create: if resource == null
+                    && isMember(workspaceId)
+                    && canSeeClient(workspaceId, clientId)
+                    && isAllowedClientFile()
+                    && request.resource.metadata.uploaded_by == request.auth.uid;
+      // Metadata inmutable (protege `uploaded_by`).
+      allow update: if false;
+      // Archivos subidos antes de guardar `uploaded_by` solo los borra el owner.
+      allow delete: if isMember(workspaceId)
+                    && canSeeClient(workspaceId, clientId)
+                    && (isOwner(workspaceId)
+                        || resource.metadata.get("uploaded_by", "") == request.auth.uid);
     }
 
-    // Workspace branding (logo for receipts) — readable by any member, writable by owner only
+    // Branding del workspace (logo de recibos): lo leen los miembros, lo escribe el owner.
     match /workspaces/{workspaceId}/branding/{allPaths=**} {
-      allow read: if request.auth != null
-                  && firestore.exists(/databases/(default)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
-      allow write, delete: if request.auth != null
-                           && firestore.get(/databases/(default)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)).data.role == "owner";
+      allow read: if isMember(workspaceId);
+      allow write: if isOwner(workspaceId);
     }
 
-    // Deny everything else by default
+    // Todo lo demás, denegado.
     match /{allPaths=**} {
       allow read, write: if false;
     }

@@ -39,7 +39,10 @@ export interface Subteam {
 export type InvitationStatus = 'pending' | 'accepted' | 'expired'
 
 export interface WorkspaceInvitation {
+  /** Igual a `token` en invitaciones nuevas (el link apunta al doc por ID). */
   id: string
+  /** Nombre del workspace al crear la invitación (el invitado no puede leer el workspace). */
+  workspace_name?: string
   email: string
   role: 'supervisor' | 'agent'
   subteam_id: string | null
@@ -48,6 +51,8 @@ export interface WorkspaceInvitation {
   created_by_uid: string
   created_at: Timestamp
   expires_at: Timestamp
+  accepted_by?: string
+  accepted_at?: Timestamp
 }
 
 export interface StateInfo {

@@ -15,8 +15,8 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 
 | # | Spec | Prioridad | Depende de | Tamaño |
 |---|------|-----------|------------|--------|
-| 01 | [Reglas de seguridad Firestore/Storage](01-seguridad-reglas.md) | 🔴 Crítica | — (se implementa junto con 02) | L |
-| 02 | [Invitaciones y onboarding](02-invitaciones-onboarding.md) | 🔴 Crítica | 01 | M |
+| 01 | [Reglas de seguridad Firestore/Storage](01-seguridad-reglas.md) | 🔴 Crítica · ✅ hotfix | — (se implementa junto con 02) | L |
+| 02 | [Invitaciones y onboarding](02-invitaciones-onboarding.md) | 🔴 Crítica · 🟡 parcial | 01 | M |
 | 03 | [Integridad de escrituras del cliente y dinero](03-integridad-cliente-pagos.md) | 🔴 Alta | — | L |
 | 04 | [Correcciones del reporte de ventas](04-reporte-ventas.md) | 🔴 Alta | Respuestas de negocio | S |
 | 05 | [Historial de status y métricas confiables](05-historial-status-metricas.md) | 🟠 Alta | — | M |

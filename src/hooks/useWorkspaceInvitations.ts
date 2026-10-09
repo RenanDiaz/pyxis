@@ -29,18 +29,21 @@ export function useCreateInvitation() {
   return useMutation({
     mutationFn: ({
       workspaceId,
+      workspaceName,
       email,
       role,
       subteamId,
       createdByUid,
     }: {
       workspaceId: string
+      workspaceName: string
       email: string
       role: 'supervisor' | 'agent'
       subteamId: string | null
       createdByUid: string
     }) =>
       createInvitation(workspaceId, {
+        workspace_name: workspaceName,
         email,
         role,
         subteam_id: subteamId,
