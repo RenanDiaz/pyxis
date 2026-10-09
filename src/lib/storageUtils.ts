@@ -13,6 +13,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { saveAs } from 'file-saver'
+import { toast } from 'sonner'
 import { db, isFirebaseConfigured } from '@/lib/firebase'
 import { storage } from '@/lib/firebaseStorage'
 import type { DocFileType } from '@/types'
@@ -101,6 +102,16 @@ export async function downloadFile(url: string, filename: string): Promise<Downl
   } catch {
     const win = window.open(url, '_blank', 'noopener,noreferrer')
     return win ? 'opened' : 'blocked'
+  }
+}
+
+/** `downloadFile` + aviso al usuario si no se pudo descargar directo. */
+export async function downloadFileWithFeedback(url: string, filename: string): Promise<void> {
+  const result = await downloadFile(url, filename)
+  if (result === 'opened') {
+    toast.warning('No se pudo descargar directamente. El archivo se abrió en otra pestaña.')
+  } else if (result === 'blocked') {
+    toast.error('El navegador bloqueó la descarga. Permite las ventanas emergentes e intenta de nuevo.')
   }
 }
 

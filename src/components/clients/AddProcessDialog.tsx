@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { PROCESSES } from '@/data/processes'
 import type { ClientProcess, ProcessType, StateInfo } from '@/types'
+import { UPPERCASE_INPUT_CLASS } from '@/lib/clientUtils'
 
 interface AddProcessDialogProps {
   open: boolean
@@ -43,7 +44,10 @@ export default function AddProcessDialog({
 }: AddProcessDialogProps) {
   const [type, setType] = useState<ProcessType | ''>('')
   const [customLabel, setCustomLabel] = useState('')
-  const [stateAbbr, setStateAbbr] = useState<string>(defaultState ?? '')
+  // `null` = sin elegir: sigue al estado del cliente aunque cambie después de
+  // montar el diálogo (en el formulario se elige el estado más tarde).
+  const [pickedState, setStateAbbr] = useState<string | null>(null)
+  const stateAbbr = pickedState ?? defaultState ?? ''
   const [llcName, setLlcName] = useState('')
 
   const isCustom = type === 'custom'
@@ -59,7 +63,7 @@ export default function AddProcessDialog({
   const reset = () => {
     setType('')
     setCustomLabel('')
-    setStateAbbr(defaultState ?? '')
+    setStateAbbr(null)
     setLlcName('')
   }
 
@@ -136,6 +140,7 @@ export default function AddProcessDialog({
                 id="process-llc-name"
                 value={llcName}
                 onChange={(e) => setLlcName(e.target.value)}
+                className={UPPERCASE_INPUT_CLASS}
                 placeholder={
                   (isFirstRegistration ? defaultLlcName : '') || 'Ej: SUNRISE SERVICES LLC'
                 }
@@ -173,7 +178,15 @@ export default function AddProcessDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              reset()
+              onOpenChange(false)
+            }}
+          >
+            Cancelar
+          </Button>
           <Button onClick={handleAdd} disabled={!canAdd}>Agregar</Button>
         </DialogFooter>
       </DialogContent>

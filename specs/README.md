@@ -27,7 +27,7 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 | 10 | [Rendimiento](10-rendimiento.md) | 🟡 Media · ✅ | — | M |
 | 11 | [Metas por agente](11-metas.md) | 🟢 Media/Baja | 05 | M |
 | 12 | [Infra: índices, scripts y migraciones](12-infra-scripts.md) | 🟡 Media · ✅ (desplegar índices) | — | S |
-| 13 | [UX, accesibilidad y limpieza](13-ux-accesibilidad.md) | 🟢 Baja | — | M |
+| 13 | [UX, accesibilidad y limpieza](13-ux-accesibilidad.md) | 🟢 Baja · ✅ salvo flashcards y validaciones | — | M |
 | 14 | [Aviso de nueva versión](14-aviso-nueva-version.md) | 🟠 Alta · ✅ | — | S |
 | 15 | [Cotización](15-cotizacion.md) | 🟠 Alta · ✅ | — | M |
 | 16 | [Estado de cuenta](16-estado-de-cuenta.md) | 🟠 Alta · ✅ | 15 | S |

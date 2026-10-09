@@ -74,8 +74,9 @@ export default function WorkspaceSettings() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label>Nombre</Label>
+            <Label htmlFor="ws-settings-name">Nombre</Label>
             <Input
+              id="ws-settings-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="mt-1.5 max-w-sm"

@@ -65,9 +65,9 @@ export default function GoalModal({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Tipo de meta</Label>
+            <Label htmlFor="goal-type">Tipo de meta</Label>
             <Select value={type} onValueChange={(v) => setType(v as GoalType)}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="goal-type" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -77,16 +77,18 @@ export default function GoalModal({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Período</Label>
+            <Label htmlFor="goal-period">Período</Label>
             <Input
+              id="goal-period"
               value={type === 'daily' ? defaultDailyPeriod : defaultMonthlyPeriod}
               disabled
               className="bg-muted"
             />
           </div>
           <div className="space-y-2">
-            <Label>Meta de ventas (número de clientes cerrados)</Label>
+            <Label htmlFor="goal-value">Meta de ventas (número de clientes cerrados)</Label>
             <Input
+              id="goal-value"
               type="number"
               min={1}
               placeholder="Ej: 5"

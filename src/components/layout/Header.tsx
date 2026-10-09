@@ -35,6 +35,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
         size="icon"
         className="lg:hidden"
         onClick={onMenuToggle}
+        aria-label="Abrir menú"
       >
         <Menu className="h-5 w-5" />
       </Button>
@@ -45,7 +46,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Cambiar tema">
             <Sun className="h-4 w-4 rotate-0 scale-100 transition-transform dark:rotate-90 dark:scale-0" />
             <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Cambiar tema</span>

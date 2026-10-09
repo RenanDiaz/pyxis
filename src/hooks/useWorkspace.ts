@@ -31,26 +31,26 @@ export function useWorkspaceMembers(workspaceId: string | null | undefined) {
 export function useAssignableMembers(
   workspaceId: string | null | undefined,
   role: WorkspaceRole,
-  subteamId: string | null
+  subteamId: string | null,
+  uid?: string
 ) {
   const { data: members, ...rest } = useWorkspaceMembers(
     role === 'owner' || role === 'supervisor' ? workspaceId : null
   )
 
+  // Mismo criterio que `canHold` en firestore.rules (spec 13).
   const assignable = useMemo(() => {
     if (!members) return []
-    if (role === 'owner') {
-      // Owner can assign to any agent or supervisor (including themselves)
-      return members.filter((m) => m.role !== 'owner' || true) // all members
-    }
+    // Owner: cualquier miembro, incluido él mismo.
+    if (role === 'owner') return members
     if (role === 'supervisor') {
-      // Supervisor can assign to agents in their subteam + themselves
-      return members.filter(
-        (m) => m.subteam_id === subteamId
-      )
+      // Sin subequipo solo puede asignarse a sí mismo; antes veía a todos los
+      // miembros sin subequipo y las reglas rechazaban el guardado.
+      if (!subteamId) return members.filter((m) => m.uid === uid)
+      return members.filter((m) => m.subteam_id === subteamId)
     }
     return []
-  }, [members, role, subteamId])
+  }, [members, role, subteamId, uid])
 
   return { data: assignable, ...rest }
 }

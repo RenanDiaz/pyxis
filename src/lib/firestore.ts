@@ -32,7 +32,7 @@ import type {
   GoalType,
   StateInfo,
 } from '@/types'
-import { uppercaseClientFields } from '@/lib/clientUtils'
+import { normalizeClientFields } from '@/lib/clientUtils'
 import { runClientMutation, runClientUpdate } from '@/lib/clientTransactions'
 import type { StatusTrigger } from '@/lib/statusUtils'
 import { initialStatusFields } from '@/lib/statusHistory'
@@ -400,7 +400,7 @@ export async function createClient(
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   const now = Timestamp.now()
   const ref = await addDoc(wsCol(ctx.workspaceId, 'clients'), {
-    ...uppercaseClientFields(data),
+    ...normalizeClientFields(data),
     ...initialStatusFields(data.status, ctx.uid, now),
     archived: false,
     owner_uid: assignTo?.owner_uid ?? ctx.uid,
@@ -592,11 +592,16 @@ export async function getRecentClients(ctx: WorkspaceCtx, max: number = 5): Prom
   const constraints: QueryConstraint[] = [
     ...addWorkspaceRoleConstraints(ctx),
     orderBy('created_at', 'desc'),
-    limit(max),
+    // Margen para descartar archivados en memoria: los clientes viejos no
+    // tienen el campo `archived`, así que no sirve un where (spec 13).
+    limit(max * 4),
   ]
   const q = query(wsCol(ctx.workspaceId, 'clients'), ...constraints)
   const snapshot = await getDocs(q)
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Client))
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...d.data() } as Client))
+    .filter((c) => !c.archived)
+    .slice(0, max)
 }
 
 // ── States (referencia global) ──

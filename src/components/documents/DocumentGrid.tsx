@@ -4,15 +4,17 @@ import { useClientDocuments } from '@/hooks/useClientDocuments'
 import {
   uploadClientFile,
   deleteClientFile,
+  downloadFileWithFeedback,
   type UploadProgress,
 } from '@/lib/storageUtils'
 import { inferStatus } from '@/lib/statusUtils'
 import { updateClient } from '@/lib/firestore'
+import { queryClient } from '@/lib/queryClient'
 import DocumentCard from '@/components/documents/DocumentCard'
 import DocumentViewer from '@/components/documents/DocumentViewer'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Upload, FolderOpen } from 'lucide-react'
+import { Upload, FolderOpen, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { describeError } from '@/lib/errors'
 
@@ -90,6 +92,7 @@ export default function DocumentGrid({
     setUploads((prev) => [...prev, ...newUploads])
 
     // Upload each file
+    let uploaded = 0
     for (let i = 0; i < valid.length; i++) {
       const file = valid[i]
       setUploads((prev) =>
@@ -113,6 +116,7 @@ export default function DocumentGrid({
             )
           }
         )
+        uploaded++
         setUploads((prev) =>
           prev.map((u) =>
             u.file === file ? { ...u, status: 'done' } : u
@@ -128,9 +132,12 @@ export default function DocumentGrid({
       }
     }
 
-    // nuevo → contactado tras subir documentos, evaluado contra el status actual.
-    if (clientStatus && inferStatus(clientStatus, 'document_uploaded')) {
-      updateClient(workspaceId, clientId, {}, 'document_uploaded').catch(() => {})
+    // nuevo → contactado tras subir documentos, evaluado contra el status
+    // actual. Solo si al menos una subida salió bien.
+    if (uploaded > 0 && clientStatus && inferStatus(clientStatus, 'document_uploaded')) {
+      updateClient(workspaceId, clientId, {}, 'document_uploaded')
+        .then(() => queryClient.invalidateQueries({ queryKey: ['clients'] }))
+        .catch(() => {})
     }
 
     // Clear completed uploads after a short delay
@@ -165,13 +172,11 @@ export default function DocumentGrid({
       setViewerDoc(doc)
     } else if (doc.type === 'pdf') {
       window.open(doc.download_url, '_blank')
-    } else if (doc.type === 'word' || doc.type === 'excel') {
-      window.open(
-        `https://docs.google.com/viewer?url=${encodeURIComponent(doc.download_url)}&embedded=true`,
-        '_blank'
-      )
     } else {
-      window.open(doc.download_url, '_blank')
+      // Word, Excel y otros se descargan: antes se abrían en el visor de Google
+      // Docs, que recibía el link firmado de un archivo que puede traer SSN
+      // (spec 13).
+      downloadFileWithFeedback(doc.download_url, doc.name)
     }
   }
 
@@ -212,14 +217,24 @@ export default function DocumentGrid({
               <div key={`${u.file.name}-${i}`} className="rounded-lg border bg-muted/30 p-3 space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium truncate mr-2">{u.file.name}</span>
-                  <span className="text-muted-foreground text-xs shrink-0">
+                  <span className="flex items-center gap-1 text-muted-foreground text-xs shrink-0">
                     {u.status === 'uploading' && u.progress
                       ? `${u.progress.percent}%`
                       : u.status === 'done'
                         ? 'Listo'
                         : u.status === 'error'
-                          ? 'Error'
+                          ? <span className="text-destructive">Error</span>
                           : 'En espera'}
+                    {u.status === 'error' && (
+                      <button
+                        type="button"
+                        className="rounded p-0.5 hover:bg-muted"
+                        aria-label={`Quitar ${u.file.name} de la lista`}
+                        onClick={() => setUploads((prev) => prev.filter((x) => x !== u))}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </span>
                 </div>
                 {u.status === 'uploading' && u.progress && (

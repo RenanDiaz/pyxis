@@ -167,6 +167,16 @@ export default function StatesMap({ states, search, filteredStates }: StatesMapP
                       onClick={() => {
                         if (abbr) navigate(`/estados/${abbr}`)
                       }}
+                      // Teclado (spec 13): cada estado es enfocable y se abre con Enter/Espacio.
+                      tabIndex={abbr ? 0 : -1}
+                      role={abbr ? 'link' : undefined}
+                      aria-label={stateData ? `${stateData.name}: ver detalle` : undefined}
+                      onKeyDown={(e) => {
+                        if (abbr && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault()
+                          navigate(`/estados/${abbr}`)
+                        }
+                      }}
                     />
                   )
                 })

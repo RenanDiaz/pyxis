@@ -7,20 +7,24 @@ const GOOD_CALL_END = 20
 
 /**
  * ¿Es buena hora para llamar según la hora local del cliente?
- * Verdadero entre las 9:00 y las 20:00 en la zona horaria dada.
+ * Verdadero entre las 9:00 y las 20:00 en la zona horaria dada; `null` si la
+ * zona no es válida (antes decía "buena hora" ante un error, spec 13).
  */
-export function isGoodCallTime(date: Date, timezone: string): boolean {
+export function isGoodCallTime(date: Date, timezone: string): boolean | null {
   try {
     const hour = Number(formatInTimeZone(date, timezone, 'H'))
+    if (Number.isNaN(hour)) return null
     return hour >= GOOD_CALL_START && hour < GOOD_CALL_END
   } catch {
-    return true
+    return null
   }
 }
 
 /** Etiqueta del semáforo de horario. */
 export function getCallTimeLabel(date: Date, timezone: string): string {
-  return isGoodCallTime(date, timezone) ? 'Buena hora para llamar' : 'Fuera de horario'
+  const good = isGoodCallTime(date, timezone)
+  if (good === null) return 'Hora desconocida'
+  return good ? 'Buena hora para llamar' : 'Fuera de horario'
 }
 
 /** Hora local formateada en la zona horaria dada (ej. "2:30 PM"). */

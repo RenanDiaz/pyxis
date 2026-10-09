@@ -97,6 +97,6 @@ describe('historial de status', () => {
     const data = (await getDoc(doc(db('own'), CLIENT))).data()!
     assert.equal(data.status, 'cerrado')
     assert.equal(data.status_history.length, 1)
-    assert.equal(data.email, 'X@Y.COM')
+    assert.equal(data.email, 'x@y.com') // el email se normaliza a minúsculas (spec 13)
   })
 })

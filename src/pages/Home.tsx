@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import { getClientDisplayName, getPrimaryPhoneNumber } from '@/lib/clientUtils'
 import { getClientPayments, getClientPaymentSummary, parsePaymentDate } from '@/lib/processUtils'
-import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
+import { getClientTimezone, getTimezoneLabel } from '@/lib/timezones'
 import { formatMoney } from '@/lib/format'
 import { formatLocalTime } from '@/lib/callTime'
 import { isToday, isYesterday, formatDistanceToNow, format, startOfDay, endOfDay } from 'date-fns'
@@ -127,7 +127,9 @@ export default function Home() {
     ? [...allClients, ...(archivedClients ?? [])].find((c) => c.id === nextCall.client_id)
     : undefined
   const nextScheduled = nextCall?.scheduled_at?.toDate?.()
-  const nextTz = nextClient?.state ? getStateTimezone(nextClient.state) : null
+  const nextTz = nextClient?.state
+    ? getClientTimezone(nextClient.state, getPrimaryPhoneNumber(nextClient)).timezone
+    : null
   const nextBalance = nextClient ? getClientPaymentSummary(nextClient).balance : 0
   const nextPhone = nextClient ? getPrimaryPhoneNumber(nextClient) : ''
 
@@ -323,11 +325,11 @@ export default function Home() {
         <Card
           className={cn(
             debtClients.length > 0 &&
-              'border-amber-300 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20',
+              'border-violet-300 bg-violet-50/60 dark:border-violet-800 dark:bg-violet-950/20',
           )}
         >
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400">
+            <CardTitle className="flex items-center gap-2 text-base text-violet-700 dark:text-violet-400">
               <AlertTriangle className="h-4 w-4" />
               Deudas pendientes · {debtClients.length}
             </CardTitle>
@@ -343,7 +345,7 @@ export default function Home() {
                   return (
                     <div
                       key={client.id}
-                      className="flex items-center justify-between gap-2 border-b border-amber-200/70 py-1.5 last:border-0 dark:border-amber-800/50"
+                      className="flex items-center justify-between gap-2 border-b border-violet-200/70 py-1.5 last:border-0 dark:border-violet-800/50"
                     >
                       <div className="min-w-0 flex-1 text-sm">
                         <Link to={`/clientes/${client.id}`} className="font-semibold hover:underline">
@@ -355,7 +357,7 @@ export default function Home() {
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         {showBalance && (
-                          <span className="font-bold text-amber-700 dark:text-amber-400">
+                          <span className="font-bold text-violet-700 dark:text-violet-400">
                             ${formatMoney(balance)}
                           </span>
                         )}
@@ -392,6 +394,9 @@ export default function Home() {
                   const client = allClients.find((c) => c.id === call.client_id)
                   const clientName = client ? getClientDisplayName(client) : 'Cliente'
                   const scheduledDate = call.scheduled_at?.toDate?.()
+                  const tz = client?.state
+                    ? getClientTimezone(client.state, getPrimaryPhoneNumber(client)).timezone
+                    : null
                   return (
                     <div
                       key={call.id}
@@ -410,11 +415,10 @@ export default function Home() {
                             timeStyle: 'short',
                           }) ?? 'Sin fecha'}
                         </p>
-                        {client?.state && scheduledDate && (
+                        {tz && scheduledDate && (
                           <p className="flex items-center gap-1 text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            {formatLocalTime(scheduledDate, getStateTimezone(client.state), 'h:mm a')} (
-                            {getTimezoneLabel(getStateTimezone(client.state))})
+                            {formatLocalTime(scheduledDate, tz, 'h:mm a')} ({getTimezoneLabel(tz)})
                           </p>
                         )}
                       </div>
