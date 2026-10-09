@@ -177,6 +177,22 @@ export const clientMutations = {
       return 'total' in patch ? balanceChange(client, after) : { processes: after }
     },
 
+  /**
+   * Fija el total de los procesos que aún no tienen uno (cotización, spec 15).
+   * Un total ya acordado nunca se pisa, aunque venga en `totals`.
+   */
+  setMissingTotals:
+    (totals: Record<string, number>): ClientMutation =>
+    (client) => {
+      let after = client.processes ?? []
+      for (const [processId, total] of Object.entries(totals)) {
+        const process = after.find((p) => p.id === processId)
+        if (!process || (process.total && process.total > 0) || !(total > 0)) continue
+        after = patchProcess(after, processId, { total })
+      }
+      return balanceChange(client, after)
+    },
+
   addProcess:
     (process: ClientProcess): ClientMutation =>
     (client) => ({

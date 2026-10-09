@@ -18,6 +18,8 @@ export interface Workspace {
   receipt_company_name?: string
   receipt_logo_url?: string
   receipt_logo_path?: string
+  /** Cómo pagar (Zelle, cuenta…). Se imprime en las cotizaciones (spec 15). */
+  payment_instructions?: string
 }
 
 export interface WorkspaceMember {
