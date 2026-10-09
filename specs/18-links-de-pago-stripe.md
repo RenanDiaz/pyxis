@@ -244,14 +244,14 @@ El Worker importa este módulo y `getProcessLabel` (`src/lib/processUtils.ts`) c
 | `FIREBASE_SA_CLIENT_EMAIL` | secreto | service account con rol *Cloud Datastore User* | la misma |
 | `FIREBASE_SA_PRIVATE_KEY` | secreto | clave PEM, con `\n` escapados | la misma |
 | `FIREBASE_PROJECT_ID` | variable | id del proyecto | el mismo |
-| `APP_URL` | variable | `https://<dominio>` | `https://staging.<dominio>` |
+| `APP_URL` | variable | `https://mipyxis.com` | `https://staging.mipyxis.com` |
 
 - **Service account dedicada** (`pyxis-worker@…`), no la de `firebase-admin` de los scripts. Rol mínimo: Cloud Datastore User.
 - **Local:** `.dev.vars` (ignorado por git) y `.dev.vars.example` con los nombres.
 
 ### Setup manual de Stripe (una vez, en la cuenta de plataforma)
 - [ ] Crear la cuenta de **plataforma**. Ver la pregunta abierta 1 sobre la entidad legal y el país.
-- [ ] Activar **Connect** y completar el *platform profile*. Soporte: `soporte@<dominio>`.
+- [ ] Activar **Connect** y completar el *platform profile*. Soporte: `soporte@mipyxis.com`.
 - [ ] **Branding:** nombre "Pyxis", ícono y color. Es lo que ve el owner en el onboarding.
 - [ ] Copiar las claves de test y live a los secretos de staging y producción.
 - [ ] En **modo test**, conectar un workspace de staging y generar un link. Pagar con `4242 4242 4242 4242` y probar R5–R7.

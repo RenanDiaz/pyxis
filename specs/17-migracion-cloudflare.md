@@ -10,23 +10,20 @@
 ## Decisión
 - **Hosting:** **Cloudflare Workers con static assets**, en el plan gratuito, que sí permite uso comercial. Un solo Worker sirve la SPA y las rutas `/api/*`. Mismo origen, así que no hay CORS.
   - Las requests a archivos estáticos no consumen la cuota del Worker. El plan gratuito incluye 100k invocaciones/día.
-- **Dominio:** comprarlo en **Cloudflare Registrar**.
-  - Lo vende a precio de costo y sin recargo, con privacidad WHOIS gratis.
-  - El DNS queda en Cloudflare desde el día 1, así que no hay cambio de nameservers.
-  - Preferir `.com`.
+- **Dominio:** **`mipyxis.com`** (comprado). El DNS vive en Cloudflare: si se compró en Cloudflare Registrar ya está, y si no, ver el paso 0.
 - **Entornos:**
 
   | Entorno | Worker | Dominio | Rama |
   |---|---|---|---|
-  | Producción | `pyxis` | `<dominio>` (+ `www` → redirect) | `main` |
-  | Staging | `pyxis-staging` | `staging.<dominio>` | todas las demás |
+  | Producción | `pyxis` | `mipyxis.com` (+ `www` → redirect) | `main` |
+  | Staging | `pyxis-staging` | `staging.mipyxis.com` | todas las demás |
 
   Staging hace falta antes del spec 18: es donde vivirán las claves de **prueba** de Stripe. Los *preview URLs* por versión del Worker de producción compartirían los secretos de producción, por eso no se usan.
 - **Firebase no cambia:** mismo proyecto, mismo plan Spark. Las reglas y la configuración `VITE_FIREBASE_*` quedan iguales.
 
 ## Fuera de alcance
 - Código del spec 18. Esta migración solo deja el Worker con un `GET /api/health` para probar el enrutamiento.
-- Email transaccional. **Email Routing** de Cloudflare (gratis) sí entra: reenvía `soporte@<dominio>` a un buzón personal, y Stripe lo pide como contacto de soporte de la plataforma.
+- Email transaccional. **Email Routing** de Cloudflare (gratis) sí entra: reenvía `soporte@mipyxis.com` a un buzón personal, y Stripe lo pide como contacto de soporte de la plataforma.
 
 ## Cambios en el repo (un PR)
 1. **`wrangler.jsonc`** en la raíz:
@@ -57,8 +54,9 @@ Marcar cada paso al hacerlo. Lo que dice *verificar* depende de la consola de Cl
 
 ### Paso 0 — Cuenta y dominio
 - [ ] Crear la cuenta de Cloudflare con un correo que no sea personal, si es posible, y activar 2FA.
-- [ ] **Domain Registration → Register Domains:** comprar `<dominio>` con renovación automática.
-- [ ] **Email → Email Routing:** activar y crear `soporte@<dominio>` → buzón personal. Verificar el buzón destino.
+- [x] Comprar **`mipyxis.com`**. Confirmar que la **renovación automática** esté activa.
+  - *Si se compró fuera de Cloudflare:* agregar el dominio en **Add a domain** (plan Free) y cambiar los nameservers en el registrador por los que indique Cloudflare. Esperar a que la zona quede *Active* antes del paso 4. Opcional: transferirlo a Cloudflare Registrar después de 60 días.
+- [ ] **Email → Email Routing:** activar y crear `soporte@mipyxis.com` → buzón personal. Verificar el buzón destino.
 
 ### Paso 1 — Conectar el repo (Workers Builds)
 - [ ] **Workers & Pages → Create → Import a repository:** `RenanDiaz/pyxis`, rama de producción `main`.
@@ -74,17 +72,17 @@ Marcar cada paso al hacerlo. Lo que dice *verificar* depende de la consola de Cl
 - [ ] Hacer los checks de la sección *Criterios de aceptación*.
 
 ### Paso 3 — Firebase y Google
-- [ ] **Firebase Console → Authentication → Settings → Authorized domains:** agregar `<dominio>`, `staging.<dominio>` y `pyxis.<cuenta>.workers.dev`. No acepta comodines.
+- [ ] **Firebase Console → Authentication → Settings → Authorized domains:** agregar `mipyxis.com`, `staging.mipyxis.com` y `pyxis.<cuenta>.workers.dev`. No acepta comodines.
 - [ ] **Google Cloud Console → APIs & Services → Credentials → la API key del navegador:**
-  - Si tiene *restricción por HTTP referrer*, agregar `https://<dominio>/*` y `https://staging.<dominio>/*`.
+  - Si tiene *restricción por HTTP referrer*, agregar `https://mipyxis.com/*` y `https://staging.mipyxis.com/*`.
   - Si no tiene restricción, no hay que hacer nada aquí. Conviene ponerla después del corte.
 - [ ] **Storage CORS:** `cors.json` usa `origin: ["*"]`, así que no hay cambio. *(Si algún día se restringe, agregar el dominio).*
 - [ ] Probar el login con Google en `workers.dev`.
 
 ### Paso 4 — Dominio en el Worker
-- [ ] **Worker `pyxis` → Settings → Domains & Routes → Add → Custom domain:** `<dominio>` y `www.<dominio>`.
+- [ ] **Worker `pyxis` → Settings → Domains & Routes → Add → Custom domain:** `mipyxis.com` y `www.mipyxis.com`.
 - [ ] **Redirect `www` → apex:** con una regla en **Rules → Redirect Rules**, código 301.
-- [ ] **Worker `pyxis-staging` → Custom domain:** `staging.<dominio>`.
+- [ ] **Worker `pyxis-staging` → Custom domain:** `staging.mipyxis.com`.
 - [ ] **SSL/TLS:** modo *Full (strict)* y *Always Use HTTPS* activo.
 
 ### Paso 5 — Corte
@@ -92,8 +90,8 @@ Hacerlo fuera de horario de llamadas.
 - [ ] Avisar a los agentes de la nueva URL y de lo siguiente:
   - **Tienen que volver a iniciar sesión.** La sesión de Firebase se guarda por dominio.
   - **Los borradores de formularios del dominio viejo no se pasan al nuevo.** Están en `localStorage`. Antes del corte, que terminen o guarden lo que tengan a medias.
-- [ ] Hacer los checks finales en `<dominio>`.
-- [ ] **Vercel:** deploy de un `vercel.json` que solo haga redirect 308 de `/(.*)` → `https://<dominio>/$1`.
+- [ ] Hacer los checks finales en `mipyxis.com`.
+- [ ] **Vercel:** deploy de un `vercel.json` que solo haga redirect 308 de `/(.*)` → `https://mipyxis.com/$1`.
   - Las pestañas viejas no se enteran por el aviso de versión: el `fetch` a `/version.json` redirige a otro origen y falla por CORS. Por eso hace falta el aviso del punto anterior.
 
 ### Paso 6 — Monitoreo (primera semana)
@@ -110,15 +108,15 @@ Si algo falla en los primeros días:
 - [ ] Quitar `pyxis.<cuenta>.workers.dev` de los dominios autorizados de Firebase, si ya no se usa.
 
 ## Criterios de aceptación
-- [ ] `https://<dominio>/clientes/<id>` con recarga dura carga la app, no un 404. El fallback SPA funciona.
-- [ ] `curl -I https://<dominio>/assets/no-existe.js` devuelve **404**, no `index.html` (spec 14).
+- [ ] `https://mipyxis.com/clientes/<id>` con recarga dura carga la app, no un 404. El fallback SPA funciona.
+- [ ] `curl -I https://mipyxis.com/assets/no-existe.js` devuelve **404**, no `index.html` (spec 14).
   - *Si devuelve 200 con HTML:* agregar `"/assets/*"` a `run_worker_first`, y que el Worker devuelva 404 cuando `ASSETS.fetch` responda HTML para una ruta bajo `/assets/`.
-- [ ] `curl -I https://<dominio>/version.json` → `Cache-Control: no-store`, y el contenido coincide con el commit desplegado.
+- [ ] `curl -I https://mipyxis.com/version.json` → `Cache-Control: no-store`, y el contenido coincide con el commit desplegado.
 - [ ] `GET /api/health` → `{ ok: true, version }`. `GET /api/otra` → 404 en JSON.
-- [ ] Login con Google y con email/password en `<dominio>` y en `staging.<dominio>`.
+- [ ] Login con Google y con email/password en `mipyxis.com` y en `staging.mipyxis.com`.
 - [ ] Subir y descargar un documento de Storage, y exportar `.docx` y `.xlsx`. Esto prueba los chunks lazy.
-- [ ] Un push a otra rama hace deploy en `staging.<dominio>` y **no** toca producción.
+- [ ] Un push a otra rama hace deploy en `staging.mipyxis.com` y **no** toca producción.
 - [ ] `tsc -b` y `npm run lint` pasan, incluido `worker/`.
 
 ## Preguntas abiertas
-- **Nombre del dominio:** lo decide el dueño del producto. No bloquea el código: el PR usa `<dominio>` como placeholder en `wrangler.jsonc` hasta comprarlo.
+Ninguna. Dominio definido: `mipyxis.com` (comprado el 2026-10-09).
