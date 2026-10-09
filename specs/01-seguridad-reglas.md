@@ -24,7 +24,7 @@ Queda pendiente: R8 (costo de reglas), el hallazgo 8 (`download_url`, P3) y
 precios por workspace si se pasa a multi-tenant real.
 
 - **Reglas:** `firestore.rules` y `storage.rules`.
-- **Tests:** `tests/rules/*.test.ts` (31 casos, emulador). Correr con `npm run test:rules` (requiere Java).
+- **Tests:** `tests/rules/*.test.ts` (31 casos, emulador). Correr con `npm run test:emulator` (requiere Java).
   En CI corren solos (`.github/workflows/rules-tests.yml`) en cada PR que toca reglas o sus tests.
 - **Admins globales:** colección `admins/{uid}`, solo escribible con el Admin SDK:
   `npx tsx scripts/set-admin.ts --add|--remove <email> | --list`.
@@ -126,7 +126,7 @@ si P2 se resuelve a favor.
 - Reescribir `firestore.rules` por bloques con helpers `me(ws)`, `isOwner(ws)`,
   `isSupervisorOf(ws, subteamId)`, `inScope(ws, data)`.
 - Tests con `@firebase/rules-unit-testing` + emulador (`firebase emulators:exec`),
-  en `tests/rules/`. Script `npm run test:rules`.
+  en `tests/rules/`. Script `npm run test:emulator`.
 - Despliegue: primero reglas + código de 02 en el mismo release; verificar con
   usuarios de prueba de cada rol en un proyecto staging.
 

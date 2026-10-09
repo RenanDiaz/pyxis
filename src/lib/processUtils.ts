@@ -1,5 +1,6 @@
 import type { StateInfo, Client, ClientProcess, ProcessStage, Payment } from '@/types'
 import { PROCESSES } from '@/data/processes'
+import { fromCents, sumMoney, toCents } from '@/lib/money'
 
 export function getProcessDef(type: string) {
   return PROCESSES.find((p) => p.id === type)
@@ -72,7 +73,12 @@ export function formatFieldValue(
 // ── Agregados a nivel proceso / cliente ──
 
 export function getProcessPaid(process: ClientProcess): number {
-  return (process.payments ?? []).reduce((sum, p) => sum + p.amount, 0)
+  return sumMoney((process.payments ?? []).map((p) => p.amount))
+}
+
+/** Saldo del proceso redondeado a centavos (negativo si se pagó de más). */
+export function getProcessBalance(process: ClientProcess): number {
+  return fromCents(toCents(process.total) - toCents(getProcessPaid(process)))
 }
 
 // ── Fechas de pago ──
@@ -165,20 +171,16 @@ export interface ClientPaymentSummary {
  */
 export function getClientPaymentSummary(client: Client): ClientPaymentSummary {
   if (client.processes?.length) {
-    let total = 0
-    let paid = 0
-    for (const p of client.processes) {
-      total += p.total ?? 0
-      paid += getProcessPaid(p)
-    }
-    return { total, paid, balance: total - paid, hasAny: true }
+    const total = sumMoney(client.processes.map((p) => p.total))
+    const paid = sumMoney(client.processes.map(getProcessPaid))
+    return { total, paid, balance: fromCents(toCents(total) - toCents(paid)), hasAny: true }
   }
   const total = client.payment_total ?? 0
-  const paid = (client.payments ?? []).reduce((s, p) => s + p.amount, 0)
+  const paid = sumMoney((client.payments ?? []).map((p) => p.amount))
   return {
     total,
     paid,
-    balance: total - paid,
+    balance: fromCents(toCents(total) - toCents(paid)),
     hasAny: total > 0 || paid > 0,
   }
 }

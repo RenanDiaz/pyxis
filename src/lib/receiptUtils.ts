@@ -9,6 +9,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { storage, isFirebaseConfigured } from '@/lib/firebase'
 import { getProcessLabel, parsePaymentDate } from '@/lib/processUtils'
+import { getBalanceAfterPayment, getReceiptNumber } from '@/lib/processMutations'
 import { getClientDisplayName } from '@/lib/clientUtils'
 import { getProcessCompanyName } from '@/lib/companyUtils'
 import type { Client, ClientProcess, Payment, PaymentMethod, Workspace } from '@/types'
@@ -77,7 +78,12 @@ function fmtCurrency(value: number): string {
  * demás procesos, y el nombre de la persona si no hay compañía.
  */
 function getRecipientName(client: Client, process: ClientProcess): string {
-  const company = getProcessCompanyName(client, process) || client.llc_name?.trim()
+  // Un registro sin nombre propio NO cae a `client.llc_name`: sería la compañía
+  // de otro registro (ver la regla de herencia en companyUtils).
+  const company =
+    process.type === 'registration'
+      ? getProcessCompanyName(client, process)
+      : client.llc_name?.trim()
   return company || getClientDisplayName(client)
 }
 
@@ -113,17 +119,12 @@ async function fetchImageAsDataUrl(url: string): Promise<{
   }
 }
 
-function buildReceiptNumber(
-  client: Client,
-  process: ClientProcess,
-  paymentIndex: number,
-  payment: Payment,
-): string {
+function buildReceiptNumber(client: Client, process: ClientProcess, payment: Payment): string {
   const clientPart = client.id.slice(-4).toUpperCase()
   const processPart = process.id.slice(-3).toUpperCase()
   const parsed = parsePaymentDate(payment.date)
   const datePart = parsed ? format(parsed, 'yyMMdd') : '' // YYMMDD (fecha local)
-  const seq = String(paymentIndex + 1).padStart(2, '0')
+  const seq = String(getReceiptNumber(process, payment)).padStart(2, '0')
   return `R-${datePart}-${clientPart}${processPart}-${seq}`
 }
 
@@ -131,7 +132,6 @@ interface ReceiptInput {
   client: Client
   process: ClientProcess
   payment: Payment
-  paymentIndex: number
   workspace: Workspace
 }
 
@@ -139,15 +139,10 @@ export async function generatePaymentReceipt({
   client,
   process,
   payment,
-  paymentIndex,
   workspace,
 }: ReceiptInput): Promise<void> {
-  const payments = process.payments ?? []
   const total = process.total ?? 0
-  const paidUpToThis = payments
-    .slice(0, paymentIndex + 1)
-    .reduce((sum, p) => sum + p.amount, 0)
-  const balanceAfter = Math.max(0, total - paidUpToThis)
+  const balanceAfter = getBalanceAfterPayment(process, payment)
 
   const doc = new jsPDF({ unit: 'pt', format: 'letter' })
   const pageW = doc.internal.pageSize.getWidth()
@@ -195,7 +190,7 @@ export async function generatePaymentReceipt({
 
   doc.setTextColor(...muted)
   doc.setFontSize(9)
-  const receiptNumber = buildReceiptNumber(client, process, paymentIndex, payment)
+  const receiptNumber = buildReceiptNumber(client, process, payment)
   doc.text(`N° ${receiptNumber}`, pageW - margin, y + 54, { align: 'right' })
 
   const parsedPaymentDate = parsePaymentDate(payment.date)

@@ -32,6 +32,7 @@ import {
 import { getClientDisplayName } from '@/lib/clientUtils'
 import { getProcessCompanyName } from '@/lib/companyUtils'
 import type { ExpenseConfig, ReportAccount, ReportInput } from '@/lib/generateSalesReport'
+import { sumMoney } from '@/lib/money'
 
 export type StripeFeeMode = 'none' | 'estimate'
 
@@ -124,10 +125,12 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
       accounts.push({
         // Cada registro de LLC es una compañía distinta: se reporta la del
         // proceso, no la del cliente.
+        // Un registro sin nombre propio no toma `client.llc_name` (sería la
+        // compañía de otro registro); los demás procesos sí son de esa compañía.
         company:
-          getProcessCompanyName(client, process) ||
-          client.llc_name?.trim() ||
-          getClientDisplayName(client),
+          (process.type === 'registration'
+            ? getProcessCompanyName(client, process)
+            : client.llc_name?.trim()) || getClientDisplayName(client),
         purchase: getProcessLabel(process),
         state: process.state || client.state || '',
         stateFee,
@@ -177,7 +180,7 @@ export function previewReport(
       if (monthPayments.length === 0) continue
       accountCount += 1
       paymentCount += monthPayments.length
-      totalCharge += monthPayments.reduce((sum, { payment }) => sum + payment.amount, 0)
+      totalCharge = sumMoney([totalCharge, ...monthPayments.map(({ payment }) => payment.amount)])
     }
   }
 

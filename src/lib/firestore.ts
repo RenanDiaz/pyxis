@@ -33,6 +33,8 @@ import type {
   StateInfo,
 } from '@/types'
 import { uppercaseClientFields } from '@/lib/clientUtils'
+import { runClientMutation } from '@/lib/clientTransactions'
+import type { ClientChange, ClientMutation } from '@/lib/processMutations'
 
 // ── Workspace context for role-based queries ──
 
@@ -426,6 +428,16 @@ export async function updateClient(
     ...uppercaseClientFields(data),
     updated_at: Timestamp.now(),
   })
+}
+
+/** Cambios a procesos y pagos: transaccionales (ver `processMutations.ts`). */
+export async function mutateClient(
+  workspaceId: string,
+  id: string,
+  mutation: ClientMutation,
+): Promise<ClientChange> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  return runClientMutation(db, workspaceId, id, mutation)
 }
 
 export async function deleteClient(workspaceId: string, id: string): Promise<void> {

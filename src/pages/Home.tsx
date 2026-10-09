@@ -29,6 +29,7 @@ import { formatMoney } from '@/lib/format'
 import { formatLocalTime } from '@/lib/callTime'
 import { isToday, isYesterday, formatDistanceToNow, format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { sumMoney } from '@/lib/money'
 
 /** Pequeño delta contextual (▲/▼ vs. ayer). */
 function Delta({ diff, prefix = '' }: { diff: number; prefix?: string }) {
@@ -85,13 +86,16 @@ export default function Home() {
   }).length
 
   const sumPaymentsFor = (predicate: (d: Date) => boolean) =>
-    allClients.reduce((sum, c) => {
-      const matching = getClientPayments(c).filter((p) => {
-        const d = parsePaymentDate(p.date)
-        return d ? predicate(d) : false
-      })
-      return sum + matching.reduce((s, p) => s + p.amount, 0)
-    }, 0)
+    sumMoney(
+      allClients.flatMap((c) =>
+        getClientPayments(c)
+          .filter((p) => {
+            const d = parsePaymentDate(p.date)
+            return d ? predicate(d) : false
+          })
+          .map((p) => p.amount),
+      ),
+    )
 
   const paymentsToday = sumPaymentsFor(isToday)
   const paymentsYesterday = sumPaymentsFor(isYesterday)

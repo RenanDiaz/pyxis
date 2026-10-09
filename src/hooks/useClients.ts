@@ -7,7 +7,9 @@ import {
   updateClient,
   deleteClient,
   findClientsByPhone,
+  mutateClient,
 } from '@/lib/firestore'
+import type { ClientMutation } from '@/lib/processMutations'
 import { useUserProfile } from '@/hooks/useUserProfile'
 
 interface ClientFilters {
@@ -57,6 +59,19 @@ export function useUpdateClient() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) =>
       updateClient(workspaceId!, id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
+    },
+  })
+}
+
+/** Mutaciones transaccionales de procesos y pagos (`clientMutations`). */
+export function useClientMutation() {
+  const { workspaceId } = useUserProfile()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ clientId, mutation }: { clientId: string; mutation: ClientMutation }) =>
+      mutateClient(workspaceId!, clientId, mutation),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },

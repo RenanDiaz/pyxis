@@ -20,7 +20,15 @@ import {
 } from '@/components/ui/dialog'
 import { DollarSign, Plus, CircleCheck, CircleAlert, Clock, FileDown } from 'lucide-react'
 import type { Client, ClientProcess, Payment, PaymentMethod, Workspace } from '@/types'
-import { getProcessPaid, parsePaymentDateParts, paymentInputToISO } from '@/lib/processUtils'
+import { getProcessBalance, getProcessPaid, parsePaymentDateParts, paymentInputToISO } from '@/lib/processUtils'
+import {
+  clientMutations,
+  getReceiptNumber,
+  paymentKey,
+  type PaymentInput,
+  type RunClientMutation,
+} from '@/lib/processMutations'
+import { roundMoney, toCents } from '@/lib/money'
 import { generatePaymentReceipt } from '@/lib/receiptUtils'
 import { formatMoney } from '@/lib/format'
 import { format } from 'date-fns'
@@ -48,12 +56,10 @@ function formatPaymentDate(value: string): string {
     : format(parts.date, "d 'de' MMM yyyy, h:mm a", { locale: es })
 }
 
-export type PaymentEvent = 'partial' | 'full'
-
 interface PaymentSectionProps {
   client: Client
   process: ClientProcess
-  onUpdate: (process: ClientProcess, event?: PaymentEvent) => Promise<void>
+  onMutate: RunClientMutation
   isPending: boolean
   suggestedTotal?: number | null
   workspace?: Workspace | null
@@ -62,28 +68,22 @@ interface PaymentSectionProps {
 export default function PaymentSection({
   client,
   process,
-  onUpdate,
+  onMutate,
   isPending,
   suggestedTotal,
   workspace,
 }: PaymentSectionProps) {
-  const [generatingIndex, setGeneratingIndex] = useState<number | null>(null)
+  const [generatingKey, setGeneratingKey] = useState<string | null>(null)
 
-  const handleDownloadReceipt = async (payment: Payment, index: number) => {
+  const handleDownloadReceipt = async (payment: Payment) => {
     if (!workspace) return
-    setGeneratingIndex(index)
+    setGeneratingKey(paymentKey(payment))
     try {
-      await generatePaymentReceipt({
-        client,
-        process,
-        payment,
-        paymentIndex: index,
-        workspace,
-      })
+      await generatePaymentReceipt({ client, process, payment, workspace })
     } catch {
       toast.error('Error al generar el recibo')
     } finally {
-      setGeneratingIndex(null)
+      setGeneratingKey(null)
     }
   }
 
@@ -101,10 +101,11 @@ export default function PaymentSection({
   const payments = process.payments ?? []
   const total = process.total ?? 0
   const amountPaid = getProcessPaid(process)
-  const balance = total - amountPaid
+  const balance = getProcessBalance(process)
+  const isPaidOff = total > 0 && balance <= 0
 
   const getPaymentStatus = () => {
-    if (total === 0) return 'sin_precio'
+    if (total === 0) return amountPaid > 0 ? 'anticipo' : 'sin_precio'
     if (amountPaid === 0) return 'pendiente'
     if (balance <= 0) return 'pagado'
     return 'parcial'
@@ -112,54 +113,61 @@ export default function PaymentSection({
 
   const status = getPaymentStatus()
 
-  const handleRegisterPayment = async () => {
-    const amount = parseFloat(paymentAmount)
-    if (isNaN(amount) || amount <= 0) return
-
-    const newPayment: Payment = {
-      amount,
-      method: paymentMethod,
-      date: paymentInputToISO(paymentDate || today, paymentTime),
-      ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
-    }
-
-    const newPayments = [...payments, newPayment]
-    const isFullPayment = total > 0 && amountPaid + amount >= total
-
-    await onUpdate({ ...process, payments: newPayments }, isFullPayment ? 'full' : 'partial')
+  const resetPaymentForm = () => {
     setPaymentAmount('')
     setPaymentNote('')
     setPaymentDate(today)
     setShowDialog(false)
   }
 
-  const handlePayFull = async () => {
-    if (total <= 0 || balance <= 0) return
-
-    const newPayment: Payment = {
-      amount: balance,
+  const registerPayment = async (amount: number) => {
+    const input: PaymentInput = {
+      amount,
       method: paymentMethod,
       date: paymentInputToISO(paymentDate || today, paymentTime),
       ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
     }
+    const ok = await onMutate(clientMutations.addPayment(process.id, input), 'Pago registrado')
+    if (ok) resetPaymentForm()
+  }
 
-    await onUpdate({ ...process, payments: [...payments, newPayment] }, 'full')
-    setPaymentNote('')
-    setPaymentDate(today)
-    setShowDialog(false)
+  const handleRegisterPayment = async () => {
+    const amount = roundMoney(parseFloat(paymentAmount))
+    if (isNaN(amount) || amount <= 0) return
+    if (
+      total > 0 &&
+      toCents(amount) > toCents(balance) &&
+      !confirm(
+        `El monto ($${formatMoney(amount)}) supera el saldo pendiente ($${formatMoney(balance)}). ¿Registrarlo de todos modos?`,
+      )
+    ) {
+      return
+    }
+    await registerPayment(amount)
+  }
+
+  const handlePayFull = async () => {
+    if (total <= 0 || balance <= 0) return
+    await registerPayment(balance)
   }
 
   const handleSetTotal = async () => {
-    const num = parseFloat(totalInput)
+    const num = roundMoney(parseFloat(totalInput))
     if (isNaN(num) || num < 0) return
-    await onUpdate({ ...process, total: num })
-    setShowTotalDialog(false)
-    setTotalInput('')
+    const ok = await onMutate(clientMutations.updateProcess(process.id, { total: num }), 'Total actualizado')
+    if (ok) {
+      setShowTotalDialog(false)
+      setTotalInput('')
+    }
   }
 
-  const handleDeletePayment = async (index: number) => {
-    const updated = payments.filter((_, i) => i !== index)
-    await onUpdate({ ...process, payments: updated })
+  const handleDeletePayment = async (payment: Payment) => {
+    const receipt = getReceiptNumber(process, payment)
+    const message =
+      `Se eliminará el pago de $${formatMoney(payment.amount)} del ${formatPaymentDate(payment.date)}. ` +
+      `Si ya entregaste el recibo N° ${receipt}, queda sin respaldo. ¿Eliminar el pago?`
+    if (!confirm(message)) return
+    await onMutate(clientMutations.removePayment(process.id, paymentKey(payment)), 'Pago eliminado')
   }
 
   return (
@@ -200,7 +208,8 @@ export default function PaymentSection({
           <DollarSign className="mr-1 h-3 w-3" />
           {total > 0 ? 'Editar total' : 'Definir total'}
         </Button>
-        {total > 0 && balance > 0 && (
+        {/* Sin total definido también se puede cobrar (anticipo). */}
+        {!isPaidOff && (
           <Button
             size="sm"
             onClick={() => {
@@ -220,9 +229,14 @@ export default function PaymentSection({
         <div className="space-y-2 pt-2">
           <p className="text-xs font-medium text-muted-foreground">Historial de pagos</p>
           {payments.map((p, i) => (
-            <div key={i} className="flex items-center justify-between gap-2 text-sm border-b pb-2 last:border-0">
+            <div key={`${paymentKey(p)}#${i}`} className="flex items-center justify-between gap-2 text-sm border-b pb-2 last:border-0">
               <div className="min-w-0">
-                <p className="font-medium">${formatMoney(p.amount)}</p>
+                <p className="font-medium">
+                  ${formatMoney(p.amount)}
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    Recibo N° {getReceiptNumber(process, p)}
+                  </span>
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {formatPaymentDate(p.date)} · {METHOD_LABELS[p.method] ?? p.method}
                   {p.note && ` · ${p.note}`}
@@ -233,18 +247,18 @@ export default function PaymentSection({
                   variant="outline"
                   size="sm"
                   className="text-xs"
-                  onClick={() => handleDownloadReceipt(p, i)}
-                  disabled={!workspace || generatingIndex !== null}
+                  onClick={() => handleDownloadReceipt(p)}
+                  disabled={!workspace || generatingKey !== null}
                   title={workspace ? 'Generar recibo PDF' : 'Configura el emisor en el workspace'}
                 >
                   <FileDown className="mr-1 h-3 w-3" />
-                  {generatingIndex === i ? 'Generando...' : 'Recibo'}
+                  {generatingKey === paymentKey(p) ? 'Generando...' : 'Recibo'}
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="text-xs text-destructive hover:text-destructive"
-                  onClick={() => handleDeletePayment(i)}
+                  onClick={() => handleDeletePayment(p)}
                   disabled={isPending}
                 >
                   Eliminar
@@ -276,7 +290,7 @@ export default function PaymentSection({
               id="payment-total"
               type="number"
               min="0"
-              step="1"
+              step="0.01"
               value={totalInput}
               onChange={(e) => setTotalInput(e.target.value)}
               placeholder="Ej: 699"
@@ -297,7 +311,13 @@ export default function PaymentSection({
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="text-sm text-muted-foreground">
-              Saldo pendiente: <span className="font-semibold text-foreground">${formatMoney(balance)}</span>
+              {total > 0 ? (
+                <>
+                  Saldo pendiente: <span className="font-semibold text-foreground">${formatMoney(balance)}</span>
+                </>
+              ) : (
+                'Este proceso aún no tiene total: el pago se registra como anticipo.'
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -306,7 +326,7 @@ export default function PaymentSection({
                 id="pay-amount"
                 type="number"
                 min="0"
-                step="1"
+                step="0.01"
                 value={paymentAmount}
                 onChange={(e) => setPaymentAmount(e.target.value)}
                 placeholder="Monto del pago"
@@ -364,11 +384,13 @@ export default function PaymentSection({
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button variant="outline" onClick={() => setShowDialog(false)}>Cancelar</Button>
-            <Button variant="secondary" onClick={handlePayFull} disabled={isPending}>
-              Pago completo (${formatMoney(balance)})
-            </Button>
+            {total > 0 && balance > 0 && (
+              <Button variant="secondary" onClick={handlePayFull} disabled={isPending}>
+                Pago completo (${formatMoney(balance)})
+              </Button>
+            )}
             <Button onClick={handleRegisterPayment} disabled={isPending || !paymentAmount}>
-              Registrar parcial
+              {total > 0 ? 'Registrar parcial' : 'Registrar anticipo'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -389,6 +411,12 @@ function PaymentStatusBadge({ status }: { status: string }) {
       return (
         <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
           <CircleAlert className="mr-1 h-3 w-3" /> Parcial
+        </Badge>
+      )
+    case 'anticipo':
+      return (
+        <Badge variant="secondary" className="bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300">
+          <CircleAlert className="mr-1 h-3 w-3" /> Anticipo
         </Badge>
       )
     case 'pendiente':

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients'
+import { useClient, useUpdateClient, useDeleteClient, useClientMutation } from '@/hooks/useClients'
 import { useCalls, useCreateCall } from '@/hooks/useCalls'
 import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
@@ -13,7 +13,6 @@ import { formatMoney } from '@/lib/format'
 import StatusSelect from '@/components/clients/StatusSelect'
 import ProcessCard from '@/components/clients/ProcessCard'
 import AddProcessDialog from '@/components/clients/AddProcessDialog'
-import type { PaymentEvent } from '@/components/clients/PaymentSection'
 import OutcomeBadge from '@/components/calls/OutcomeBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -31,12 +30,11 @@ import {
 import { ArrowLeft, Pencil, Trash2, Phone, Mail, FileDown, Archive, ArchiveRestore, UserCircle, RefreshCw, Info, Plus, CalendarPlus } from 'lucide-react'
 import ClientTimeline from '@/components/clients/ClientTimeline'
 import type { Client, ClientStatus, ClientProcess } from '@/types'
-import { inferStatus } from '@/lib/statusUtils'
+import { clientMutations, type RunClientMutation } from '@/lib/processMutations'
 import { Timestamp } from 'firebase/firestore'
 import { toast } from 'sonner'
 import { exportClientDoc, exportRegistrationDoc } from '@/lib/exportClientDoc'
 import {
-  backfillFirstRegistrationCompany,
   getProcessCompanyName,
   getRegistrationProcesses,
 } from '@/lib/companyUtils'
@@ -180,6 +178,7 @@ export default function ClientDetail() {
   const { data: calls } = useCalls({ clientId: id })
   const { data: states } = useStates()
   const updateMutation = useUpdateClient()
+  const clientMutation = useClientMutation()
   const deleteMutation = useDeleteClient()
   const createCallMutation = useCreateCall()
   // Al reasignar se agregan notas de sistema: remonta el card de notas.
@@ -291,35 +290,28 @@ export default function ClientDetail() {
     toast.success(`Cliente reasignado a ${newAgent.display_name}`)
   }
 
-  const handleProcessUpdate = async (updated: ClientProcess, event?: PaymentEvent) => {
-    const processes = (client.processes ?? []).map((p) => (p.id === updated.id ? updated : p))
-    const data: Partial<Client> = { processes }
-    if (event) {
-      const summary = getClientPaymentSummary({ ...client, processes })
-      const allPaid = summary.total > 0 && summary.balance <= 0
-      const newStatus = inferStatus(client.status, allPaid ? 'full_payment' : 'partial_payment')
-      if (newStatus) data.status = newStatus
+  // Procesos y pagos se modifican en una transacción sobre el documento
+  // actual (no sobre la copia en caché), para no pisar cambios concurrentes.
+  const runMutation: RunClientMutation = async (mutation, successMessage) => {
+    try {
+      await clientMutation.mutateAsync({ clientId: client.id, mutation })
+      toast.success(successMessage)
+      return true
+    } catch (err) {
+      // Los errores propios (proceso/pago que ya no existe) vienen en español.
+      const own = err instanceof Error && !('code' in err)
+      toast.error(own ? err.message : 'No se pudo guardar el cambio. Intenta de nuevo.')
+      return false
     }
-    await updateMutation.mutateAsync({ id: client.id, data })
-    toast.success(event ? 'Pago registrado' : 'Proceso actualizado')
   }
 
   const handleAddProcess = async (process: ClientProcess) => {
-    // Al pasar a más de un registro, el primero deja de heredar los datos de
-    // compañía del cliente: se los copiamos para que conserve su identidad.
-    const processes = backfillFirstRegistrationCompany(client, [
-      ...(client.processes ?? []),
-      process,
-    ])
-    await updateMutation.mutateAsync({ id: client.id, data: { processes } })
-    toast.success('Proceso agregado')
+    await runMutation(clientMutations.addProcess(process), 'Proceso agregado')
   }
 
   const handleRemoveProcess = async (processId: string) => {
     if (!confirm('¿Quitar este proceso? Se eliminarán también sus pagos registrados.')) return
-    const processes = (client.processes ?? []).filter((p) => p.id !== processId)
-    await updateMutation.mutateAsync({ id: client.id, data: { processes } })
-    toast.success('Proceso eliminado')
+    await runMutation(clientMutations.removeProcess(processId), 'Proceso eliminado')
   }
 
   const handleExportAllDocs = async () => {
@@ -735,9 +727,9 @@ export default function ClientDetail() {
                 client={client}
                 process={process}
                 state={process.state ? states?.find((s) => s.abbreviation === process.state) : null}
-                onUpdate={handleProcessUpdate}
+                onMutate={runMutation}
                 onRemove={() => handleRemoveProcess(process.id)}
-                isPending={updateMutation.isPending}
+                isPending={clientMutation.isPending}
                 workspace={workspace}
               />
             ))

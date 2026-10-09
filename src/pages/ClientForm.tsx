@@ -46,6 +46,7 @@ import { ArrowLeft, Plus, X, AlertTriangle } from 'lucide-react'
 import type { Client, ClientStatus, ClientPhone, PhoneLabel, Partner, ClientProcess } from '@/types'
 import { inferStatus } from '@/lib/statusUtils'
 import { toast } from 'sonner'
+import { deleteField } from 'firebase/firestore'
 
 type FormData = Record<string, string>
 
@@ -376,6 +377,10 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
       if (formData[field.id]?.trim()) {
         const trimmed = (formData[field.id] as string).trim()
         clientData[field.id] = CLIENT_UPPERCASE_FIELD_IDS.has(field.id) ? trimmed.toUpperCase() : trimmed
+      } else if (isEditing && existingClient?.[field.id as keyof Client]) {
+        // Vaciado por el usuario: se borra del documento (updateDoc hace merge
+        // y, sin esto, el valor viejo quedaba guardado).
+        clientData[field.id] = deleteField()
       }
     }
 
@@ -390,7 +395,10 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
         ...(p.ownership_percentage != null && p.ownership_percentage > 0 && { ownership_percentage: p.ownership_percentage }),
       }))
     clientData.partners = validPartners
-    clientData.processes = processes
+    // Al editar, los procesos (y sus pagos) solo se gestionan desde el detalle,
+    // de forma transaccional. Mandarlos aquí pisaría pagos registrados mientras
+    // el formulario estaba abierto.
+    if (!isEditing) clientData.processes = processes
 
     try {
       if (isEditing && id) {
@@ -634,6 +642,15 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
               <div className="space-y-3">
                 <Separator />
                 <Label>Procesos contratados</Label>
+                {isEditing && (
+                  <p className="text-xs text-muted-foreground">
+                    Los procesos y sus pagos se agregan, quitan y editan desde el{' '}
+                    <Link to={`/clientes/${id}`} className="underline hover:text-foreground">
+                      detalle del cliente
+                    </Link>
+                    .
+                  </p>
+                )}
                 {registrationCount > 1 && (
                   <p className="text-xs text-muted-foreground">
                     Este cliente tiene {registrationCount} compañías. El nombre, dirección y
@@ -642,7 +659,9 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
                 )}
                 {processes.length === 0 && (
                   <p className="text-sm text-muted-foreground">
-                    Sin procesos asignados. Agrega los servicios que el cliente quiere contratar.
+                    {isEditing
+                      ? 'Sin procesos asignados.'
+                      : 'Sin procesos asignados. Agrega los servicios que el cliente quiere contratar.'}
                   </p>
                 )}
                 {processes.map((p) => (
@@ -670,20 +689,24 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
                         )
                       })()}
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={() => removeProcess(p.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    {!isEditing && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => removeProcess(p.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 ))}
-                <Button type="button" variant="outline" size="sm" onClick={() => setShowAddProcess(true)}>
-                  <Plus className="mr-1 h-3 w-3" /> Agregar proceso
-                </Button>
+                {!isEditing && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => setShowAddProcess(true)}>
+                    <Plus className="mr-1 h-3 w-3" /> Agregar proceso
+                  </Button>
+                )}
               </div>
 
               {/* Partners section */}
