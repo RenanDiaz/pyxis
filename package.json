@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:rules": "npx -y firebase-tools@15.33.0 emulators:exec --only firestore,storage --project demo-pyxis \"tsx --test --test-concurrency=1 tests/rules/*.test.ts\""
+    "test": "tsx --tsconfig tsconfig.app.json --test tests/unit/*.test.ts",
+    "test:emulator": "npx -y firebase-tools@15.33.0 emulators:exec --only firestore,storage --project demo-pyxis \"tsx --tsconfig tsconfig.app.json --test --test-concurrency=1 tests/rules/*.test.ts tests/emulator/*.test.ts\""
   },
   "dependencies": {
     "@radix-ui/react-switch": "^1.2.6",

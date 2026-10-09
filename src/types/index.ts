@@ -112,6 +112,13 @@ export type ProcessStage = 'pendiente' | 'en_proceso' | 'completado' | 'cancelad
 export type PaymentMethod = 'efectivo' | 'zelle' | 'transferencia' | 'stripe' | 'otro'
 
 export interface Payment {
+  /** uuid. Pagos legacy pueden no tenerlo (ver `scripts/backfill-payment-ids.ts`). */
+  id?: string
+  /**
+   * Número de recibo dentro del proceso, asignado al registrar el pago y fijo
+   * para siempre (borrar otro pago no lo renumera). Legacy: posición en el array + 1.
+   */
+  receipt_number?: number
   amount: number
   method: PaymentMethod
   // Fecha del pago. Nuevos: ISO datetime con hora (`2026-06-23T19:00:00.000Z`).

@@ -1,7 +1,8 @@
-name: Tests de reglas
+name: Tests de reglas y transacciones
 
-# Corre los tests de firestore.rules / storage.rules contra los emuladores de
-# Firebase (que necesitan Java). Solo cuando cambian las reglas o sus tests.
+# Corre contra los emuladores de Firebase (que necesitan Java) los tests de
+# firestore.rules / storage.rules y los de las transacciones de pagos. Solo
+# cuando cambia algo de eso.
 on:
   pull_request:
     paths:
@@ -9,6 +10,10 @@ on:
       - storage.rules
       - firebase.json
       - tests/rules/**
+      - tests/emulator/**
+      - src/lib/clientTransactions.ts
+      - src/lib/processMutations.ts
+      - src/lib/money.ts
       - package.json
       - package-lock.json
       - .github/workflows/rules-tests.yml
@@ -19,6 +24,9 @@ on:
       - storage.rules
       - firebase.json
       - tests/rules/**
+      - tests/emulator/**
+      - src/lib/clientTransactions.ts
+      - src/lib/processMutations.ts
 
 jobs:
   rules:
@@ -45,4 +53,4 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run test:rules
+      - run: npm run test:emulator

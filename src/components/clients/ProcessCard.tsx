@@ -17,7 +17,8 @@ import { FileDown, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import StateClock from '@/components/states/StateClock'
 import { getStateTimezone } from '@/lib/timezones'
-import PaymentSection, { type PaymentEvent } from '@/components/clients/PaymentSection'
+import PaymentSection from '@/components/clients/PaymentSection'
+import { clientMutations, type ProcessPatch, type RunClientMutation } from '@/lib/processMutations'
 import {
   getProcessDef,
   getProcessLabel,
@@ -44,7 +45,8 @@ interface ProcessCardProps {
   client: Client
   process: ClientProcess
   state?: StateInfo | null
-  onUpdate: (process: ClientProcess, event?: PaymentEvent) => Promise<void>
+  /** Aplica cambios al proceso de forma transaccional (sobre el doc actual). */
+  onMutate: RunClientMutation
   onRemove: () => void
   isPending: boolean
   workspace?: Workspace | null
@@ -54,7 +56,7 @@ export default function ProcessCard({
   client,
   process,
   state,
-  onUpdate,
+  onMutate,
   onRemove,
   isPending,
   workspace,
@@ -78,20 +80,16 @@ export default function ProcessCard({
     business_purpose: process.business_purpose ?? '',
   }
 
+  const updateProcess = (patch: ProcessPatch, successMessage: string) =>
+    onMutate(clientMutations.updateProcess(process.id, patch), successMessage)
+
   const handleSaveCompany = async () => {
-    const next: ClientProcess = { ...process }
+    const patch: ProcessPatch = {}
     for (const key of COMPANY_KEYS) {
-      const value = currentCompany[key].trim()
-      if (value) {
-        next[key] = value
-      } else {
-        // Firestore rechaza `undefined`: quitamos la clave para volver al
-        // valor heredado del cliente.
-        delete next[key]
-      }
+      // Vacío ⇒ `undefined`: se quita la clave y vuelve al valor heredado.
+      patch[key] = currentCompany[key].trim() || undefined
     }
-    await onUpdate(next)
-    setCompany(null)
+    if (await updateProcess(patch, 'Datos de la compañía guardados')) setCompany(null)
   }
 
   const handleExport = async () => {
@@ -146,7 +144,7 @@ export default function ProcessCard({
           <span className="text-xs text-muted-foreground">Etapa</span>
           <Select
             value={process.stage}
-            onValueChange={(v) => onUpdate({ ...process, stage: v as ProcessStage })}
+            onValueChange={(v) => updateProcess({ stage: v as ProcessStage }, 'Etapa actualizada')}
           >
             <SelectTrigger className="h-8 w-[160px]">
               <SelectValue />
@@ -236,7 +234,7 @@ export default function ProcessCard({
                 checked={hasRegisteredAgent(process)}
                 disabled={isPending}
                 onCheckedChange={(checked) =>
-                  onUpdate({ ...process, has_registered_agent: checked })
+                  updateProcess({ has_registered_agent: checked }, 'Registered Agent actualizado')
                 }
               />
             </div>
@@ -262,7 +260,7 @@ export default function ProcessCard({
         <PaymentSection
           client={client}
           process={process}
-          onUpdate={onUpdate}
+          onMutate={onMutate}
           isPending={isPending}
           suggestedTotal={process.total ? null : getSuggestedPrice(process.type, state)}
           workspace={workspace}
@@ -282,8 +280,7 @@ export default function ProcessCard({
             variant="outline"
             disabled={notes === null || isPending}
             onClick={async () => {
-              await onUpdate({ ...process, notes: currentNotes })
-              setNotes(null)
+              if (await updateProcess({ notes: currentNotes }, 'Notas guardadas')) setNotes(null)
             }}
           >
             Guardar notas

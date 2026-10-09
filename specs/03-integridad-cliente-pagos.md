@@ -1,6 +1,6 @@
 # 03 — Integridad de escrituras del cliente y dinero
 
-**Prioridad:** 🔴 Alta · **Estado:** propuesto
+**Prioridad:** 🔴 Alta · **Estado:** implementado salvo R6 (ver abajo)
 
 ## Problema
 `processes` (con sus pagos) vive como array dentro del doc del cliente y se
@@ -20,6 +20,43 @@ documentos inconsistentes.
 | ✔ 8 | Sin tope: se puede pagar más que el saldo; "Registrar pago" solo con `total > 0` | Saldos negativos; no se puede cobrar anticipo antes de fijar precio. |
 | 9 | Fallback `|| client.llc_name` en `receiptUtils.ts` | El 2º registro sin nombre sale con el nombre de la 1ª compañía (contradice la regla de herencia de `companyUtils`). |
 | ✔ 10 | Notas `[SISTEMA]` (reasignaciones) viven en el mismo string editable | El agente puede borrar la auditoría desde el textarea. |
+
+## Implementación (2026-10-09)
+- **R1:**
+  - `src/lib/processMutations.ts` tiene los mutadores puros (`clientMutations.*`).
+  - `src/lib/clientTransactions.ts` los corre en `runTransaction` sobre el documento actual.
+  - `ClientDetail`, `ProcessCard` y `PaymentSection` solo mutan procesos por esa vía.
+  - El form de edición ya no envía `processes` (P1).
+  - El status se calcula dentro de la transacción.
+- **R2:** al editar, un campo que el usuario vació se borra con `deleteField()`.
+- **R3:** `src/lib/money.ts` (centavos). Lo usan los agregados de `processUtils`, recibos, Home y el reporte.
+- **R4:**
+  - `Payment.id` y `receipt_number` se asignan al registrar el pago.
+  - Los pagos legacy usan su posición original (lo que ya se imprimía).
+  - Saldo del recibo por fecha.
+  - Backfill: `npx tsx scripts/backfill-payment-ids.ts [--dry-run]`.
+- **R5:**
+  - Borrar un pago pide confirmación y recalcula el status: un cliente cerrado y saldado que vuelve a deber pasa a `en_proceso`.
+  - Cambiar el total también recalcula.
+  - Un sobrepago se advierte y se confirma, no se bloquea (P3).
+  - Se pueden registrar anticipos sin total definido.
+- **R7:** el recibo y el reporte ya no caen a `client.llc_name` para un registro sin nombre.
+- **Tests:**
+  - `npm test`: 12 unitarios (centavos, recibos, status).
+  - `npm run test:emulator`: 3 de concurrencia contra el emulador. Como control, el patrón viejo (leer y después escribir) pierde 1 de 2 pagos simultáneos.
+- **CI:**
+  - `ci.yml` corre build y tests unitarios en cada PR.
+  - `rules-tests.yml` corre también los tests de transacciones.
+
+**Pendiente:** R6 (notas de sistema separadas). No es dinero; va en un PR propio.
+
+**Cambio de comportamiento:** las mutaciones de procesos son transacciones. Sin conexión fallan con un error explícito, en vez de quedar en cola como antes con `updateDoc`.
+
+### Decisiones tomadas
+- **P1:** los procesos se agregan, quitan y editan solo desde el detalle (confirmado). Al crear un cliente nuevo se pueden seguir agregando en el formulario: ahí no hay concurrencia porque el documento todavía no existe.
+- **P2:** sin migración a centavos en Firestore.
+- **P3:** el sobrepago se advierte con confirmación (recomendación del spec).
+- **P4:** un recibo anulado no se puede descargar; el diálogo de borrado avisa que el recibo entregado queda sin respaldo.
 
 ## Objetivo
 Ninguna operación concurrente razonable pierde un pago; los montos cuadran al
