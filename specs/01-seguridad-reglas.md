@@ -25,6 +25,7 @@ precios por workspace si se pasa a multi-tenant real.
 
 - **Reglas:** `firestore.rules` y `storage.rules`.
 - **Tests:** `tests/rules/*.test.ts` (31 casos, emulador). Correr con `npm run test:rules` (requiere Java).
+  En CI corren solos (`.github/workflows/rules-tests.yml`) en cada PR que toca reglas o sus tests.
 - **Admins globales:** colección `admins/{uid}`, solo escribible con el Admin SDK:
   `npx tsx scripts/set-admin.ts --add|--remove <email> | --list`.
 - **Auditoría:** `npx tsx scripts/audit-members.ts` (solo lectura). Busca owners que no son
