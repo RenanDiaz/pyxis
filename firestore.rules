@@ -91,7 +91,12 @@ service cloud.firestore {
     match /workspaces/{workspaceId} {
       allow read: if isWorkspaceMember(workspaceId);
       allow create: if signedIn() && request.resource.data.owner_uid == request.auth.uid;
-      allow update, delete: if isOwner(workspaceId);
+      // Cambiar owner_uid solo como parte de un traspaso: el nuevo owner queda
+      // con rol owner en el mismo batch (spec 06).
+      allow update: if isOwner(workspaceId)
+                    && (request.resource.data.owner_uid == resource.data.owner_uid
+                        || getAfter(memberPath(workspaceId, request.resource.data.owner_uid)).data.role == "owner");
+      allow delete: if isOwner(workspaceId);
     }
 
     match /workspaces/{workspaceId}/members/{uid} {
@@ -104,11 +109,22 @@ service cloud.firestore {
       allow create: if signedIn() && request.auth.uid == uid
                     && (foundsWorkspace(workspaceId) || joinsViaInvitation(workspaceId));
 
-      // Rol y subequipo solo los cambia el owner (nadie se los cambia a sí mismo).
+      // Rol y subequipo solo los cambia el owner (nadie se los cambia a sí
+      // mismo), salvo el owner que entrega la propiedad (spec 06).
       allow update: if isOwner(workspaceId) && request.auth.uid != uid;
       allow update: if isOwner(workspaceId) && request.auth.uid == uid
-                    && request.resource.data.role == resource.data.role;
+                    && (request.resource.data.role == resource.data.role
+                        || handsOverOwnership(workspaceId));
       allow delete: if isOwner(workspaceId);
+    }
+
+    // El owner pasa a supervisor solo si, al terminar el batch, el workspace
+    // tiene otro owner_uid y ese miembro quedó como owner.
+    function handsOverOwnership(workspaceId) {
+      let wsAfter = getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)).data;
+      return request.resource.data.role == "supervisor"
+             && wsAfter.owner_uid != request.auth.uid
+             && getAfter(memberPath(workspaceId, wsAfter.owner_uid)).data.role == "owner";
     }
 
     function foundsWorkspace(workspaceId) {
@@ -160,8 +176,9 @@ service cloud.firestore {
       allow update: if isWorkspaceMember(workspaceId)
                     && canSee(workspaceId, resource.data)
                     && (ownershipUnchanged() || canHold(workspaceId, request.resource.data));
-      allow delete: if isWorkspaceMember(workspaceId)
-                    && (me(workspaceId).role == "owner" || resource.data.owner_uid == request.auth.uid);
+      // Borrar de verdad (datos personales, SSN) solo el owner; el resto
+      // archiva (spec 06).
+      allow delete: if isOwner(workspaceId);
 
       // Los documentos heredan el acceso de su cliente.
       match /documents/{docId} {

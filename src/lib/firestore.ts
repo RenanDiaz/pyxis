@@ -97,6 +97,12 @@ export async function updateUserWorkspace(uid: string, workspaceId: string): Pro
   await updateDoc(doc(db, 'users', uid), { workspace_id: workspaceId })
 }
 
+/** El usuario quedó apuntando a un workspace del que ya no es miembro. */
+export async function clearUserWorkspace(uid: string): Promise<void> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  await updateDoc(doc(db, 'users', uid), { workspace_id: null })
+}
+
 // ── Workspaces ──
 
 export async function getWorkspace(id: string): Promise<Workspace | null> {
@@ -147,11 +153,6 @@ export async function updateWorkspace(
   await updateDoc(doc(db, 'workspaces', id), data)
 }
 
-export async function deleteWorkspace(id: string): Promise<void> {
-  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  await deleteDoc(doc(db, 'workspaces', id))
-}
-
 // ── Workspace Members ──
 
 export async function getWorkspaceMembers(workspaceId: string): Promise<WorkspaceMember[]> {
@@ -187,14 +188,6 @@ export async function updateMemberSubteam(
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   await updateDoc(wsDoc(workspaceId, 'members', uid), { subteam_id: subteamId })
-}
-
-export async function removeMember(workspaceId: string, uid: string): Promise<void> {
-  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  const batch = writeBatch(db)
-  batch.delete(wsDoc(workspaceId, 'members', uid))
-  batch.update(doc(db, 'users', uid), { workspace_id: null })
-  await batch.commit()
 }
 
 // ── Subteams ──
@@ -434,11 +427,6 @@ export async function mutateClient(
 
 function currentUid(): string | null {
   return auth?.currentUser?.uid ?? null
-}
-
-export async function deleteClient(workspaceId: string, id: string): Promise<void> {
-  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  await deleteDoc(wsDoc(workspaceId, 'clients', id))
 }
 
 export async function findClientsByPhone(workspaceId: string, phone: string): Promise<Client[]> {

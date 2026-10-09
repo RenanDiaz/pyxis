@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserProfile } from '@/hooks/useUserProfile'
-import { useUpdateWorkspace, useDeleteWorkspace, useWorkspaceMembers } from '@/hooks/useWorkspace'
+import { useUpdateWorkspace, useTransferOwnership, useWorkspaceMembers } from '@/hooks/useWorkspace'
 import { useAuth } from '@/contexts/AuthContext'
-import { updateWorkspace } from '@/lib/firestore'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,14 +17,15 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import ReceiptBrandingSection from '@/components/workspace/ReceiptBrandingSection'
-import { describeError } from '@/lib/errors'
+import DeleteWorkspaceDialog from '@/components/workspace/DeleteWorkspaceDialog'
 
 export default function WorkspaceSettings() {
   const { workspace, workspaceId } = useUserProfile()
   const { user } = useAuth()
   const { data: members } = useWorkspaceMembers(workspaceId)
   const updateWs = useUpdateWorkspace()
-  const deleteWs = useDeleteWorkspace()
+  const transfer = useTransferOwnership()
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const navigate = useNavigate()
 
   const [name, setName] = useState(workspace?.name ?? '')
@@ -39,23 +39,17 @@ export default function WorkspaceSettings() {
 
   const handleTransferOwnership = async () => {
     if (!workspaceId || !newOwner || !user) return
-    if (!confirm(`¿Estás seguro de transferir la propiedad del workspace a este miembro? Perderás el rol de owner.`)) return
+    const target = members?.find((m) => m.uid === newOwner)
+    if (
+      !confirm(
+        `¿Transferir la propiedad a ${target?.display_name ?? 'este miembro'}? ` +
+          'Pasarás a supervisor y ya no podrás administrar el workspace.'
+      )
+    )
+      return
     try {
-      await updateWorkspace(workspaceId, { owner_uid: newOwner })
-      toast.success('Propiedad transferida')
-      navigate('/')
-    } catch (err) {
-      toast.error(describeError(err, 'No se pudo transferir la propiedad'))
-    }
-  }
-
-  const handleDelete = async () => {
-    if (!workspaceId) return
-    const confirm1 = prompt('Escribe ELIMINAR para confirmar la eliminación del workspace:')
-    if (confirm1 !== 'ELIMINAR') return
-    try {
-      await deleteWs.mutateAsync(workspaceId)
-      toast.success('Workspace eliminado')
+      await transfer.mutateAsync({ workspaceId, fromUid: user.uid, toUid: newOwner })
+      toast.success('Propiedad transferida. Ahora eres supervisor.')
       navigate('/')
     } catch {
       // El toast de error lo muestra el handler global de mutaciones.
@@ -102,7 +96,7 @@ export default function WorkspaceSettings() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Transfiere la propiedad del workspace a otro miembro. Perderás el rol de owner.
+              Transfiere la propiedad del workspace a otro miembro. Tú pasarás a supervisor.
             </p>
             <Select value={newOwner} onValueChange={setNewOwner}>
               <SelectTrigger className="max-w-sm">
@@ -119,7 +113,7 @@ export default function WorkspaceSettings() {
             <Button
               variant="outline"
               onClick={handleTransferOwnership}
-              disabled={!newOwner}
+              disabled={!newOwner || transfer.isPending}
             >
               Transferir propiedad
             </Button>
@@ -134,13 +128,22 @@ export default function WorkspaceSettings() {
         <CardContent className="space-y-3">
           <Separator />
           <p className="text-sm text-muted-foreground">
-            Eliminar el workspace borrará todos los datos asociados. Esta acción no se puede deshacer.
+            Eliminar el workspace borra clientes, documentos, llamadas y miembros. No se puede deshacer.
           </p>
-          <Button variant="destructive" onClick={handleDelete}>
+          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
             Eliminar workspace
           </Button>
         </CardContent>
       </Card>
+
+      {deleteOpen && workspace && workspaceId && user && (
+        <DeleteWorkspaceDialog
+          workspaceId={workspaceId}
+          workspace={workspace}
+          ownerUid={user.uid}
+          onOpenChange={setDeleteOpen}
+        />
+      )}
     </div>
   )
 }
