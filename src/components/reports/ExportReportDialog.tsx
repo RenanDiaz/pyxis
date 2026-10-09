@@ -19,7 +19,11 @@ import {
 } from '@/components/ui/select'
 import { Plus, Trash2 } from 'lucide-react'
 import { DEFAULT_TAX_RATE, type ExpenseConfig } from '@/lib/generateSalesReport'
-import type { ProjectedSale, StripeFeeMode } from '@/lib/salesReportData'
+import {
+  DEFAULT_REGISTERED_AGENT_COST,
+  type ProjectedSale,
+  type StripeFeeMode,
+} from '@/lib/salesReportData'
 import { formatMoney } from '@/lib/format'
 
 /** Config completa de exportación: gastos + opciones de cálculo. */
@@ -27,6 +31,8 @@ export interface ExportSettings {
   expenses: ExpenseConfig
   stripeFeeMode: StripeFeeMode
   taxRate: number
+  /** Costo del Registered Agent de las cuentas que lo incluyen. */
+  registeredAgentCost: number
 }
 
 const STORAGE_KEY = 'pyxis.salesReport.exportSettings'
@@ -52,6 +58,7 @@ function defaultSettings(employeeName: string): ExportSettings {
     },
     stripeFeeMode: 'surcharge',
     taxRate: DEFAULT_TAX_RATE,
+    registeredAgentCost: DEFAULT_REGISTERED_AGENT_COST,
   }
 }
 
@@ -274,6 +281,24 @@ export default function ExportReportDialog({
                 }
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="report-registered-agent">Registered Agent ($)</Label>
+            <Input
+              id="report-registered-agent"
+              type="number"
+              min={0}
+              step="0.01"
+              className="w-32"
+              value={settings.registeredAgentCost}
+              onChange={(e) =>
+                setSettings((s) => ({ ...s, registeredAgentCost: parseFloat(e.target.value) || 0 }))
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              Costo por cada registro marcado con Registered Agent.
+            </p>
           </div>
 
           <div className="space-y-2">
