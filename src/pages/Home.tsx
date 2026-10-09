@@ -61,6 +61,7 @@ function MetricSkeleton() {
 
 export default function Home() {
   const { data: clients, isLoading: clientsLoading, error: clientsError, refetch: refetchClients } = useClients()
+  const { data: archivedClients } = useClients({ archived: true })
   const { data: upcomingCalls } = useUpcomingCalls(5)
   const { wsCtx } = useUserProfile()
   const { user } = useAuth()
@@ -121,7 +122,10 @@ export default function Home() {
 
   // ── Próxima llamada (protagonista) ──
   const nextCall = upcomingCalls?.[0]
-  const nextClient = nextCall ? allClients.find((c) => c.id === nextCall.client_id) : undefined
+  // La próxima llamada puede ser de un cliente archivado: también se busca ahí.
+  const nextClient = nextCall
+    ? [...allClients, ...(archivedClients ?? [])].find((c) => c.id === nextCall.client_id)
+    : undefined
   const nextScheduled = nextCall?.scheduled_at?.toDate?.()
   const nextTz = nextClient?.state ? getStateTimezone(nextClient.state) : null
   const nextBalance = nextClient ? getClientPaymentSummary(nextClient).balance : 0
