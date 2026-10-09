@@ -5,6 +5,7 @@ import {
   deleteObject,
 } from 'firebase/storage'
 import { jsPDF } from 'jspdf'
+import { drawBrandHeader, fmtCurrency, pdfFileBase, PDF_COLORS, PDF_MARGIN } from '@/lib/pdfBranding'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { storage, isFirebaseConfigured } from '@/lib/firebase'
@@ -65,13 +66,6 @@ export async function deleteWorkspaceLogo(path: string): Promise<void> {
 
 // ── PDF generation ──
 
-function fmtCurrency(value: number): string {
-  return value.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 2,
-  })
-}
 
 /**
  * Nombre del receptor del recibo: la compañía de ESTE proceso cuando es un
@@ -93,32 +87,6 @@ function getServiceLabel(process: ClientProcess): string {
   return process.state ? `${label} — ${process.state}` : label
 }
 
-async function fetchImageAsDataUrl(url: string): Promise<{
-  dataUrl: string
-  width: number
-  height: number
-} | null> {
-  try {
-    const res = await fetch(url, { mode: 'cors' })
-    if (!res.ok) return null
-    const blob = await res.blob()
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
-    })
-    const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-      const img = new Image()
-      img.onload = () => resolve({ width: img.width, height: img.height })
-      img.onerror = reject
-      img.src = dataUrl
-    })
-    return { dataUrl, ...dimensions }
-  } catch {
-    return null
-  }
-}
 
 function buildReceiptNumber(client: Client, process: ClientProcess, payment: Payment): string {
   const clientPart = client.id.slice(-4).toUpperCase()
@@ -147,66 +115,18 @@ export async function generatePaymentReceipt({
 
   const doc = new jsPDF({ unit: 'pt', format: 'letter' })
   const pageW = doc.internal.pageSize.getWidth()
-  const margin = 48
-  let y = margin
+  const margin = PDF_MARGIN
+  const { accent, muted, text } = PDF_COLORS
 
-  const companyName = workspace.receipt_company_name?.trim() || workspace.name
-  const accent: [number, number, number] = [37, 99, 235] // tailwind blue-600
-  const muted: [number, number, number] = [107, 114, 128] // gray-500
-  const text: [number, number, number] = [17, 24, 39] // gray-900
-
-  // ── Header: logo + company name + RECIBO ──
-  let logoBottom = y
-  if (workspace.receipt_logo_url) {
-    const img = await fetchImageAsDataUrl(workspace.receipt_logo_url)
-    if (img) {
-      const maxW = 110
-      const maxH = 70
-      const ratio = img.width / img.height
-      let w = maxW
-      let h = w / ratio
-      if (h > maxH) {
-        h = maxH
-        w = h * ratio
-      }
-      const fmt = img.dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG'
-      try {
-        doc.addImage(img.dataUrl, fmt, margin, y, w, h)
-        logoBottom = y + h
-      } catch {
-        // fall through if format unsupported
-      }
-    }
-  }
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(20)
-  doc.setTextColor(...text)
-  doc.text(companyName, pageW - margin, y + 18, { align: 'right' })
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(11)
-  doc.setTextColor(...accent)
-  doc.text('RECIBO DE PAGO', pageW - margin, y + 38, { align: 'right' })
-
-  doc.setTextColor(...muted)
-  doc.setFontSize(9)
   const receiptNumber = buildReceiptNumber(client, process, payment)
-  doc.text(`N° ${receiptNumber}`, pageW - margin, y + 54, { align: 'right' })
-
   const parsedPaymentDate = parsePaymentDate(payment.date)
   const paymentDate = parsedPaymentDate
     ? format(parsedPaymentDate, "d 'de' MMMM 'de' yyyy", { locale: es })
     : '—'
-  doc.text(`Fecha: ${paymentDate}`, pageW - margin, y + 68, { align: 'right' })
-
-  y = Math.max(logoBottom, y + 80) + 16
-
-  // Divider
-  doc.setDrawColor(229, 231, 235)
-  doc.setLineWidth(1)
-  doc.line(margin, y, pageW - margin, y)
-  y += 22
+  let y = await drawBrandHeader(doc, workspace, {
+    title: 'RECIBO DE PAGO',
+    lines: [`N° ${receiptNumber}`, `Fecha: ${paymentDate}`],
+  })
 
   // ── Recipient ──
   doc.setFont('helvetica', 'bold')
@@ -329,8 +249,5 @@ export async function generatePaymentReceipt({
     align: 'right',
   })
 
-  const fileBase = (workspace.receipt_company_name || workspace.name)
-    .replace(/[^a-zA-Z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '') || 'recibo'
-  doc.save(`${fileBase}_${receiptNumber}.pdf`)
+  doc.save(`${pdfFileBase(workspace, 'recibo')}_${receiptNumber}.pdf`)
 }

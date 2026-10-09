@@ -141,7 +141,7 @@ export async function createWorkspace(data: {
 
 export async function updateWorkspace(
   id: string,
-  data: Partial<Pick<Workspace, 'name' | 'owner_uid' | 'receipt_company_name' | 'receipt_logo_url' | 'receipt_logo_path'>>
+  data: Partial<Pick<Workspace, 'name' | 'owner_uid' | 'receipt_company_name' | 'receipt_logo_url' | 'receipt_logo_path' | 'payment_instructions'>>
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   await updateDoc(doc(db, 'workspaces', id), data)

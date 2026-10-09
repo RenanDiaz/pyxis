@@ -150,6 +150,7 @@ export function useUpdateWorkspace() {
         receipt_company_name?: string
         receipt_logo_url?: string
         receipt_logo_path?: string
+        payment_instructions?: string
       }
     }) => updateWorkspace(id, data),
     onSuccess: () => {

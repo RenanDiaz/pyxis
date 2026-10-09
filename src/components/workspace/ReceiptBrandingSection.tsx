@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { ImageIcon, Upload, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useUpdateWorkspace } from '@/hooks/useWorkspace'
@@ -23,6 +24,22 @@ export default function ReceiptBrandingSection({ workspace, workspaceId }: Props
 
   const initialName = workspace.receipt_company_name ?? ''
   const dirty = companyName.trim() !== initialName
+
+  const initialInstructions = workspace.payment_instructions ?? ''
+  const [instructions, setInstructions] = useState(initialInstructions)
+  const instructionsDirty = instructions.trim() !== initialInstructions.trim()
+
+  const handleSaveInstructions = async () => {
+    try {
+      await updateWs.mutateAsync({
+        id: workspaceId,
+        data: { payment_instructions: instructions.trim() },
+      })
+      toast.success('Instrucciones de pago guardadas')
+    } catch {
+      // El toast de error lo muestra el handler global de mutaciones.
+    }
+  }
 
   const handleSaveName = async () => {
     await updateWs.mutateAsync({
@@ -84,9 +101,9 @@ export default function ReceiptBrandingSection({ workspace, workspaceId }: Props
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Comprobantes de pago</CardTitle>
+        <CardTitle className="text-base">Recibos y cotizaciones</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Esta información aparecerá en los recibos PDF que emitas a tus clientes.
+          Esta información aparecerá en los recibos y cotizaciones PDF que emitas a tus clientes.
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -156,6 +173,29 @@ export default function ReceiptBrandingSection({ workspace, workspaceId }: Props
             size="sm"
             onClick={handleSaveName}
             disabled={updateWs.isPending || !dirty}
+          >
+            Guardar
+          </Button>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="payment-instructions">Instrucciones de pago</Label>
+          <Textarea
+            id="payment-instructions"
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+            maxLength={1000}
+            rows={4}
+            placeholder={'Ej: Zelle a pagos@miempresa.com (Mi Empresa LLC)\nTransferencia: Banco X, cuenta 1234…'}
+            className="max-w-lg"
+          />
+          <p className="text-xs text-muted-foreground">
+            Aparecen en las cotizaciones, en la sección "Cómo pagar". Si lo dejas vacío, la sección no se muestra.
+          </p>
+          <Button
+            size="sm"
+            onClick={handleSaveInstructions}
+            disabled={updateWs.isPending || !instructionsDirty}
           >
             Guardar
           </Button>

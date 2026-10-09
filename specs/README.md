@@ -23,12 +23,13 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 | 06 | [Administración del workspace](06-administracion-workspace.md) | 🟠 Alta | 01 | M |
 | 07 | [Detección de teléfonos duplicados](07-duplicados-telefono.md) | 🟡 Media | 01 | S |
 | 08 | [Agenda](08-agenda.md) | 🟡 Media | 05 (intentos de contacto) | M |
-| 09 | [Manejo de errores y sesión](09-errores-sesion.md) | 🟡 Media | — | M |
+| 09 | [Manejo de errores y sesión](09-errores-sesion.md) | 🟡 Media · ✅ | — | M |
 | 10 | [Rendimiento](10-rendimiento.md) | 🟡 Media | — | M |
 | 11 | [Metas por agente](11-metas.md) | 🟢 Media/Baja | 05 | M |
 | 12 | [Infra: índices, scripts y migraciones](12-infra-scripts.md) | 🟡 Media | — | S |
 | 13 | [UX, accesibilidad y limpieza](13-ux-accesibilidad.md) | 🟢 Baja | — | M |
 | 14 | [Aviso de nueva versión](14-aviso-nueva-version.md) | 🟠 Alta · ✅ | — | S |
+| 15 | [Cotización](15-cotizacion.md) | 🟠 Alta · ✅ | — | M |
 | — | [Borradores de formularios](form-drafts.md) | ✅ Implementado | — | — |
 
 **Por qué este orden:** 01+02 cierran un hueco que permite tomar control de

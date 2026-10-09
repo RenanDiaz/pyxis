@@ -27,7 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft, Pencil, Trash2, Phone, Mail, FileDown, Archive, ArchiveRestore, UserCircle, RefreshCw, Info, Plus, CalendarPlus } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Phone, Mail, FileDown, FileText, Archive, ArchiveRestore, UserCircle, RefreshCw, Info, Plus, CalendarPlus } from 'lucide-react'
+import QuoteDialog from '@/components/clients/QuoteDialog'
 import ClientTimeline from '@/components/clients/ClientTimeline'
 import type { Client, ClientStatus, ClientProcess } from '@/types'
 import { clientMutations, type RunClientMutation } from '@/lib/processMutations'
@@ -199,6 +200,7 @@ export default function ClientDetail() {
   const [showReassign, setShowReassign] = useState(false)
   const [reassignUid, setReassignUid] = useState('')
   const [showAddProcess, setShowAddProcess] = useState(false)
+  const [showQuote, setShowQuote] = useState(false)
 
   if (isLoading) {
     return <p className="text-muted-foreground">Cargando...</p>
@@ -507,6 +509,10 @@ export default function ClientDetail() {
               <span className="hidden sm:inline">Exportar</span> .docx
             </Button>
           )}
+          <Button variant="ghost" size="sm" onClick={() => setShowQuote(true)}>
+            <FileText className="mr-1 h-3 w-3" />
+            Cotización
+          </Button>
           <Button asChild variant="ghost" size="sm">
             <Link to={`/clientes/${client.id}/editar`}>
               <Pencil className="mr-1 h-3 w-3" />
@@ -550,6 +556,16 @@ export default function ClientDetail() {
           </Button>
         </div>
       </div>
+
+      {showQuote && (
+        <QuoteDialog
+          client={client}
+          workspace={workspace}
+          states={states}
+          onOpenChange={setShowQuote}
+          onMutate={runMutation}
+        />
+      )}
 
       <AddProcessDialog
         open={showAddProcess}
