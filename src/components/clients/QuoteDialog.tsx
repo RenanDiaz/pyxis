@@ -19,7 +19,9 @@ import {
   DEFAULT_QUOTE_VALID_DAYS,
   isQuotableByDefault,
   MAX_QUOTE_VALID_DAYS,
+  processQuoteLine,
 } from '@/lib/quote'
+import { getClientDisplayName } from '@/lib/clientUtils'
 
 interface QuoteDialogProps {
   client: Client
@@ -73,14 +75,15 @@ export default function QuoteDialog({ client, workspace, states, onOpenChange, o
         const ok = await onMutate(clientMutations.setMissingTotals(totals), 'Precios guardados en los procesos')
         if (!ok) return
       }
-      const quote = buildQuote(
-        client,
-        selected.map((p) => ({ process: p, price: priceOf(p.id) })),
-        { validDays: days },
-      )
+      const quote = buildQuote({
+        ref: client.id,
+        recipient: getClientDisplayName(client),
+        lines: selected.map((p) => processQuoteLine(client, p, priceOf(p.id))),
+        validDays: days,
+      })
       // Carga diferida: jsPDF solo se necesita al generar.
       const { downloadQuotePdf } = await import('@/lib/quotePdf')
-      await downloadQuotePdf(client, quote, workspace)
+      await downloadQuotePdf(quote, workspace)
       toast.success(`Cotización ${quote.number} generada`)
       onOpenChange(false)
     } catch (err) {

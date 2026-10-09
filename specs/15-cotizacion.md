@@ -56,14 +56,32 @@ que se emite después de cada pago.
    - Se edita en la sección de comprobantes de la configuración del workspace (owner).
    - Lo leen todos los miembros, porque las reglas ya permiten leer el workspace.
 
+## Cotización rápida (sin cliente) — pedido posterior de Isabel
+Durante una llamada, el cliente espera y todavía no está registrado.
+- **Dónde:** botón "Cotización" en el detalle de cada estado (`/estados/:abbr`).
+- **Destinatario:** "Para (opcional)" se escribe a mano. Si queda vacío, el PDF
+  no muestra la sección "Preparada para".
+- **Servicios:**
+  - Todo el catálogo de procesos, con el precio sugerido para ese estado.
+    Viene marcado "Registro de LLC"; los manuales arrancan vacíos.
+  - Más "Otro servicio": nombre y precio libres.
+- **Sin persistencia:** no se guarda nada ni se crea un cliente. El número usa un
+  código al azar en lugar del id del cliente.
+- **Una línea por servicio con su precio total.** Sin desglose de fees ni datos
+  del estado; solo la abreviatura junto al servicio ("— FL").
+
 ## Diseño
 - `src/lib/pdfBranding.ts`: encabezado de marca, colores, moneda y logo. Se
   extrajo de `receiptUtils.ts`, así que el recibo y la cotización comparten diseño.
-- `src/lib/quote.ts` (puro, con tests): `buildQuote(client, lines, { now, validDays })`
-  devuelve número, líneas, total (en centavos, vía `money.ts`) y vigencia.
-  `defaultQuotePrice(process, state)` da el precio inicial.
-- `src/lib/quotePdf.ts`: dibuja el PDF.
-- `src/components/clients/QuoteDialog.tsx`: el diálogo.
+- `src/lib/quote.ts` (puro, con tests):
+  - `buildQuote({ ref, recipient?, lines, now, validDays })`: las líneas son
+    `{ label, detail?, price }` y no dependen del modelo de proceso.
+  - `processQuoteLine` convierte un proceso del cliente en una línea.
+- `src/lib/quotePdf.ts`: dibuja el PDF. La sección "Cómo pagar" y la leyenda
+  están en `pdfBranding.ts`, compartidas con el estado de cuenta.
+- Diálogos:
+  - `src/components/clients/QuoteDialog.tsx`: cotización de un cliente.
+  - `src/components/quotes/QuickQuoteDialog.tsx`: cotización rápida.
 
 ## Criterios de aceptación
 - [x] Cliente con registro FL (sin total) y EIN (manual, sin total): el registro
