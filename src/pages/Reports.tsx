@@ -169,9 +169,9 @@ export default function Reports() {
 
           {/* Resumen del mes */}
           <div className="grid grid-cols-3 gap-3">
-            <StatBox label="Cuentas" value={String(preview.accountCount)} />
-            <StatBox label="Pagos" value={String(preview.paymentCount)} />
-            <StatBox label="Total cobrado" value={fmtCurrency(preview.totalCharge)} />
+            <StatBox label="Ventas" value={String(preview.accountCount)} />
+            <StatBox label="Total vendido" value={fmtCurrency(preview.totalCharge)} />
+            <StatBox label="Por cobrar" value={fmtCurrency(preview.totalPending)} />
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
@@ -179,7 +179,7 @@ export default function Reports() {
               {isLoading
                 ? 'Cargando clientes…'
                 : preview.accountCount === 0
-                  ? 'No hay pagos registrados en este mes.'
+                  ? 'No hay ventas registradas en este mes.'
                   : `Reporte para ${monthLabelEs}.`}
             </p>
             <Button onClick={() => setDialogOpen(true)} disabled={isLoading}>
@@ -194,7 +194,7 @@ export default function Reports() {
         <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
           <Users className="h-10 w-10 mb-3 opacity-40" />
           <p className="text-sm">
-            Registra pagos en los procesos de tus clientes para que aparezcan aquí.
+            Una venta aparece en el mes de su fecha de venta cuando tiene al menos un pago.
           </p>
         </div>
       )}
@@ -205,6 +205,7 @@ export default function Reports() {
         defaultEmployeeName={defaultEmployeeName}
         accountCount={preview.accountCount}
         missingState={preview.missingState}
+        projected={preview.projected}
         isExporting={isExporting}
         onExport={handleExport}
       />

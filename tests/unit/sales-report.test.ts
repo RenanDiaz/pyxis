@@ -13,7 +13,7 @@ const proc = (over: Partial<ClientProcess>): ClientProcess => ({
 })
 const client = (over: Partial<Client>, processes: ClientProcess[]) =>
   ({ id: 'c1', first_name: 'ANA', last_name: 'PÉREZ', status: 'en_proceso', processes, ...over } as unknown as Client)
-const pay = (amount: number, date: string) => ({ amount, method: 'zelle' as const, date })
+const pay = (amount: number, date: string, method: 'zelle' | 'stripe' = 'zelle') => ({ amount, method, date })
 const states = [
   { abbreviation: 'NY', state_fee: '210.0' },
   { abbreviation: 'TX', state_fee: '310.0' },
@@ -26,10 +26,10 @@ const expenses: ExpenseConfig = {
   fixedExpenses: [{ label: 'Zoom Phone', amount: 75 }],
 }
 
-function build(clients: Client[], monthKey = '2026-10') {
+function build(clients: Client[], monthKey = '2026-10', stripeFeeMode: 'none' | 'estimate' = 'none') {
   return buildReportInput({
     clients, states, monthKey, monthLabel: 'October 2026',
-    expenses, stripeFeeMode: 'none', taxRate: 0.39,
+    expenses, stripeFeeMode, taxRate: 0.39,
   })
 }
 
@@ -73,22 +73,24 @@ describe('reporte de ventas — fecha de venta', () => {
     return d ? localDateKey(d) : null
   }
 
-  it('sold_at manda; sin ella, la más temprana entre creación y primer pago', () => {
+  it('sold_at manda; sin ella, el primer pago (no la creación del proceso)', () => {
     const created = (y: number, m: number, d: number) => Timestamp.fromDate(new Date(y, m - 1, d, 12))
     assert.equal(saleKey(proc({ sold_at: '2026-08-28', payments: [pay(312, '2026-09-03')] })), '2026-08-28')
-    assert.equal(saleKey(proc({ created_at: created(2026, 8, 28), payments: [pay(312, '2026-09-03')] })), '2026-08-28')
-    // Proceso migrado: se creó después de que el cliente pagara.
-    assert.equal(saleKey(proc({ created_at: created(2026, 10, 1), payments: [pay(312, '2026-07-15')] })), '2026-07-15')
-    assert.equal(saleKey(proc({ sold_at: 'basura', created_at: created(2026, 9, 2) })), '2026-09-02')
+    // Prospecto cotizado en septiembre que pagó en octubre: venta de octubre.
+    assert.equal(
+      saleKey(proc({ created_at: created(2026, 9, 20), payments: [pay(400, '2026-10-09'), pay(329.5, '2026-10-03')] })),
+      '2026-10-03',
+    )
+    assert.equal(saleKey(proc({ sold_at: 'basura', payments: [pay(100, '2026-09-02')] })), '2026-09-02')
+    assert.equal(saleKey(proc({ created_at: created(2026, 9, 2) })), null)
   })
 
-  it('una venta de agosto cobrada en septiembre sale en agosto con todos sus pagos', () => {
+  it('una venta de agosto cobrada en septiembre sale en agosto, en una sola fila', () => {
     const c = client({}, [
-      proc({ state: 'NY', sold_at: '2026-08-28', payments: [pay(312, '2026-09-03'), pay(312, '2026-09-09')] }),
+      proc({ state: 'NY', total: 624, sold_at: '2026-08-28', payments: [pay(312, '2026-09-03'), pay(312, '2026-09-09')] }),
     ])
     const aug = build([c], '2026-08')
-    assert.equal(aug.accounts.length, 1)
-    assert.deepEqual(aug.accounts[0].payments.map((p) => p.charge), [312, 312])
+    assert.deepEqual(aug.accounts.map((a) => [localDateKey(a.date), a.charge]), [['2026-08-28', 624]])
     assert.equal(build([c], '2026-09').accounts.length, 0)
     assert.equal(previewReport([c], '2026-08').accountCount, 1)
     assert.equal(previewReport([c], '2026-09').accountCount, 0)
@@ -103,28 +105,80 @@ describe('reporte de ventas — fecha de venta', () => {
   })
 })
 
+describe('reporte de ventas — una fila por venta (P6)', () => {
+  it('CHARGE es el total vendido aunque falte cobrar; sin total, lo cobrado', () => {
+    const c = client({}, [
+      proc({ id: 'a', state: 'NY', total: 609, payments: [pay(304.5, '2026-10-02')] }),
+      proc({ id: 'b', state: 'TX', payments: [pay(200, '2026-10-03')] }),
+      // Se cobró de más: CHARGE no queda por debajo de lo cobrado.
+      proc({ id: 'c', state: 'NY', total: 100, payments: [pay(120, '2026-10-04')] }),
+    ])
+    assert.deepEqual(build([c]).accounts.map((a) => a.charge), [609, 200, 120])
+  })
+
+  it('un proceso sin pagos no es una venta', () => {
+    const c = client({}, [proc({ state: 'NY', total: 659, sold_at: '2026-10-02' })])
+    assert.equal(build([c]).accounts.length, 0)
+    assert.equal(previewReport([c], '2026-10').accountCount, 0)
+  })
+
+  it('el saldo se proyecta con el método del primer pago', () => {
+    const c = client({}, [
+      // 1er pago con Stripe: lo pagado y el saldo llevan comisión.
+      proc({ id: 'a', state: 'NY', total: 600, payments: [pay(300, '2026-10-02', 'stripe')] }),
+      // 1er pago con Zelle: solo el pago con Stripe lleva comisión, el saldo no.
+      proc({ id: 'b', state: 'NY', total: 600, payments: [pay(100, '2026-10-02'), pay(200, '2026-10-05', 'stripe')] }),
+    ])
+    const fee = (x: number) => Math.round((x * 0.029 + 0.3) * 100) / 100
+    assert.deepEqual(build([c], '2026-10', 'estimate').accounts.map((a) => a.stripeFee), [
+      fee(300) * 2,
+      fee(200),
+    ])
+    assert.deepEqual(build([c]).accounts.map((a) => a.stripeFee), [0, 0])
+  })
+
+  it('la vista previa resume lo vendido y lista los saldos proyectados', () => {
+    const c = client({}, [
+      proc({ id: 'a', state: 'NY', total: 609, payments: [pay(304.5, '2026-10-02', 'stripe')] }),
+      proc({ id: 'b', type: 'ein', total: 150, payments: [pay(150, '2026-10-03')] }),
+    ])
+    const preview = previewReport([c], '2026-10')
+    assert.equal(preview.totalCharge, 759)
+    assert.equal(preview.totalPending, 304.5)
+    assert.deepEqual(preview.projected, [{ label: 'ANA PÉREZ — Registro de LLC', pending: 304.5, stripe: true }])
+  })
+})
+
 describe('reporte de ventas — fórmulas', () => {
-  const twoPayments: ReportInput = {
+  const input: ReportInput = {
     monthLabel: 'October 2026',
     taxRate: 0.39,
     expenses: { ...expenses, bonus: 150 },
-    accounts: [{
-      company: 'ACME, LLC', purchase: 'Registro de LLC', state: 'NY', stateFee: 210,
-      registeredAgent: 45, hasRegisteredAgent: true, owner: 'ANA PÉREZ',
-      payments: [
-        { date: new Date(2026, 9, 1), charge: 329.5, stripeFee: 0 },
-        { date: new Date(2026, 9, 9), charge: 329.5, stripeFee: 0 },
-      ],
-    }],
+    accounts: [
+      {
+        date: new Date(2026, 9, 1), company: 'ACME, LLC', purchase: 'Registro de LLC', state: 'NY',
+        charge: 659, stateFee: 210, registeredAgent: 45, hasRegisteredAgent: true, stripeFee: 0,
+        owner: 'ANA PÉREZ',
+      },
+      {
+        date: new Date(2026, 9, 2), company: 'ANA PÉREZ', purchase: 'EIN', state: '',
+        charge: 150, stateFee: 0, registeredAgent: 0, hasRegisteredAgent: false, stripeFee: 4.65,
+        owner: 'ANA PÉREZ',
+      },
+    ],
   }
-  const ws = buildWorkbook(twoPayments).worksheets[0]
+  const ws = buildWorkbook(input).worksheets[0]
   const f = (addr: string) => (ws.getCell(addr).value as { formula: string }).formula
 
-  it('state fee y RA se restan una sola vez por cuenta, con la tasa configurada', () => {
+  it('una fila por cuenta, sin celdas combinadas, con la tasa configurada', () => {
+    assert.equal(ws.getCell('F2').value, 659)
     assert.equal(f('I2'), '(F2-G2-H2)*0.39')
     assert.equal(f('K2'), 'F2-G2-H2-I2-J2')
-    assert.equal(f('I3'), '(F3)*0.39')
-    assert.equal(f('K3'), 'F3-I3-J3')
+    assert.equal(f('I3'), '(F3-G3)*0.39')
+    assert.equal(f('K3'), 'F3-G3-I3-J3')
+    assert.equal(ws.getCell('A3').value, 2)
+    assert.equal(f('K4'), 'SUM(K2:K3)')
+    assert.equal(ws.getCell('C2').isMerged, false)
   })
 
   it('TOTAL PAY suma el bonus y WHAT I TOOK HOME resta la base una sola vez', () => {

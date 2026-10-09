@@ -80,6 +80,11 @@ export default function ProcessCard({
 
   const saveSoldAt = async () => {
     if (soldAt === null) return
+    // Borrar la fecha vuelve a contar la venta en el mes del primer pago.
+    if (soldAt === '' && process.sold_at) {
+      if (await updateProcess({ sold_at: undefined }, 'Fecha de venta quitada')) setSoldAt(null)
+      return
+    }
     // Fecha incompleta, futura o sin cambios: se descarta el borrador.
     if (!/^\d{4}-\d{2}-\d{2}$/.test(soldAt) || soldAt > today || soldAt === process.sold_at) {
       setSoldAt(null)
@@ -192,6 +197,11 @@ export default function ProcessCard({
             onBlur={saveSoldAt}
             title="Mes en que el reporte de ventas cuenta este proceso"
           />
+          {!process.sold_at && (
+            <span className="text-xs text-muted-foreground">
+              {saleDate ? 'según el primer pago' : 'sin pagos aún'}
+            </span>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">

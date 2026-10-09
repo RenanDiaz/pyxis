@@ -4,24 +4,26 @@
  * Transforma los datos del CRM (clientes → procesos → pagos) al modelo de
  * entrada del reporte de ventas (`ReportInput`) para un mes concreto.
  *
- * Reglas de mapeo (ver decisiones en el SPEC):
- *  - Una "cuenta" del reporte = un PROCESO contratado ("una cuenta = una venta").
- *  - La venta cuenta en el mes de su FECHA DE VENTA (`getProcessSaleDate`:
- *    `sold_at`, o la más temprana entre la creación y el primer pago), no en el
- *    del primer pago: una venta cerrada a fin de mes y cobrada el siguiente es
- *    del mes en que se cerró (spec 04, P10).
- *  - Una vez que el proceso pertenece al mes, se incluyen TODOS sus pagos, aunque
- *    alguno se haya hecho en otro mes (es parte de la misma venta y no debe
- *    contarse aparte en el mes en que se cobró). Sin pagos no entra (aún).
+ * Reglas de mapeo (spec 04):
+ *  - Una "cuenta" del reporte = un PROCESO vendido = UNA fila (P6).
+ *  - Una venta es un proceso con al menos un pago: sin pagos es un prospecto o
+ *    una cotización, no una venta.
+ *  - La venta cuenta en el mes de su FECHA DE VENTA (`getProcessSaleDate`), no
+ *    en el del primer pago: una venta cerrada a fin de mes y cobrada el
+ *    siguiente es del mes en que se cerró (P10).
+ *  - CHARGE = total acordado del proceso, aunque falte cobrar parte (lo que
+ *    importa es que aparezcan todas las ventas). Sin total, lo cobrado. El saldo
+ *    pendiente es un monto PROYECTADO: se advierte en el diálogo de exportación,
+ *    no en el Excel.
  *  - `stateFee` se deriva del documento del estado del PROCESO (states.json).
  *    Sin `process.state` va en 0 y la UI lo advierte: no se usa `client.state`,
- *    que puede ser el de otra compañía del cliente (spec 04).
+ *    que puede ser el de otra compañía del cliente.
  *  - El costo del Registered Agent no se registra en el CRM → columna H en 0;
  *    si el proceso incluye Registered Agent (`has_registered_agent`), las
  *    fórmulas de TAX y NET de esa cuenta restan H (se puede completar en Excel).
- *  - `stripeFee` solo se calcula para los pagos cuyo método es `stripe`; se deja
- *    en 0 o se estima (2.9% + $0.30) según `stripeFeeMode`. Los pagos hechos con
- *    cualquier otro método nunca tienen comisión de Stripe.
+ *  - `stripeFee` solo se estima para lo pagado con `stripe` (0 o 2.9% + $0.30
+ *    según `stripeFeeMode`). El saldo pendiente se proyecta con el método del
+ *    PRIMER pago: si fue Stripe, también se le estima la comisión.
  * -----------------------------------------------------------------------------
  */
 
@@ -36,7 +38,7 @@ import {
 import { getClientDisplayName } from '@/lib/clientUtils'
 import { getProcessCompanyName } from '@/lib/companyUtils'
 import type { ExpenseConfig, ReportAccount, ReportInput } from '@/lib/generateSalesReport'
-import { sumMoney } from '@/lib/money'
+import { fromCents, sumMoney, toCents } from '@/lib/money'
 
 export type StripeFeeMode = 'none' | 'estimate'
 
@@ -63,43 +65,70 @@ function parseMoney(raw: string | undefined): number {
   return Number.isNaN(num) ? 0 : num
 }
 
-/**
- * Todos los pagos del proceso con su `Date` ya parseada, ordenados por fecha.
- * Se descartan los pagos sin fecha válida. La comparación de mes se hace en hora
- * LOCAL (no por `slice` del string: un ISO en UTC puede caer en el mes vecino
- * cerca de la frontera).
- */
-function sortedPaymentsOf(
-  process: ClientProcess,
-): Array<{ payment: Payment; date: Date }> {
-  return (process.payments ?? [])
-    .map((payment) => ({ payment, date: parsePaymentDate(payment.date) }))
-    .filter((x): x is { payment: Payment; date: Date } => x.date !== null)
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
-}
-
-/**
- * Pagos del proceso si su fecha de venta cae en el mes `monthKey` (TODOS sus
- * pagos, de cualquier mes); si no, `[]` (el proceso pertenece a otro mes).
- */
-function monthPaymentsOf(
-  process: ClientProcess,
-  monthKey: string,
-): Array<{ payment: Payment; date: Date }> {
-  const saleDate = getProcessSaleDate(process)
-  if (!saleDate || localMonthKey(saleDate) !== monthKey) return []
-  return sortedPaymentsOf(process)
-}
-
-function estimateStripeFee(charge: number, mode: StripeFeeMode): number {
+function estimateStripeFee(amount: number, mode: StripeFeeMode): number {
   if (mode === 'none') return 0
-  if (charge <= 0) return 0
-  return Math.round((charge * STRIPE_PERCENT + STRIPE_FLAT) * 100) / 100
+  if (amount <= 0) return 0
+  return Math.round((amount * STRIPE_PERCENT + STRIPE_FLAT) * 100) / 100
+}
+
+/** Una venta del mes, con lo cobrado y lo proyectado ya calculados. */
+interface MonthSale {
+  client: Client
+  process: ClientProcess
+  saleDate: Date
+  /** Pagos con fecha válida, ordenados por fecha. */
+  payments: Payment[]
+  /** Total acordado (o lo cobrado si no hay total, o si se cobró de más). */
+  charge: number
+  /** Parte de `charge` que falta cobrar: monto proyectado. */
+  pending: number
 }
 
 /**
- * Construye el `ReportInput` para el mes dado. Las cuentas quedan ordenadas por
- * fecha de venta y numeradas en ese orden por el generador.
+ * Ventas cuyo `getProcessSaleDate` cae en `monthKey` y que tienen al menos un
+ * pago, ordenadas por fecha de venta. Base común del reporte y su vista previa.
+ */
+function monthSalesOf(clients: Client[], monthKey: string): MonthSale[] {
+  const sales: MonthSale[] = []
+  for (const client of clients) {
+    for (const process of client.processes ?? []) {
+      const saleDate = getProcessSaleDate(process)
+      if (!saleDate || localMonthKey(saleDate) !== monthKey) continue
+      // La comparación es en hora LOCAL: un ISO en UTC puede caer en el mes vecino.
+      const payments = (process.payments ?? [])
+        .map((payment) => ({ payment, time: parsePaymentDate(payment.date)?.getTime() }))
+        .filter((x): x is { payment: Payment; time: number } => x.time !== undefined)
+        .sort((a, b) => a.time - b.time)
+        .map((x) => x.payment)
+      if (payments.length === 0) continue
+      const paid = toCents(sumMoney(payments.map((p) => p.amount)))
+      const charge = Math.max(toCents(process.total), paid)
+      sales.push({
+        client,
+        process,
+        saleDate,
+        payments,
+        charge: fromCents(charge),
+        pending: fromCents(charge - paid),
+      })
+    }
+  }
+  return sales.sort((a, b) => a.saleDate.getTime() - b.saleDate.getTime())
+}
+
+/** "CLIENTE — Proceso", para las advertencias de la UI. */
+function saleLabel(sale: MonthSale): string {
+  return `${getClientDisplayName(sale.client)} — ${getProcessLabel(sale.process)}`
+}
+
+/** El saldo se proyecta con el método del primer pago (P6). */
+function projectsStripe(sale: MonthSale): boolean {
+  return sale.pending > 0 && sale.payments[0].method === 'stripe'
+}
+
+/**
+ * Construye el `ReportInput` para el mes dado: una cuenta por venta, ordenadas
+ * por fecha de venta y numeradas en ese orden por el generador.
  */
 export function buildReportInput(params: BuildReportParams): ReportInput {
   const { clients, states, monthKey, monthLabel, expenses, stripeFeeMode, taxRate } = params
@@ -109,89 +138,72 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
     stateFeeByAbbr.set(s.abbreviation.toUpperCase(), parseMoney(s.state_fee))
   }
 
-  const entries: Array<{ saleTime: number; account: ReportAccount }> = []
+  const accounts = monthSalesOf(clients, monthKey).map((sale): ReportAccount => {
+    const { client, process } = sale
+    const stateAbbr = (process.state ?? '').toUpperCase()
+    // La comisión de Stripe solo aplica a lo pagado con Stripe, y al saldo si
+    // el primer pago fue con Stripe.
+    const stripeFees = sale.payments
+      .filter((p) => p.method === 'stripe')
+      .map((p) => estimateStripeFee(p.amount, stripeFeeMode))
+    if (projectsStripe(sale)) stripeFees.push(estimateStripeFee(sale.pending, stripeFeeMode))
 
-  for (const client of clients) {
-    const processes = client.processes ?? []
-    for (const process of processes) {
-      // Pagos del proceso que caen en el mes objetivo, ordenados por fecha.
-      const monthPayments = monthPaymentsOf(process, monthKey)
-
-      if (monthPayments.length === 0) continue
-
-      const stateAbbr = (process.state ?? '').toUpperCase()
-      const stateFee = stateAbbr ? stateFeeByAbbr.get(stateAbbr) ?? 0 : 0
-
-      const account: ReportAccount = {
-        // Cada registro de LLC es una compañía distinta: se reporta la del
-        // proceso, no la del cliente.
-        // Un registro sin nombre propio no toma `client.llc_name` (sería la
-        // compañía de otro registro); los demás procesos sí son de esa compañía.
-        company:
-          (process.type === 'registration'
-            ? getProcessCompanyName(client, process)
-            : client.llc_name?.trim()) || getClientDisplayName(client),
-        purchase: getProcessLabel(process),
-        state: process.state ?? '',
-        stateFee,
-        registeredAgent: 0,
-        hasRegisteredAgent: hasRegisteredAgent(process),
-        owner: getClientDisplayName(client),
-        payments: monthPayments.map(({ payment, date }) => ({
-          date,
-          charge: payment.amount,
-          // La comisión de Stripe solo aplica a los pagos hechos con Stripe.
-          stripeFee:
-            payment.method === 'stripe' ? estimateStripeFee(payment.amount, stripeFeeMode) : 0,
-        })),
-      }
-      entries.push({ saleTime: getProcessSaleDate(process)!.getTime(), account })
+    return {
+      date: sale.saleDate,
+      // Cada registro de LLC es una compañía distinta: se reporta la del
+      // proceso, no la del cliente.
+      // Un registro sin nombre propio no toma `client.llc_name` (sería la
+      // compañía de otro registro); los demás procesos sí son de esa compañía.
+      company:
+        (process.type === 'registration'
+          ? getProcessCompanyName(client, process)
+          : client.llc_name?.trim()) || getClientDisplayName(client),
+      purchase: getProcessLabel(process),
+      state: process.state ?? '',
+      charge: sale.charge,
+      stateFee: stateAbbr ? stateFeeByAbbr.get(stateAbbr) ?? 0 : 0,
+      registeredAgent: 0,
+      hasRegisteredAgent: hasRegisteredAgent(process),
+      stripeFee: sumMoney(stripeFees),
+      owner: getClientDisplayName(client),
     }
-  }
+  })
 
-  // Orden por fecha de venta (y, a igual fecha, por el primer pago).
-  entries.sort(
-    (a, b) =>
-      a.saleTime - b.saleTime ||
-      a.account.payments[0].date.getTime() - b.account.payments[0].date.getTime()
-  )
+  return { monthLabel, accounts, expenses, taxRate }
+}
 
-  return { monthLabel, accounts: entries.map((e) => e.account), expenses, taxRate }
+/** Venta con saldo pendiente: su CHARGE incluye un monto proyectado. */
+export interface ProjectedSale {
+  label: string
+  pending: number
+  /** El saldo se proyectó como pago con Stripe (método del primer pago). */
+  stripe: boolean
 }
 
 /**
  * Resumen ligero para mostrar en la UI antes de exportar (sin construir el
- * workbook): cuántas cuentas y pagos entran en el mes y el total cobrado.
+ * workbook): cuántas ventas entran en el mes, cuánto suman y qué falta cobrar.
  */
 export interface ReportPreview {
   accountCount: number
-  paymentCount: number
+  /** Suma de CHARGE: lo vendido en el mes, cobrado o no. */
   totalCharge: number
-  /** Cuentas del mes sin estado en el proceso: su state fee sale en 0. */
+  /** Parte de `totalCharge` que falta cobrar (proyectada). */
+  totalPending: number
+  /** Ventas del mes sin estado en el proceso: su state fee sale en 0. */
   missingState: string[]
+  projected: ProjectedSale[]
 }
 
-export function previewReport(
-  clients: Client[],
-  monthKey: string
-): ReportPreview {
-  let accountCount = 0
-  let paymentCount = 0
-  let totalCharge = 0
-  const missingState: string[] = []
-
-  for (const client of clients) {
-    for (const process of client.processes ?? []) {
-      const monthPayments = monthPaymentsOf(process, monthKey)
-      if (monthPayments.length === 0) continue
-      accountCount += 1
-      paymentCount += monthPayments.length
-      totalCharge = sumMoney([totalCharge, ...monthPayments.map(({ payment }) => payment.amount)])
-      if (!process.state) {
-        missingState.push(`${getClientDisplayName(client)} — ${getProcessLabel(process)}`)
-      }
-    }
+export function previewReport(clients: Client[], monthKey: string): ReportPreview {
+  const sales = monthSalesOf(clients, monthKey)
+  return {
+    accountCount: sales.length,
+    totalCharge: sumMoney(sales.map((s) => s.charge)),
+    totalPending: sumMoney(sales.map((s) => s.pending)),
+    missingState: sales.filter((s) => !s.process.state).map(saleLabel),
+    projected: sales
+      .filter((s) => s.pending > 0)
+      .map((s) => ({ label: saleLabel(s), pending: s.pending, stripe: projectsStripe(s) })),
   }
-
-  return { accountCount, paymentCount, totalCharge, missingState }
 }

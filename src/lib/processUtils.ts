@@ -123,9 +123,9 @@ export function localDateKey(d: Date): string {
 
 /**
  * Fecha de venta del proceso: el mes en que el reporte de ventas lo cuenta.
- * `sold_at` si el agente la fijó; si no, la más temprana entre la creación del
- * proceso y su primer pago (los procesos migrados tienen `created_at` tardío,
- * y un proceso capturado tarde puede tener un pago anterior a su creación).
+ * `sold_at` si el agente la fijó (una venta cerrada antes de su primer pago o
+ * capturada tarde); si no, la fecha del primer pago. `created_at` NO sirve: un
+ * proceso se agrega al cotizar a un prospecto, a veces un mes antes de venderse.
  */
 export function getProcessSaleDate(process: ClientProcess): Date | null {
   const sold = /^(\d{4})-(\d{2})-(\d{2})$/.exec(process.sold_at ?? '')
@@ -133,15 +133,12 @@ export function getProcessSaleDate(process: ClientProcess): Date | null {
     const d = new Date(Number(sold[1]), Number(sold[2]) - 1, Number(sold[3]))
     if (!isNaN(d.getTime())) return d
   }
-  const candidates: Date[] = []
-  const created = process.created_at
-  if (created && typeof created.toDate === 'function') candidates.push(created.toDate())
+  let first: Date | null = null
   for (const p of process.payments ?? []) {
     const d = parsePaymentDate(p.date)
-    if (d) candidates.push(d)
+    if (d && (!first || d.getTime() < first.getTime())) first = d
   }
-  if (candidates.length === 0) return null
-  return candidates.reduce((min, d) => (d.getTime() < min.getTime() ? d : min))
+  return first
 }
 
 /**
