@@ -20,6 +20,7 @@ import {
 import { PROCESSES } from '@/data/processes'
 import type { ClientProcess, ProcessType, StateInfo } from '@/types'
 import { UPPERCASE_INPUT_CLASS } from '@/lib/clientUtils'
+import { localDateKey } from '@/lib/processUtils'
 
 interface AddProcessDialogProps {
   open: boolean
@@ -49,6 +50,9 @@ export default function AddProcessDialog({
   const [pickedState, setStateAbbr] = useState<string | null>(null)
   const stateAbbr = pickedState ?? defaultState ?? ''
   const [llcName, setLlcName] = useState('')
+  // Fecha de venta: hoy por defecto; se cambia si se captura una venta pasada.
+  const [soldAt, setSoldAt] = useState('')
+  const today = localDateKey(new Date())
 
   const isCustom = type === 'custom'
   const isRegistration = type === 'registration'
@@ -65,6 +69,7 @@ export default function AddProcessDialog({
     setCustomLabel('')
     setStateAbbr(null)
     setLlcName('')
+    setSoldAt('')
   }
 
   const handleAdd = () => {
@@ -75,6 +80,7 @@ export default function AddProcessDialog({
       payments: [],
       stage: 'pendiente',
       created_at: Timestamp.now(),
+      sold_at: /^\d{4}-\d{2}-\d{2}$/.test(soldAt) && soldAt <= today ? soldAt : today,
       ...(isCustom ? { custom_label: customLabel.trim() } : {}),
       ...(stateAbbr ? { state: stateAbbr } : {}),
       ...(isRegistration && llcName.trim() ? { llc_name: llcName.trim() } : {}),
@@ -156,6 +162,20 @@ export default function AddProcessDialog({
               </p>
             </div>
           )}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="process-sold-at">Fecha de venta</Label>
+            <Input
+              id="process-sold-at"
+              type="date"
+              max={today}
+              value={soldAt || today}
+              onChange={(e) => setSoldAt(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              El reporte de ventas cuenta el proceso en este mes, aunque se cobre después.
+            </p>
+          </div>
 
           <div className="space-y-1.5">
             <Label>Estado</Label>

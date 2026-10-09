@@ -168,6 +168,7 @@ interface ClientProcess {
   business_address?: string
   business_purpose?: string
   notes?: string
+  sold_at?: string           // fecha de venta (yyyy-MM-dd): mes en que la cuenta el reporte
   created_at: Timestamp
 }
 ```

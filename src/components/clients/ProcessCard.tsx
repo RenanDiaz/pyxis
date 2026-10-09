@@ -25,7 +25,9 @@ import {
   getFieldValue,
   formatFieldValue,
   getSuggestedPrice,
+  getProcessSaleDate,
   hasRegisteredAgent,
+  localDateKey,
   PROCESS_STAGE_LABELS,
 } from '@/lib/processUtils'
 import {
@@ -68,6 +70,23 @@ export default function ProcessCard({
   // Solo el primer registro hereda los datos de compañía del cliente; los demás
   // muestran únicamente los suyos para no repetir la misma compañía en cada card.
   const inheritsCompany = inheritsClientCompany(client, process)
+
+  // Fecha de venta: borrador local mientras se edita; se guarda al salir del campo.
+  const [soldAt, setSoldAt] = useState<string | null>(null)
+  const saleDate = getProcessSaleDate(process)
+  const savedSoldAt = saleDate ? localDateKey(saleDate) : ''
+  const currentSoldAt = soldAt ?? savedSoldAt
+  const today = localDateKey(new Date())
+
+  const saveSoldAt = async () => {
+    if (soldAt === null) return
+    // Fecha incompleta, futura o sin cambios: se descarta el borrador.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(soldAt) || soldAt > today || soldAt === process.sold_at) {
+      setSoldAt(null)
+      return
+    }
+    if (await updateProcess({ sold_at: soldAt }, 'Fecha de venta actualizada')) setSoldAt(null)
+  }
 
   const [notes, setNotes] = useState<string | null>(null)
   const currentNotes = notes ?? process.notes ?? ''
@@ -158,6 +177,21 @@ export default function ProcessCard({
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="flex items-center gap-2 pt-1">
+          <Label htmlFor={`sold-at-${process.id}`} className="text-xs font-normal text-muted-foreground">
+            Venta
+          </Label>
+          <Input
+            id={`sold-at-${process.id}`}
+            type="date"
+            max={today}
+            className="h-8 w-[160px]"
+            value={currentSoldAt}
+            onChange={(e) => setSoldAt(e.target.value)}
+            onBlur={saveSoldAt}
+            title="Mes en que el reporte de ventas cuenta este proceso"
+          />
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
