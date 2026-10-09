@@ -34,8 +34,22 @@ import { getClientDisplayName } from '@/lib/clientUtils'
 import { startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
+import { useFormDraft } from '@/hooks/useFormDraft'
+import { draftKey, readDraft } from '@/lib/formDraft'
+import DraftBanner from '@/components/shared/DraftBanner'
 
 type FilterTab = 'todas' | 'pendientes' | 'hoy' | 'semana'
+
+interface NewCallDraft {
+  clientId: string
+  date: string
+  time: string
+  notes: string
+}
+
+const EMPTY_CALL: NewCallDraft = { clientId: '', date: '', time: '', notes: '' }
+const NEW_CALL_FORM_ID = 'schedule:new-call'
 
 function getDateFilters(tab: FilterTab) {
   const now = new Date()
@@ -51,7 +65,14 @@ function getDateFilters(tab: FilterTab) {
 
 export default function Schedule() {
   const [tab, setTab] = useState<FilterTab>('todas')
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const { user } = useAuth()
+  // Si quedó un borrador de "Agendar llamada" (recarga, cierre del navegador),
+  // se reabre el modal con lo que se había escrito.
+  const [storedCall] = useState(() =>
+    user ? readDraft<NewCallDraft>(draftKey(user.uid, NEW_CALL_FORM_ID)) : null,
+  )
+  const [callDraftSavedAt, setCallDraftSavedAt] = useState(storedCall?.savedAt ?? null)
+  const [dialogOpen, setDialogOpen] = useState(!!storedCall)
 
   const dateFilters = getDateFilters(tab)
   const { data: calls, isLoading } = useCalls({
@@ -61,10 +82,25 @@ export default function Schedule() {
   const { data: clients } = useClients()
 
   // New call form state
-  const [newCallClientId, setNewCallClientId] = useState('')
-  const [newCallDate, setNewCallDate] = useState('')
-  const [newCallTime, setNewCallTime] = useState('')
-  const [newCallNotes, setNewCallNotes] = useState('')
+  const restoredCall = storedCall?.data ?? EMPTY_CALL
+  const [newCallClientId, setNewCallClientId] = useState(restoredCall.clientId)
+  const [newCallDate, setNewCallDate] = useState(restoredCall.date)
+  const [newCallTime, setNewCallTime] = useState(restoredCall.time)
+  const [newCallNotes, setNewCallNotes] = useState(restoredCall.notes)
+  const callDraft = useFormDraft<NewCallDraft>({
+    formId: NEW_CALL_FORM_ID,
+    value: { clientId: newCallClientId, date: newCallDate, time: newCallTime, notes: newCallNotes },
+    initial: EMPTY_CALL,
+  })
+
+  const resetNewCall = () => {
+    setNewCallClientId('')
+    setNewCallDate('')
+    setNewCallTime('')
+    setNewCallNotes('')
+    setCallDraftSavedAt(null)
+    callDraft.clear()
+  }
   const createCallMutation = useCreateCall()
   const updateCallMutation = useUpdateCall()
 
@@ -83,10 +119,7 @@ export default function Schedule() {
       })
       toast.success('Llamada agendada')
       setDialogOpen(false)
-      setNewCallClientId('')
-      setNewCallDate('')
-      setNewCallTime('')
-      setNewCallNotes('')
+      resetNewCall()
     } catch {
       toast.error('Error al agendar llamada')
     }
@@ -119,6 +152,9 @@ export default function Schedule() {
               <DialogTitle>Agendar llamada</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-2">
+              {callDraftSavedAt && (
+                <DraftBanner savedAt={callDraftSavedAt} onDiscard={resetNewCall} />
+              )}
               <div>
                 <Label>Cliente</Label>
                 <Select value={newCallClientId} onValueChange={setNewCallClientId}>

@@ -4,6 +4,9 @@ import { useClient, useCreateClient, useUpdateClient, useFindClientsByPhone } fr
 import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useAssignableMembers } from '@/hooks/useWorkspace'
+import { useFormDraft } from '@/hooks/useFormDraft'
+import { useAuth } from '@/contexts/AuthContext'
+import { draftKey, readDraft } from '@/lib/formDraft'
 import clientFormConfig from '@/data/client_form.json'
 import {
   getProcessLabel,
@@ -19,6 +22,7 @@ import {
   type CompanyClient,
 } from '@/lib/companyUtils'
 import AddProcessDialog from '@/components/clients/AddProcessDialog'
+import DraftBanner from '@/components/shared/DraftBanner'
 import { getStateByAreaCode } from '@/lib/areaCodeMap'
 import { formatPhoneForDisplay, isValidPhone } from '@/lib/phoneUtils'
 import { CLIENT_UPPERCASE_FIELD_IDS, PARTNER_UPPERCASE_FIELD_IDS } from '@/lib/clientUtils'
@@ -45,11 +49,139 @@ import { toast } from 'sonner'
 
 type FormData = Record<string, string>
 
-export default function ClientForm() {
+/** Estado editable del formulario; es lo que se guarda como borrador. */
+interface ClientFormSnapshot {
+  formData: FormData
+  phones: ClientPhone[]
+  partners: Partner[]
+  processes: ClientProcess[]
+  status: ClientStatus
+}
+
+const EMPTY_SNAPSHOT: ClientFormSnapshot = {
+  formData: {},
+  phones: [{ number: '', label: 'personal', is_primary: true }],
+  partners: [],
+  processes: [],
+  status: 'nuevo',
+}
+
+function snapshotFromClient(client: Client): ClientFormSnapshot {
+  const formData: FormData = {}
+  for (const field of clientFormConfig.fields) {
+    const value = client[field.id as keyof Client]
+    const str = typeof value === 'string' ? value : ''
+    formData[field.id] = CLIENT_UPPERCASE_FIELD_IDS.has(field.id) ? str.toUpperCase() : str
+  }
+  const phones = client.phones?.length
+    ? client.phones
+    : client.phone
+      ? [{ number: client.phone, label: 'personal' as const, is_primary: true }]
+      : EMPTY_SNAPSHOT.phones
+  // Uppercase text fields for visual consistency with what is saved
+  const partners = (client.partners ?? []).map((p) => ({
+    ...p,
+    first_name: p.first_name?.toUpperCase() ?? '',
+    last_name: p.last_name?.toUpperCase() ?? '',
+    ssn_itin: p.ssn_itin?.toUpperCase(),
+    address: p.address?.toUpperCase(),
+  }))
+  return { formData, phones, partners, processes: client.processes ?? [], status: client.status }
+}
+
+// El SSN/ITIN nunca se guarda en localStorage. Los campos vacíos se omiten para
+// que borrar lo escrito cuente como "sin cambios".
+function toDraftSnapshot(snapshot: ClientFormSnapshot): ClientFormSnapshot {
+  const formData = Object.fromEntries(
+    Object.entries(snapshot.formData).filter(([key, value]) => key !== 'ssn_itin' && value.trim() !== ''),
+  )
+  const partners = snapshot.partners.map((p) => {
+    const copy = { ...p }
+    delete copy.ssn_itin
+    return copy
+  })
+  return { ...snapshot, formData, partners }
+}
+
+// Al restaurar sobre un cliente existente, el SSN/ITIN se toma del original.
+function withSensitiveFrom(draft: ClientFormSnapshot, source: ClientFormSnapshot): ClientFormSnapshot {
+  const ssn = source.formData.ssn_itin
+  return {
+    ...draft,
+    formData: ssn ? { ...draft.formData, ssn_itin: ssn } : draft.formData,
+    partners: draft.partners.map((p, i) => {
+      const src = source.partners[i]
+      return src?.ssn_itin && src.first_name === p.first_name && src.last_name === p.last_name
+        ? { ...p, ssn_itin: src.ssn_itin }
+        : p
+    }),
+  }
+}
+
+const DRAFT_NOTE = 'Por seguridad, el SSN/ITIN no se guarda en el borrador.'
+
+interface DraftNotice {
+  savedAt: number
+  conflict: boolean
+  data: ClientFormSnapshot
+}
+
+/** Datos con los que arranca el formulario, incluido un borrador previo si existe. */
+interface FormBoot {
+  start: ClientFormSnapshot
+  /** `updated_at` del cliente al abrir el formulario (para detectar conflictos). */
+  version: number | null
+  /** Lo que se muestra al abrir: el borrador restaurado o `start`. */
+  shown: ClientFormSnapshot
+  notice: DraftNotice | null
+}
+
+function bootForm(uid: string | undefined, formId: string, client: Client | null): FormBoot {
+  const start = client ? snapshotFromClient(client) : EMPTY_SNAPSHOT
+  const version = client?.updated_at?.toMillis?.() ?? null
+  const stored = uid ? readDraft<ClientFormSnapshot>(draftKey(uid, formId)) : null
+  if (!stored) return { start, version, shown: start, notice: null }
+  // Editando: si el cliente cambió después del borrador (pagos, etapa,
+  // reasignación…), restaurarlo a ciegas pisaría esos cambios.
+  const conflict = !!client && stored.base !== version
+  return {
+    start,
+    version,
+    shown: conflict ? start : withSensitiveFrom(stored.data, start),
+    notice: { savedAt: stored.savedAt, conflict, data: stored.data },
+  }
+}
+
+// Carga el cliente y monta el formulario una sola vez por registro: un refetch
+// (foco de ventana, invalidación) no debe pisar lo que el usuario está editando,
+// y cambiar de cliente (o entre nuevo/editar) remonta sin arrastrar estado.
+export default function ClientFormPage() {
+  const { id } = useParams<{ id: string }>()
+  const { data: existingClient, isLoading } = useClient(id)
+
+  if (id && isLoading) {
+    return <p className="text-muted-foreground">Cargando...</p>
+  }
+
+  if (id && !existingClient) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Cliente no encontrado</p>
+        <Link to="/clientes" className="text-primary underline mt-2 inline-block">
+          Volver a clientes
+        </Link>
+      </div>
+    )
+  }
+
+  return <ClientForm key={id ?? 'new'} existingClient={existingClient ?? null} />
+}
+
+function ClientForm({ existingClient }: { existingClient: Client | null }) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const isEditing = !!id
-  const { data: existingClient, isLoading: clientLoading } = useClient(id)
+  const { user } = useAuth()
   const { data: states } = useStates()
   const { role, workspaceId, wsCtx } = useUserProfile()
   const createMutation = useCreateClient()
@@ -70,54 +202,52 @@ export default function ClientForm() {
     }
   }, [canAssign, wsCtx, selectedAgentUid])
 
-  const [formData, setFormData] = useState<FormData>({})
-  const [phones, setPhones] = useState<ClientPhone[]>([
-    { number: '', label: 'personal', is_primary: true },
-  ])
-  const [partners, setPartners] = useState<Partner[]>([])
-  const [processes, setProcesses] = useState<ClientProcess[]>([])
+  // Borrador en localStorage: se autoguarda mientras se edita y se restaura al
+  // volver al formulario tras recargar o cerrar el navegador.
+  const formId = isEditing ? `client-form:edit:${id}` : 'client-form:new'
+  const [boot] = useState(() => bootForm(user?.uid, formId, existingClient))
+  const [draftNotice, setDraftNotice] = useState<DraftNotice | null>(boot.notice)
+
+  const [formData, setFormData] = useState<FormData>(boot.shown.formData)
+  const [phones, setPhones] = useState<ClientPhone[]>(boot.shown.phones)
+  const [partners, setPartners] = useState<Partner[]>(boot.shown.partners)
+  const [processes, setProcesses] = useState<ClientProcess[]>(boot.shown.processes)
   const [showAddProcess, setShowAddProcess] = useState(false)
-  const [status, setStatus] = useState<ClientStatus>('nuevo')
-  const stateManuallySet = useRef(false)
+  const [status, setStatus] = useState<ClientStatus>(boot.shown.status)
+  const stateManuallySet = useRef(!!boot.shown.formData.state)
   const [stateAutoDetected, setStateAutoDetected] = useState(false)
 
-  useEffect(() => {
-    if (existingClient) {
-      const data: FormData = {}
-      for (const field of clientFormConfig.fields) {
-        const value = existingClient[field.id as keyof typeof existingClient]
-        const str = typeof value === 'string' ? value : ''
-        data[field.id] = CLIENT_UPPERCASE_FIELD_IDS.has(field.id) ? str.toUpperCase() : str
-      }
-      setFormData(data)
-      setStatus(existingClient.status)
-      if (data.state) stateManuallySet.current = true
+  const initialDraft = useMemo(() => toDraftSnapshot(boot.start), [boot])
+  const draft = useFormDraft({
+    formId,
+    value: toDraftSnapshot({ formData, phones, partners, processes, status }),
+    // Mientras el usuario no decide qué hacer con un borrador en conflicto, no
+    // se sobrescribe.
+    initial: draftNotice?.conflict ? null : initialDraft,
+    base: boot.version,
+  })
 
-      // Load phones
-      if (existingClient.phones?.length) {
-        setPhones(existingClient.phones)
-      } else if (existingClient.phone) {
-        setPhones([{ number: existingClient.phone, label: 'personal', is_primary: true }])
-      }
+  const applySnapshot = (snapshot: ClientFormSnapshot) => {
+    setFormData(snapshot.formData)
+    setPhones(snapshot.phones)
+    setPartners(snapshot.partners)
+    setProcesses(snapshot.processes)
+    setStatus(snapshot.status)
+    stateManuallySet.current = !!snapshot.formData.state
+    setStateAutoDetected(false)
+  }
 
-      if (existingClient.processes?.length) {
-        setProcesses(existingClient.processes)
-      }
+  const restoreDraft = () => {
+    if (!draftNotice) return
+    applySnapshot(withSensitiveFrom(draftNotice.data, boot.start))
+    setDraftNotice({ ...draftNotice, conflict: false })
+  }
 
-      // Load partners (uppercase text fields for visual consistency with what is saved)
-      if (existingClient.partners?.length) {
-        setPartners(
-          existingClient.partners.map((p) => ({
-            ...p,
-            first_name: p.first_name?.toUpperCase() ?? '',
-            last_name: p.last_name?.toUpperCase() ?? '',
-            ssn_itin: p.ssn_itin?.toUpperCase(),
-            address: p.address?.toUpperCase(),
-          })),
-        )
-      }
-    }
-  }, [existingClient])
+  const discardDraft = () => {
+    if (!draftNotice?.conflict) applySnapshot(boot.start)
+    draft.clear()
+    setDraftNotice(null)
+  }
 
   // Auto-detect state from primary phone's area code
   useEffect(() => {
@@ -236,8 +366,9 @@ export default function ClientForm() {
       phone: formatPhoneForDisplay(primaryPhone.number.trim()),
       phones: cleanPhones,
       status,
-      notes: isEditing ? (existingClient?.notes || '') : '',
-      ...(!isEditing && { archived: false }),
+      // Al editar no se reenvían las notas: se gestionan en el detalle y
+      // mandarlas aquí pisaría las agregadas mientras el formulario estaba abierto.
+      ...(!isEditing && { notes: '', archived: false }),
     }
 
     // Only include non-empty optional fields
@@ -269,6 +400,7 @@ export default function ClientForm() {
           clientData.status = newStatus
         }
         await updateMutation.mutateAsync({ id, data: clientData as Partial<Client> })
+        draft.clear()
         toast.success('Cliente actualizado')
         navigate(`/clientes/${id}`)
       } else {
@@ -283,18 +415,13 @@ export default function ClientForm() {
           data: clientData as Omit<Client, 'id' | 'created_at' | 'updated_at' | 'owner_uid' | 'subteam_id'>,
           assignTo,
         })
+        draft.clear()
         toast.success('Cliente creado')
         navigate(`/clientes/${newId}`)
       }
     } catch {
       toast.error('Error al guardar el cliente')
     }
-  }
-
-  const formReady = !isEditing || (!!existingClient && Object.keys(formData).length > 0)
-
-  if (isEditing && (clientLoading || !formReady)) {
-    return <p className="text-muted-foreground">Cargando...</p>
   }
 
   // Vista del cliente en borrador para resolver la compañía de cada registro.
@@ -334,6 +461,16 @@ export default function ClientForm() {
           {isEditing ? 'Editar cliente' : 'Nuevo cliente'}
         </h1>
       </div>
+
+      {draftNotice && (
+        <DraftBanner
+          savedAt={draftNotice.savedAt}
+          conflict={draftNotice.conflict}
+          onRestore={restoreDraft}
+          onDiscard={discardDraft}
+          note={DRAFT_NOTE}
+        />
+      )}
 
       <div className="grid gap-6 md:grid-cols-[1fr_320px]">
         <Card>
@@ -651,7 +788,7 @@ export default function ClientForm() {
                 </div>
               )}
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-wrap items-center gap-3 pt-4">
                 <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
                   {createMutation.isPending || updateMutation.isPending
                     ? 'Guardando...'
@@ -660,8 +797,13 @@ export default function ClientForm() {
                       : 'Crear cliente'}
                 </Button>
                 <Button type="button" variant="outline" asChild>
-                  <Link to={isEditing ? `/clientes/${id}` : '/clientes'}>Cancelar</Link>
+                  <Link to={isEditing ? `/clientes/${id}` : '/clientes'} onClick={draft.clear}>
+                    Cancelar
+                  </Link>
                 </Button>
+                {draft.savedAt && (
+                  <span className="text-xs text-muted-foreground">Borrador guardado en este navegador</span>
+                )}
               </div>
             </form>
           </CardContent>

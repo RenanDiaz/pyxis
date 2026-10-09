@@ -5,6 +5,9 @@ import { useCalls, useCreateCall } from '@/hooks/useCalls'
 import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useAuth } from '@/contexts/AuthContext'
+import { useFormDraft } from '@/hooks/useFormDraft'
+import { draftKey, readDraft } from '@/lib/formDraft'
+import DraftBanner from '@/components/shared/DraftBanner'
 import { getClientPaymentSummary } from '@/lib/processUtils'
 import { formatMoney } from '@/lib/format'
 import StatusSelect from '@/components/clients/StatusSelect'
@@ -59,6 +62,115 @@ function stripSystemNotePrefix(line: string): string {
   return line.replace(SYSTEM_NOTE_PREFIX_RE, '')
 }
 
+interface NotesDraftNotice {
+  savedAt: number
+  conflict: boolean
+  data: string
+}
+
+function ClientNotesCard({ client }: { client: Client }) {
+  const { user } = useAuth()
+  const updateMutation = useUpdateClient()
+  const savedNotes = client.notes ?? ''
+
+  // Borrador de las notas: si se recarga o se cierra el navegador antes de
+  // "Guardar notas", lo escrito se recupera al volver al cliente.
+  const formId = `client-notes:${client.id}`
+  const [draftNotice, setDraftNotice] = useState<NotesDraftNotice | null>(() => {
+    const stored = user ? readDraft<string>(draftKey(user.uid, formId)) : null
+    if (!stored || stored.data === savedNotes) return null
+    // Si las notas guardadas cambiaron después del borrador (p. ej. una
+    // reasignación), restaurarlo las pisaría: se pregunta antes.
+    return { savedAt: stored.savedAt, conflict: stored.base !== savedNotes, data: stored.data }
+  })
+  const [notes, setNotes] = useState<string | null>(() =>
+    draftNotice && !draftNotice.conflict ? draftNotice.data : null,
+  )
+  const currentNotes = notes ?? savedNotes
+  const draft = useFormDraft({
+    formId,
+    value: currentNotes,
+    initial: draftNotice?.conflict ? null : savedNotes,
+    base: savedNotes,
+  })
+
+  const handleSaveNotes = async () => {
+    if (notes === null) return
+    try {
+      await updateMutation.mutateAsync({ id: client.id, data: { notes } })
+      draft.clear()
+      setDraftNotice(null)
+      toast.success('Notas guardadas')
+    } catch {
+      toast.error('No se pudieron guardar las notas')
+    }
+  }
+
+  const restoreDraft = () => {
+    if (!draftNotice) return
+    setNotes(draftNotice.data)
+    setDraftNotice({ ...draftNotice, conflict: false })
+  }
+
+  const discardDraft = () => {
+    if (!draftNotice?.conflict) setNotes(null)
+    draft.clear()
+    setDraftNotice(null)
+  }
+
+  const systemLines = currentNotes.split('\n').filter((line) => isSystemNoteLine(line))
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium text-muted-foreground">Notas</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {draftNotice && (
+          <DraftBanner
+            savedAt={draftNotice.savedAt}
+            conflict={draftNotice.conflict}
+            onRestore={restoreDraft}
+            onDiscard={discardDraft}
+          />
+        )}
+        {/* System notes (reassignment history) */}
+        {systemLines.length > 0 && (
+          <div className="space-y-1.5">
+            {systemLines.map((line, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-2 rounded-md border border-muted bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+              >
+                <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>{stripSystemNotePrefix(line)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <Textarea
+          value={currentNotes}
+          onChange={(e) => setNotes(e.target.value.toUpperCase())}
+          placeholder="Escribe notas sobre el cliente..."
+          rows={6}
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            size="sm"
+            onClick={handleSaveNotes}
+            disabled={notes === null || notes === savedNotes || updateMutation.isPending}
+          >
+            Guardar notas
+          </Button>
+          {draft.savedAt && (
+            <span className="text-xs text-muted-foreground">Borrador guardado en este navegador</span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -70,7 +182,8 @@ export default function ClientDetail() {
   const updateMutation = useUpdateClient()
   const deleteMutation = useDeleteClient()
   const createCallMutation = useCreateCall()
-  const [notes, setNotes] = useState<string | null>(null)
+  // Al reasignar se agregan notas de sistema: remonta el card de notas.
+  const [notesResetKey, setNotesResetKey] = useState(0)
 
   const showAgent = role === 'owner' || role === 'supervisor'
   const { data: members } = useWorkspaceMembers(showAgent ? workspaceId : null)
@@ -106,12 +219,6 @@ export default function ClientDetail() {
   const handleStatusChange = async (status: ClientStatus) => {
     await updateMutation.mutateAsync({ id: client.id, data: { status } })
     toast.success('Status actualizado')
-  }
-
-  const handleSaveNotes = async () => {
-    if (notes === null) return
-    await updateMutation.mutateAsync({ id: client.id, data: { notes } })
-    toast.success('Notas guardadas')
   }
 
   const handleDelete = async () => {
@@ -178,7 +285,7 @@ export default function ClientDetail() {
         notes: updatedNotes,
       },
     })
-    setNotes(null)
+    setNotesResetKey((k) => k + 1)
     setShowReassign(false)
     setReassignUid('')
     toast.success(`Cliente reasignado a ${newAgent.display_name}`)
@@ -234,7 +341,6 @@ export default function ClientDetail() {
     }
   }
 
-  const currentNotes = notes ?? client.notes ?? ''
   const clientProcesses = client.processes ?? []
   // Un documento Word por compañía: cada proceso de registro es una compañía.
   const registrations = getRegistrationProcesses(client)
@@ -601,43 +707,7 @@ export default function ClientDetail() {
             </Card>
           )}
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Notas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* System notes (reassignment history) */}
-              {currentNotes.split('\n').filter((line) => isSystemNoteLine(line)).length > 0 && (
-                <div className="space-y-1.5">
-                  {currentNotes
-                    .split('\n')
-                    .filter((line) => isSystemNoteLine(line))
-                    .map((line, i) => (
-                      <div
-                        key={i}
-                        className="flex items-start gap-2 rounded-md border border-muted bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
-                      >
-                        <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                        <span>{stripSystemNotePrefix(line)}</span>
-                      </div>
-                    ))}
-                </div>
-              )}
-              <Textarea
-                value={currentNotes}
-                onChange={(e) => setNotes(e.target.value.toUpperCase())}
-                placeholder="Escribe notas sobre el cliente..."
-                rows={6}
-              />
-              <Button
-                size="sm"
-                onClick={handleSaveNotes}
-                disabled={notes === null || updateMutation.isPending}
-              >
-                Guardar notas
-              </Button>
-            </CardContent>
-          </Card>
+          <ClientNotesCard key={`${client.id}:${notesResetKey}`} client={client} />
         </div>
 
         {/* Right column: processes (with payments), documents, call history */}

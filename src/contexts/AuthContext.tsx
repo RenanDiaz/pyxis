@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth'
 import { auth, isFirebaseConfigured } from '@/lib/firebase'
 import { getUserProfile, createUserProfile } from '@/lib/firestore'
+import { clearUserDrafts, pruneExpiredDrafts } from '@/lib/formDraft'
 
 interface AuthContextType {
   user: User | null
@@ -47,6 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(isFirebaseConfigured)
 
   useEffect(() => {
+    pruneExpiredDrafts()
+  }, [])
+
+  useEffect(() => {
     if (!isFirebaseConfigured || !auth) return
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -74,6 +79,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
+    // Los borradores tienen datos de clientes: no deben quedar en un navegador
+    // compartido después de cerrar sesión.
+    if (user) clearUserDrafts(user.uid)
     if (!isFirebaseConfigured || !auth) {
       setUser(null)
       return
