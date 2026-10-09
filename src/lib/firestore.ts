@@ -3,6 +3,7 @@ import {
   doc,
   getDocs,
   getDoc,
+  getCountFromServer,
   setDoc,
   addDoc,
   updateDoc,
@@ -470,12 +471,18 @@ export async function getUpcomingCalls(ctx: WorkspaceCtx, max: number = 5): Prom
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Call))
 }
 
-export async function getOverdueCalls(ctx: WorkspaceCtx, max: number = 10): Promise<Call[]> {
+export async function getOverdueCalls(
+  ctx: WorkspaceCtx,
+  max: number = 10,
+  // La campana solo mira las vencidas recientes (spec 20).
+  since?: Date
+): Promise<Call[]> {
   if (!isFirebaseConfigured || !db) return []
   const now = Timestamp.now()
   const constraints: QueryConstraint[] = [
     ...addWorkspaceRoleConstraints(ctx),
     where('outcome', '==', 'pendiente'),
+    ...(since ? [where('scheduled_at', '>=', Timestamp.fromDate(since))] : []),
     where('scheduled_at', '<', now),
     orderBy('scheduled_at', 'desc'),
     limit(max),
@@ -483,6 +490,18 @@ export async function getOverdueCalls(ctx: WorkspaceCtx, max: number = 10): Prom
   const q = query(wsCol(ctx.workspaceId, 'calls'), ...constraints)
   const snapshot = await getDocs(q)
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Call))
+}
+
+/** Cuántas vencidas quedan antes de `before` (fuera de la ventana de la campana). */
+export async function countOverdueBefore(ctx: WorkspaceCtx, before: Date): Promise<number> {
+  if (!isFirebaseConfigured || !db) return 0
+  const q = query(
+    wsCol(ctx.workspaceId, 'calls'),
+    ...addWorkspaceRoleConstraints(ctx),
+    where('outcome', '==', 'pendiente'),
+    where('scheduled_at', '<', Timestamp.fromDate(before))
+  )
+  return (await getCountFromServer(q)).data().count
 }
 
 export async function getCall(workspaceId: string, id: string): Promise<Call | null> {

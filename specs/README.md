@@ -34,7 +34,7 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 | 17 | [Migración a Cloudflare y dominio propio](17-migracion-cloudflare.md) | 🔴 Alta | — | M |
 | 18 | [Links de pago con Stripe](18-links-de-pago-stripe.md) | 🟠 Alta | 17 | L |
 | 19 | [Llamadas a leads (sin crear cliente)](19-leads-agenda.md) | 🟠 Alta · ✅ | 08 (Agenda); 07 opcional | M |
-| 20 | [Notificaciones vencidas que nunca se borran (bug)](20-notificaciones-vencidas.md) | 🟠 Alta | 08, 19 | S |
+| 20 | [Notificaciones vencidas que nunca se borran (bug)](20-notificaciones-vencidas.md) | 🟠 Alta · ✅ | 08, 19 | S |
 | — | [Borradores de formularios](form-drafts.md) | ✅ Implementado | — | — |
 
 **Por qué este orden:** 01+02 cierran un hueco que permite tomar control de
