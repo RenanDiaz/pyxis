@@ -1,6 +1,6 @@
 # 19 — Llamadas a leads (sin crear cliente)
 
-**Prioridad:** 🟠 Alta (pedido de producción) · **Estado:** propuesto · **Tamaño:** M · **Relacionado:** [08](08-agenda.md) (Agenda), [07](07-duplicados-telefono.md) (teléfonos normalizados), [05](05-historial-status-metricas.md) (métricas)
+**Prioridad:** 🟠 Alta (pedido de producción) · **Estado:** implementado · **Tamaño:** M · **Relacionado:** [08](08-agenda.md) (Agenda), [07](07-duplicados-telefono.md) (teléfonos normalizados), [05](05-historial-status-metricas.md) (métricas)
 
 ## Problema
 Hoy toda llamada exige un `client_id`. Para agendar una llamada con alguien que
@@ -45,6 +45,54 @@ interface Call {
 - **Cuándo pasar a colección:** si el negocio pide un embudo de leads (lista,
   estados, fuente, conversión por agente), se migra a `leads/{id}` y las
   llamadas lo referencian. Ver P3.
+
+## Implementación (2026-10-09)
+- **Datos:**
+  - `Call.client_id: string | null`, más `CallLead` y `converted_client_id`
+    (`src/types`).
+  - Helpers puros en `src/lib/leads.ts`: `buildLead`, `phoneDigits`,
+    `getCallDisplayName`, `splitLeadName` y `findClientByPhone`, con tests.
+- **Reglas:** `validCallTarget` en create y update de `calls`. Tests: lead
+  válido; sin cliente ni lead; lead sin nombre o teléfono; cliente y lead a la
+  vez; visibilidad por rol; conversión; llamadas viejas.
+- **Agenda:**
+  - Toggle "Un cliente / Un lead (sin registrar)", con nombre, teléfono y
+    estado opcional.
+  - La zona horaria sale del estado del lead con el código de área (spec 13).
+  - Aviso "Este número ya es cliente" con "Agendar con este cliente".
+  - Owner y supervisor eligen a quién se asigna (P1): `createCall` acepta
+    `assignTo`.
+  - El borrador del modal guarda los datos del lead.
+- **Tarjetas:**
+  - Las llamadas a leads llevan el badge "Lead" y abren `LeadPanel`, con
+    teléfono, estado, Llamar, WhatsApp, "Agendar otra" y "Convertir en
+    cliente".
+  - Marcar una llamada a lead como `reagendada` abre el modal precargado.
+- **Inicio y campana:** muestran el nombre del lead y llevan a la Agenda,
+  porque un lead no tiene ficha.
+- **Conversión:**
+  - `/clientes/nuevo?fromCall={id}` precarga nombre, apellidos, teléfono y
+    estado. El status inicial es `contactado` si alguna llamada del lead está
+    completada, y el agente por defecto es el del lead.
+  - Al guardar, `convertLeadCalls` (`src/lib/leadConversion.ts`, con test de
+    emulador) pasa todas las llamadas visibles del lead al cliente nuevo.
+  - Si falla, o si el teléfono ya es de un cliente, `LeadPanel` ofrece
+    "Vincular llamadas a este cliente" en vez de "Convertir", para no duplicar
+    el cliente.
+- **Métricas:** `countContacted` ignora las llamadas a leads.
+- **Índices:** no hacen falta. La query de conversión usa solo igualdades
+  (`lead.phone_digits` más el filtro de rol), y Firestore las resuelve
+  combinando índices de un campo.
+
+### Decisiones
+- **P1:** sí, owner y supervisor asignan el lead a un agente.
+- **P2:** nombre y teléfono de 10 dígitos obligatorios; estado opcional.
+  Las notas del lead van en las notas de la llamada; `lead.notes` queda en el
+  modelo, pero la v1 no lo pide.
+- **P3:** sin lista de leads (embebido). Si se pide un embudo, se migra a una
+  colección `leads`.
+- `splitLeadName`: con 3 o más palabras, las 2 últimas son apellidos (lo usual
+  en nombres hispanos). El agente puede corregirlo en el formulario.
 
 ## Requisitos
 1. **Agendar a un lead** (Agenda → "Nueva llamada"):
@@ -125,16 +173,16 @@ interface Call {
   Se aplica en `create` y `update` de `calls`, con tests de emulador.
 
 ## Criterios de aceptación
-- [ ] Un agente agenda "Juan Pérez, 305-555-1234, FL" sin crear cliente.
+- [x] Un agente agenda "Juan Pérez, 305-555-1234, FL" sin crear cliente.
       `/clientes` no cambia y la Agenda la muestra con el badge "Lead".
-- [ ] La hora se captura en la zona del lead (FL → Eastern) y se muestran ambas horas.
-- [ ] Si ese teléfono ya es de un cliente visible, aparece el aviso con su nombre.
-- [ ] "Convertir en cliente" abre el formulario precargado. Al guardar, las 2
+- [x] La hora se captura en la zona del lead (FL → Eastern) y se muestran ambas horas.
+- [x] Si ese teléfono ya es de un cliente visible, aparece el aviso con su nombre.
+- [x] "Convertir en cliente" abre el formulario precargado. Al guardar, las 2
       llamadas del lead quedan vinculadas al cliente nuevo y salen en su historial.
-- [ ] Un agente no ve las llamadas a leads de otro agente: rules + test.
-- [ ] Una llamada con `client_id: null` sin `lead.name` es rechazada por las reglas.
-- [ ] Inicio, la campana y la Agenda no muestran "Cliente no disponible" para leads.
-- [ ] Un lead no aparece en los conteos de clientes nuevos.
+- [x] Un agente no ve las llamadas a leads de otro agente: rules + test.
+- [x] Una llamada con `client_id: null` sin `lead.name` es rechazada por las reglas.
+- [x] Inicio, la campana y la Agenda no muestran "Cliente no disponible" para leads.
+- [x] Un lead no aparece en los conteos de clientes nuevos.
 
 ## Preguntas abiertas
 - **P1:** ¿Un supervisor u owner también agenda a leads para sus agentes

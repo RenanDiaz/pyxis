@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useClient, useCreateClient, useUpdateClient, useFindClientsByPhone } from '@/hooks/useClients'
 import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
@@ -44,7 +45,11 @@ import StateClock from '@/components/states/StateClock'
 import { getStateTimezone } from '@/lib/timezones'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, Plus, X, AlertTriangle } from 'lucide-react'
-import type { Client, ClientStatus, ClientPhone, PhoneLabel, Partner, ClientProcess } from '@/types'
+import type { Call, CallLead, Client, ClientStatus, ClientPhone, PhoneLabel, Partner, ClientProcess } from '@/types'
+import { db } from '@/lib/firebase'
+import { getCall } from '@/lib/firestore'
+import { convertLeadCalls, convertedClientStatus, getLeadCalls } from '@/lib/leadConversion'
+import { isLeadCall, splitLeadName } from '@/lib/leads'
 import { toast } from 'sonner'
 import { deleteField } from 'firebase/firestore'
 
@@ -141,8 +146,32 @@ interface FormBoot {
   notice: DraftNotice | null
 }
 
-function bootForm(uid: string | undefined, formId: string, client: Client | null): FormBoot {
-  const start = client ? snapshotFromClient(client) : EMPTY_SNAPSHOT
+/** Lead que se convierte en cliente (spec 19). */
+interface LeadSource {
+  call: Call & { lead: CallLead }
+  /** Status inicial: contactado si ya hubo una llamada completada. */
+  status: ClientStatus
+}
+
+function snapshotFromLead({ call, status }: LeadSource): ClientFormSnapshot {
+  const { first_name, last_name } = splitLeadName(call.lead.name)
+  const formData: FormData = { first_name, last_name }
+  if (call.lead.state) formData.state = call.lead.state
+  return {
+    ...EMPTY_SNAPSHOT,
+    formData,
+    phones: [{ number: call.lead.phone, label: 'personal', is_primary: true }],
+    status,
+  }
+}
+
+function bootForm(
+  uid: string | undefined,
+  formId: string,
+  client: Client | null,
+  fromLead: LeadSource | null = null,
+): FormBoot {
+  const start = client ? snapshotFromClient(client) : fromLead ? snapshotFromLead(fromLead) : EMPTY_SNAPSHOT
   const version = client?.updated_at?.toMillis?.() ?? null
   const stored = uid ? readDraft<ClientFormSnapshot>(draftKey(uid, formId)) : null
   if (!stored) return { start, version, shown: start, notice: null }
@@ -163,8 +192,23 @@ function bootForm(uid: string | undefined, formId: string, client: Client | null
 export default function ClientFormPage() {
   const { id } = useParams<{ id: string }>()
   const { data: existingClient, isLoading } = useClient(id)
+  // "Convertir en cliente" desde un lead de la Agenda (spec 19).
+  const [searchParams] = useSearchParams()
+  const fromCall = id ? null : searchParams.get('fromCall')
+  const { wsCtx } = useUserProfile()
+  const { data: fromLead, isLoading: leadLoading } = useQuery({
+    queryKey: ['leadSource', wsCtx?.workspaceId, fromCall],
+    queryFn: async (): Promise<LeadSource | null> => {
+      const call = await getCall(wsCtx!.workspaceId, fromCall!)
+      if (!call || !isLeadCall(call)) return null
+      const leadCalls = await getLeadCalls(db!, wsCtx!, call.lead.phone_digits)
+      return { call, status: convertedClientStatus(leadCalls) }
+    },
+    enabled: !!fromCall && !!wsCtx && !!db,
+    staleTime: Infinity,
+  })
 
-  if (id && isLoading) {
+  if ((id && isLoading) || (fromCall && leadLoading)) {
     return <p className="text-muted-foreground">Cargando...</p>
   }
 
@@ -179,10 +223,22 @@ export default function ClientFormPage() {
     )
   }
 
-  return <ClientForm key={id ?? 'new'} existingClient={existingClient ?? null} />
+  return (
+    <ClientForm
+      key={id ?? (fromLead ? `lead:${fromLead.call.id}` : 'new')}
+      existingClient={existingClient ?? null}
+      fromLead={fromLead ?? null}
+    />
+  )
 }
 
-function ClientForm({ existingClient }: { existingClient: Client | null }) {
+function ClientForm({
+  existingClient,
+  fromLead,
+}: {
+  existingClient: Client | null
+  fromLead: LeadSource | null
+}) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const isEditing = !!id
@@ -199,14 +255,19 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
     wsCtx?.subteamId ?? null,
     wsCtx?.uid
   )
-  const [pickedAgentUid, setSelectedAgentUid] = useState<string>('')
+  // Al convertir un lead, el cliente queda por defecto con el agente del lead.
+  const [pickedAgentUid, setSelectedAgentUid] = useState<string>(fromLead?.call.owner_uid ?? '')
   // Por defecto, el usuario actual (derivado: sin effect que lo sincronice).
   const selectedAgentUid = pickedAgentUid || (canAssign && wsCtx ? wsCtx.uid : '')
 
   // Borrador en localStorage: se autoguarda mientras se edita y se restaura al
   // volver al formulario tras recargar o cerrar el navegador.
-  const formId = isEditing ? `client-form:edit:${id}` : 'client-form:new'
-  const [boot] = useState(() => bootForm(user?.uid, formId, existingClient))
+  const formId = isEditing
+    ? `client-form:edit:${id}`
+    : fromLead
+      ? `client-form:lead:${fromLead.call.id}`
+      : 'client-form:new'
+  const [boot] = useState(() => bootForm(user?.uid, formId, existingClient, fromLead))
   const [draftNotice, setDraftNotice] = useState<DraftNotice | null>(boot.notice)
 
   const [formData, setFormData] = useState<FormData>(boot.shown.formData)
@@ -420,7 +481,19 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
           assignTo,
         })
         draft.clear()
-        toast.success('Cliente creado')
+        if (fromLead && wsCtx && db) {
+          // Las llamadas del lead pasan al cliente nuevo (spec 19).
+          try {
+            const linked = await convertLeadCalls(db, wsCtx, fromLead.call.lead.phone_digits, newId)
+            toast.success(`Cliente creado. ${linked} llamada(s) del lead quedaron en su historial.`)
+          } catch {
+            toast.warning(
+              'Cliente creado, pero no se pudieron vincular las llamadas del lead. En la Agenda, abre el lead y usa "Vincular llamadas".'
+            )
+          }
+        } else {
+          toast.success('Cliente creado')
+        }
         navigate(`/clientes/${newId}`)
       }
     } catch {

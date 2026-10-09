@@ -23,6 +23,7 @@ import {
   CalendarClock,
 } from 'lucide-react'
 import { getClientDisplayName, getPrimaryPhoneNumber } from '@/lib/clientUtils'
+import { isLeadCall } from '@/lib/leads'
 import { getClientPayments, getClientPaymentSummary, parsePaymentDate } from '@/lib/processUtils'
 import { getClientTimezone, getTimezoneLabel } from '@/lib/timezones'
 import { formatMoney } from '@/lib/format'
@@ -123,15 +124,17 @@ export default function Home() {
   // ── Próxima llamada (protagonista) ──
   const nextCall = upcomingCalls?.[0]
   // La próxima llamada puede ser de un cliente archivado: también se busca ahí.
-  const nextClient = nextCall
+  // También puede ser a un lead sin registrar (spec 19).
+  const nextLead = nextCall && isLeadCall(nextCall) ? nextCall.lead : null
+  const nextClient = nextCall?.client_id
     ? [...allClients, ...(archivedClients ?? [])].find((c) => c.id === nextCall.client_id)
     : undefined
+  const nextName = nextLead ? nextLead.name : nextClient ? getClientDisplayName(nextClient) : null
+  const nextState = nextLead ? nextLead.state : nextClient?.state
   const nextScheduled = nextCall?.scheduled_at?.toDate?.()
-  const nextTz = nextClient?.state
-    ? getClientTimezone(nextClient.state, getPrimaryPhoneNumber(nextClient)).timezone
-    : null
+  const nextPhone = nextLead ? nextLead.phone : nextClient ? getPrimaryPhoneNumber(nextClient) : ''
+  const nextTz = nextState ? getClientTimezone(nextState, nextPhone).timezone : null
   const nextBalance = nextClient ? getClientPaymentSummary(nextClient).balance : 0
-  const nextPhone = nextClient ? getPrimaryPhoneNumber(nextClient) : ''
 
   // ── Listas secundarias ──
   const recentClients = allClients.filter((c) => !c.archived).slice(0, 5)
@@ -167,7 +170,7 @@ export default function Home() {
       </div>
 
       {/* Próxima llamada — protagonista */}
-      {nextCall && nextClient ? (
+      {nextCall && nextName ? (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[linear-gradient(120deg,#312e81,#4f46e5)] p-6 text-white">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.1em] text-indigo-200">
@@ -175,13 +178,14 @@ export default function Home() {
               {nextScheduled && ` · ${formatDistanceToNow(nextScheduled, { locale: es, addSuffix: true })}`}
             </p>
             <p className="mt-1 truncate text-xl font-extrabold tracking-tight">
-              {getClientDisplayName(nextClient)}
-              {nextClient.state && (
-                <span className="text-base font-medium text-indigo-200"> · {nextClient.state}</span>
+              {nextName}
+              {nextLead && <span className="text-base font-medium text-indigo-200"> · Lead</span>}
+              {nextState && (
+                <span className="text-base font-medium text-indigo-200"> · {nextState}</span>
               )}
             </p>
             <p className="mt-1.5 text-sm text-indigo-100">
-              {nextClient.llc_name ? `${nextClient.llc_name} · ` : ''}
+              {nextClient?.llc_name ? `${nextClient.llc_name} · ` : ''}
               {nextScheduled && nextTz
                 ? `${formatLocalTime(nextScheduled, nextTz, 'h:mm a')} hora local (${getTimezoneLabel(nextTz)})`
                 : nextScheduled
@@ -207,7 +211,11 @@ export default function Home() {
               variant="secondary"
               className="rounded-xl border-0 bg-white/15 text-white hover:bg-white/25"
             >
-              <Link to={`/clientes/${nextClient.id}`}>Ver cliente</Link>
+              {nextClient ? (
+                <Link to={`/clientes/${nextClient.id}`}>Ver cliente</Link>
+              ) : (
+                <Link to="/agenda">Ver en la agenda</Link>
+              )}
             </Button>
           </div>
         </div>
@@ -391,11 +399,13 @@ export default function Home() {
             ) : (
               <div className="space-y-3">
                 {upcomingCalls.map((call) => {
-                  const client = allClients.find((c) => c.id === call.client_id)
-                  const clientName = client ? getClientDisplayName(client) : 'Cliente'
+                  const lead = isLeadCall(call) ? call.lead : null
+                  const client = call.client_id ? allClients.find((c) => c.id === call.client_id) : undefined
+                  const clientName = lead ? lead.name : client ? getClientDisplayName(client) : 'Cliente'
                   const scheduledDate = call.scheduled_at?.toDate?.()
-                  const tz = client?.state
-                    ? getClientTimezone(client.state, getPrimaryPhoneNumber(client)).timezone
+                  const tzState = lead ? lead.state : client?.state
+                  const tz = tzState
+                    ? getClientTimezone(tzState, lead ? lead.phone : client ? getPrimaryPhoneNumber(client) : '').timezone
                     : null
                   return (
                     <div
@@ -404,10 +414,11 @@ export default function Home() {
                     >
                       <div className="min-w-0 text-sm">
                         <Link
-                          to={`/clientes/${call.client_id}`}
+                          to={lead ? '/agenda' : `/clientes/${call.client_id}`}
                           className="block truncate font-medium hover:underline"
                         >
                           {clientName}
+                          {lead && <span className="ml-1 text-xs font-normal text-muted-foreground">(lead)</span>}
                         </Link>
                         <p className="text-muted-foreground">
                           {scheduledDate?.toLocaleString('es-MX', {

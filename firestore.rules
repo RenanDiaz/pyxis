@@ -199,12 +199,25 @@ service cloud.firestore {
 
     // ── Llamadas (mismo modelo que clientes) ──
 
+    // Una llamada es a un cliente (client_id) o a un lead sin registrar
+    // (client_id null + lead con nombre y teléfono), nunca a ninguno (spec 19).
+    function validCallTarget(d) {
+      return (d.get("client_id", null) is string && !("lead" in d))
+             || (d.get("client_id", null) == null
+                 && d.get("lead", null) is map
+                 && d.lead.get("name", "") is string && d.lead.get("name", "").size() > 0
+                 && d.lead.get("phone", "") is string && d.lead.get("phone", "").size() > 0);
+    }
+
     match /workspaces/{workspaceId}/calls/{callId} {
       allow read: if isWorkspaceMember(workspaceId) && canSee(workspaceId, resource.data);
-      allow create: if isWorkspaceMember(workspaceId) && canHold(workspaceId, request.resource.data);
+      allow create: if isWorkspaceMember(workspaceId)
+                    && canHold(workspaceId, request.resource.data)
+                    && validCallTarget(request.resource.data);
       allow update: if isWorkspaceMember(workspaceId)
                     && canSee(workspaceId, resource.data)
-                    && (ownershipUnchanged() || canHold(workspaceId, request.resource.data));
+                    && (ownershipUnchanged() || canHold(workspaceId, request.resource.data))
+                    && validCallTarget(request.resource.data);
       allow delete: if isWorkspaceMember(workspaceId)
                     && (me(workspaceId).role == "owner" || resource.data.owner_uid == request.auth.uid);
     }

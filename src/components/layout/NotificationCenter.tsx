@@ -6,6 +6,7 @@ import { es } from 'date-fns/locale'
 import { useOverdueCalls, useUpcomingCalls } from '@/hooks/useCalls'
 import { useClients } from '@/hooks/useClients'
 import { getClientDisplayName } from '@/lib/clientUtils'
+import { isLeadCall } from '@/lib/leads'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { Call, Client } from '@/types'
@@ -21,8 +22,9 @@ function CallItem({
   overdue?: boolean
   onClick: () => void
 }) {
-  const client = clients.find((c) => c.id === call.client_id)
-  const clientName = client ? getClientDisplayName(client) : 'Cliente'
+  const lead = isLeadCall(call) ? call.lead : null
+  const client = call.client_id ? clients.find((c) => c.id === call.client_id) : undefined
+  const clientName = lead ? `${lead.name} (lead)` : client ? getClientDisplayName(client) : 'Cliente'
   const scheduledAt = call.scheduled_at?.toDate?.()
   const timeAgo = scheduledAt
     ? formatDistanceToNow(scheduledAt, { addSuffix: true, locale: es })
@@ -70,7 +72,8 @@ export default function NotificationCenter() {
 
   const handleCallClick = (call: Call) => {
     setOpen(false)
-    navigate(`/clientes/${call.client_id}`)
+    // Un lead no tiene ficha: se gestiona desde la Agenda (spec 19).
+    navigate(call.client_id ? `/clientes/${call.client_id}` : '/agenda')
   }
 
   return (
