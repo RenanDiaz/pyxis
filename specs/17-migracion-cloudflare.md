@@ -1,6 +1,6 @@
 # 17 — Migración a Cloudflare Workers y dominio propio
 
-**Prioridad:** 🔴 Alta (bloquea 18) · **Estado:** propuesto · **Tamaño:** M (poco código, mucha configuración manual)
+**Prioridad:** 🔴 Alta (bloquea 18) · **Estado:** código implementado · runbook pendiente · **Tamaño:** M (poco código, mucha configuración manual)
 
 ## Problema
 - **Términos de Vercel:** Pyxis está en Vercel **Hobby**, que no permite uso comercial. Pyxis es una herramienta de ventas, así que hoy ya incumple.
@@ -27,22 +27,26 @@
 
 ## Cambios en el repo (un PR)
 1. **`wrangler.jsonc`** en la raíz:
-   - `name: "pyxis"`, `main: "worker/index.ts"`, `compatibility_date` con la fecha del día de implementación.
-   - `assets: { directory: "./dist", binding: "ASSETS", not_found_handling: "single-page-application", run_worker_first: ["/api/*"] }`.
-   - `env.staging` con `name: "pyxis-staging"` y sus `routes` / custom domain.
-   - `alias: { "@": "./src" }`, para que el Worker pueda importar módulos puros de `src/lib` (spec 18).
+   - `name: "pyxis"`, `main: "worker/index.ts"`.
+   - `compatibility_date`: `2026-09-25`. No puede ser posterior a la versión de workerd del wrangler fijado; se sube junto con wrangler.
+   - `assets: { directory: "./dist", binding: "ASSETS", not_found_handling: "single-page-application", run_worker_first: ["/api/*", "/assets/*"] }`. Ver el criterio de `/assets/` más abajo.
+   - **Custom domains en el config** (`routes` con `custom_domain: true`): `mipyxis.com` y `www.mipyxis.com` en producción, `staging.mipyxis.com` en `env.staging` (`name: "pyxis-staging"`). `wrangler deploy` los crea, así que el paso 4 queda casi automático.
+   - `preview_urls: false` en ambos entornos.
+   - `tsconfig: "./tsconfig.worker.json"`: sus `paths` resuelven `@/…` → `src/`. *Se descartó `alias: { "@": "./src" }` porque esbuild no resuelve `@/lib/x` con ese alias (verificado con `wrangler deploy --dry-run`).*
 2. **`worker/index.ts`:** router mínimo.
    - `GET /api/health` → `{ ok: true, version }`.
    - Cualquier otra ruta `/api/*` → 404 en JSON.
+   - `/assets/*` → `env.ASSETS.fetch`, pero si la respuesta es HTML (fallback SPA para un chunk inexistente) devuelve **404**.
    - Todo lo demás → `env.ASSETS.fetch(request)`. **Nunca** un 404 propio para rutas que no son de la API, porque rompería los deep links.
 3. **`tsconfig.worker.json`:** tipos generados con `wrangler types`. Se agrega a `tsc -b`.
 4. **Versión (spec 14):**
    - En `vite.config.ts`: `APP_VERSION = process.env.WORKERS_CI_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || build-${Date.now()}`. Vercel se quita cuando termine el corte.
-   - `public/_headers` con `/version.json` → `Cache-Control: no-store`. Reemplaza el header de `vercel.json`.
+   - `public/_headers`: `/version.json` → `Cache-Control: no-store`, y `/assets/*` → `public, max-age=31536000, immutable` (los chunks llevan hash; además ahorra invocaciones del Worker). Reemplaza los headers de `vercel.json`.
 5. **Scripts en `package.json`:**
    - `deploy` → `wrangler deploy`.
    - `dev:api` → `wrangler dev --port 8787`.
-   - `wrangler` como devDependency **con versión fija**, porque Workers Builds usa la de `package.json`.
+   - `cf-typegen` → `wrangler types worker/worker-configuration.d.ts`. El archivo generado se versiona.
+   - `wrangler` como devDependency **con versión fija** (`4.144.0`), porque Workers Builds usa la de `package.json`.
 6. **`vite.config.ts`:** `server.proxy` de `/api` → `http://localhost:8787`. En local se corren `npm run dev` y `npm run dev:api` a la vez.
    - *Alternativa descartada:* `@cloudflare/vite-plugin`. Une ambos en un proceso, pero cambia la estructura de `dist/` y agrega una pieza más justo en la migración. Se puede reconsiderar después.
 7. **`.dev.vars.example`:** vacío por ahora. El spec 18 agrega los secretos. `.dev.vars` va a `.gitignore`.
@@ -53,9 +57,9 @@
 Marcar cada paso al hacerlo. Lo que dice *verificar* depende de la consola de Cloudflare o Stripe al momento de hacerlo, porque las pantallas cambian.
 
 ### Paso 0 — Cuenta y dominio
-- [ ] Crear la cuenta de Cloudflare con un correo que no sea personal, si es posible, y activar 2FA.
+- [x] Crear la cuenta de Cloudflare. Activar 2FA si no está.
 - [x] Comprar **`mipyxis.com`**. Confirmar que la **renovación automática** esté activa.
-  - *Si se compró fuera de Cloudflare:* agregar el dominio en **Add a domain** (plan Free) y cambiar los nameservers en el registrador por los que indique Cloudflare. Esperar a que la zona quede *Active* antes del paso 4. Opcional: transferirlo a Cloudflare Registrar después de 60 días.
+  - Comprado en Cloudflare Registrar: la zona DNS ya está activa, sin cambio de nameservers.
 - [ ] **Email → Email Routing:** activar y crear `soporte@mipyxis.com` → buzón personal. Verificar el buzón destino.
 
 ### Paso 1 — Conectar el repo (Workers Builds)
@@ -80,9 +84,8 @@ Marcar cada paso al hacerlo. Lo que dice *verificar* depende de la consola de Cl
 - [ ] Probar el login con Google en `workers.dev`.
 
 ### Paso 4 — Dominio en el Worker
-- [ ] **Worker `pyxis` → Settings → Domains & Routes → Add → Custom domain:** `mipyxis.com` y `www.mipyxis.com`.
+- [ ] **Custom domains:** los crea `wrangler deploy` desde `wrangler.jsonc`. Solo hay que verificar en **Worker → Settings → Domains & Routes** que aparezcan `mipyxis.com` y `www.mipyxis.com` (en `pyxis`) y `staging.mipyxis.com` (en `pyxis-staging`). Si el deploy falla por permisos del token sobre la zona, agregarlos a mano ahí.
 - [ ] **Redirect `www` → apex:** con una regla en **Rules → Redirect Rules**, código 301.
-- [ ] **Worker `pyxis-staging` → Custom domain:** `staging.mipyxis.com`.
 - [ ] **SSL/TLS:** modo *Full (strict)* y *Always Use HTTPS* activo.
 
 ### Paso 5 — Corte
@@ -110,13 +113,14 @@ Si algo falla en los primeros días:
 ## Criterios de aceptación
 - [ ] `https://mipyxis.com/clientes/<id>` con recarga dura carga la app, no un 404. El fallback SPA funciona.
 - [ ] `curl -I https://mipyxis.com/assets/no-existe.js` devuelve **404**, no `index.html` (spec 14).
-  - *Si devuelve 200 con HTML:* agregar `"/assets/*"` a `run_worker_first`, y que el Worker devuelva 404 cuando `ASSETS.fetch` responda HTML para una ruta bajo `/assets/`.
+  - En `wrangler dev` el fallback SPA **sí** devolvía `index.html` para chunks inexistentes, incluso con headers de fetch de script. Por eso `/assets/*` pasa por el Worker (ver cambio 2). Verificado en local: 404.
 - [ ] `curl -I https://mipyxis.com/version.json` → `Cache-Control: no-store`, y el contenido coincide con el commit desplegado.
 - [ ] `GET /api/health` → `{ ok: true, version }`. `GET /api/otra` → 404 en JSON.
 - [ ] Login con Google y con email/password en `mipyxis.com` y en `staging.mipyxis.com`.
 - [ ] Subir y descargar un documento de Storage, y exportar `.docx` y `.xlsx`. Esto prueba los chunks lazy.
 - [ ] Un push a otra rama hace deploy en `staging.mipyxis.com` y **no** toca producción.
-- [ ] `tsc -b` y `npm run lint` pasan, incluido `worker/`.
+- [x] `tsc -b` y `npm run lint` pasan, incluido `worker/`.
+- [x] En `wrangler dev`: deep link → 200 HTML; `/assets/no-existe.js` → 404; chunk real → `immutable` y 304 con `If-None-Match`; `/version.json` → `no-store`; `/api/health` → versión del build; `/api/otra` → 404 JSON.
 
 ## Preguntas abiertas
 Ninguna. Dominio definido: `mipyxis.com` (comprado el 2026-10-09).

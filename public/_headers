@@ -1,0 +1,7 @@
+# Cloudflare Workers static assets (spec 17). Reemplaza los headers de vercel.json.
+/version.json
+  Cache-Control: no-store
+
+# Los chunks llevan hash en el nombre: nunca cambian, el navegador no revalida.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
