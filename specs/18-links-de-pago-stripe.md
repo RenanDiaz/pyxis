@@ -303,7 +303,7 @@ El Worker importa este módulo y `getProcessLabel` (`src/lib/processUtils.ts`) c
      - Una LLC de EE.UU. a nombre del dueño del producto.
      - Que la plataforma sea la empresa de uno de los workspaces.
    - Esto también define quién firma los términos de Connect y responde ante Stripe.
-2. **Texto legal del recargo:** ¿el aviso de R2 es suficiente o se quiere un checkbox "Entiendo y acepto" al activarlo? *(Recomendación: checkbox, para dejar constancia de que lo decidió el owner).*
-3. **¿El recargo se muestra en el recibo de Pyxis?**
+2. ✅ **Resuelta (2026-10-09): checkbox "Entiendo y acepto".** ~~Texto legal del recargo:~~ ¿el aviso de R2 es suficiente o se quiere un checkbox "Entiendo y acepto" al activarlo? *(Recomendación: checkbox, para dejar constancia de que lo decidió el owner).*
+3. ✅ **Resuelta (2026-10-09): no se muestra en el recibo de Pyxis.** ~~¿El recargo se muestra en el recibo de Pyxis?~~
    - **Propuesta v1:** no. El recibo es del abono, y el comprobante del recargo es el de Stripe.
    - Confirmar con negocio y con el reporte de ventas (spec 04): el recargo no es venta.

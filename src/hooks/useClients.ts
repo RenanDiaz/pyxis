@@ -5,13 +5,15 @@ import {
   getClientById,
   createClient,
   updateClient,
-  deleteClient,
   findClientsByPhone,
   mutateClient,
 } from '@/lib/firestore'
 import type { ClientMutation } from '@/lib/processMutations'
 import type { StatusTrigger } from '@/lib/statusUtils'
 import { useUserProfile } from '@/hooks/useUserProfile'
+import { db } from '@/lib/firebase'
+import { deleteClientCascade } from '@/lib/workspaceAdmin'
+import { deleteFileFromStorage } from '@/lib/adminStorage'
 
 interface ClientFilters {
   status?: ClientStatus
@@ -86,9 +88,11 @@ export function useDeleteClient() {
   const queryClient = useQueryClient()
   return useMutation({
     meta: { errorMessage: 'No se pudo eliminar el cliente' },
-    mutationFn: (id: string) => deleteClient(workspaceId!, id),
+    // Con sus llamadas, documentos y archivos; solo el owner (spec 06).
+    mutationFn: (id: string) => deleteClientCascade(db!, workspaceId!, id, deleteFileFromStorage),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: ['calls'] })
     },
   })
 }

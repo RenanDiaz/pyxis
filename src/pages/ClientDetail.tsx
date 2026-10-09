@@ -47,6 +47,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { getClientDisplayName, getAllPhones, getPrimaryPhoneNumber, PHONE_LABELS } from '@/lib/clientUtils'
+import { db } from '@/lib/firebase'
+import { countClientDependents } from '@/lib/workspaceAdmin'
 import { formatPhoneForWhatsApp } from '@/lib/phoneUtils'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -224,8 +226,23 @@ export default function ClientDetail() {
     toast.success('Status actualizado')
   }
 
+  // Borrar de verdad solo el owner, y se lleva llamadas, documentos y
+  // archivos (spec 06). El resto archiva.
   const handleDelete = async () => {
-    if (!confirm('¿Estás seguro de eliminar este cliente?')) return
+    if (!workspaceId || !db) return
+    const { calls, documents } = await countClientDependents(db, workspaceId, client.id)
+    const extras = [
+      calls ? `${calls} llamada(s)` : null,
+      documents ? `${documents} documento(s) con sus archivos` : null,
+    ].filter(Boolean)
+    const detail = extras.length ? ` También se borrarán ${extras.join(' y ')}.` : ''
+    if (
+      !confirm(
+        `¿Eliminar a ${getClientDisplayName(client)} de forma permanente?${detail}\n\n` +
+          'Esta acción no se puede deshacer. Si solo quieres sacarlo de las listas, usa Archivar.'
+      )
+    )
+      return
     await deleteMutation.mutateAsync(client.id)
     toast.success('Cliente eliminado')
     navigate('/clientes')
@@ -553,15 +570,18 @@ export default function ClientDetail() {
               Reasignar
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-destructive hover:text-destructive"
-            onClick={handleDelete}
-          >
-            <Trash2 className="mr-1 h-3 w-3" />
-            Eliminar
-          </Button>
+          {role === 'owner' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+            >
+              <Trash2 className="mr-1 h-3 w-3" />
+              Eliminar
+            </Button>
+          )}
         </div>
       </div>
 

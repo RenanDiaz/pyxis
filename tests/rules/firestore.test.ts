@@ -2,6 +2,7 @@ import { after, before, beforeEach, describe, it } from 'node:test'
 import { assertFails, assertSucceeds, type RulesTestEnvironment } from '@firebase/rules-unit-testing'
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -211,5 +212,57 @@ describe('documents del cliente', () => {
     await assertSucceeds(setDoc(doc(docs(db('ag'), 'cAg'), 'n'), { name: 'a.pdf', uploaded_by_uid: 'ag' }))
     await assertFails(setDoc(doc(docs(db('ag'), 'cAg'), 'm'), { name: 'a.pdf', uploaded_by_uid: 'ag2' }))
     await assertFails(setDoc(doc(docs(db('ag'), 'cAg2'), 'o'), { name: 'a.pdf', uploaded_by_uid: 'ag' }))
+  })
+})
+
+describe('administración del workspace (spec 06)', () => {
+  const transfer = (fs: Firestore, to: string, selfRole = 'supervisor') => {
+    const batch = writeBatch(fs)
+    batch.update(doc(fs, `workspaces/${WS}`), { owner_uid: to })
+    batch.update(doc(fs, `workspaces/${WS}/members/${to}`), { role: 'owner' })
+    batch.update(doc(fs, `workspaces/${WS}/members/own`), { role: selfRole })
+    return batch.commit()
+  }
+
+  it('el owner transfiere la propiedad y queda como supervisor en un batch', async () => {
+    await assertSucceeds(transfer(db('own'), 'sup'))
+    const ws = await getDoc(doc(db('sup'), `workspaces/${WS}`))
+    if (ws.data()?.owner_uid !== 'sup') throw new Error('owner_uid no cambió')
+  })
+
+  it('el owner NO se baja el rol sin entregar la propiedad', async () => {
+    await assertFails(updateDoc(doc(db('own'), `workspaces/${WS}/members/own`), { role: 'supervisor' }))
+  })
+
+  it('NO se cambia owner_uid sin subir al nuevo owner', async () => {
+    await assertFails(updateDoc(doc(db('own'), `workspaces/${WS}`), { owner_uid: 'sup' }))
+  })
+
+  it('al entregar la propiedad el owner anterior queda como supervisor, no como agente', async () => {
+    await assertFails(transfer(db('own'), 'sup', 'agent'))
+  })
+
+  it('un supervisor no transfiere la propiedad', async () => {
+    const fs = db('sup')
+    const batch = writeBatch(fs)
+    batch.update(doc(fs, `workspaces/${WS}`), { owner_uid: 'sup' })
+    batch.update(doc(fs, `workspaces/${WS}/members/sup`), { role: 'owner' })
+    await assertFails(batch.commit())
+  })
+
+  it('solo el owner borra clientes; el agente no borra ni los suyos', async () => {
+    await assertFails(deleteDoc(doc(db('ag'), `workspaces/${WS}/clients/cAg`)))
+    await assertFails(deleteDoc(doc(db('sup'), `workspaces/${WS}/clients/cAg`)))
+    await assertSucceeds(deleteDoc(doc(db('own'), `workspaces/${WS}/clients/cAg`)))
+  })
+
+  it('el owner reasigna clientes y llamadas del miembro que quita', async () => {
+    const fs = db('own')
+    const batch = writeBatch(fs)
+    batch.update(doc(fs, `workspaces/${WS}/clients/cAg2`), { owner_uid: 'ag', subteam_id: 'A' })
+    batch.update(doc(fs, `workspaces/${WS}/calls/callAg2`), { owner_uid: 'ag', subteam_id: 'A' })
+    batch.delete(doc(fs, `workspaces/${WS}/members/ag2`))
+    batch.update(doc(fs, 'users/ag2'), { workspace_id: null })
+    await assertSucceeds(batch.commit())
   })
 })

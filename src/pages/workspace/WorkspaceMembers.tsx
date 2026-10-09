@@ -5,7 +5,6 @@ import {
   useWorkspaceMembers,
   useUpdateMemberRole,
   useUpdateMemberSubteam,
-  useRemoveMember,
   useSubteams,
 } from '@/hooks/useWorkspace'
 import {
@@ -32,7 +31,8 @@ import {
 } from '@/components/ui/dialog'
 import { UserPlus, Trash2, Copy, Link2 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { WorkspaceRole } from '@/types'
+import type { WorkspaceMember, WorkspaceRole } from '@/types'
+import RemoveMemberDialog from '@/components/workspace/RemoveMemberDialog'
 
 const ROLE_LABELS: Record<string, string> = {
   owner: 'Owner',
@@ -48,7 +48,7 @@ export default function WorkspaceMembers() {
   const { data: invitations } = useWorkspaceInvitations(workspaceId)
   const updateRole = useUpdateMemberRole()
   const updateSubteam = useUpdateMemberSubteam()
-  const removeMember = useRemoveMember()
+  const [removing, setRemoving] = useState<WorkspaceMember | null>(null)
   const createInvitation = useCreateInvitation()
   const cancelInvitation = useCancelInvitation()
 
@@ -74,12 +74,6 @@ export default function WorkspaceMembers() {
     toast.success('Subequipo actualizado')
   }
 
-  const handleRemove = async (uid: string, name: string) => {
-    if (!workspaceId) return
-    if (!confirm(`¿Estás seguro de eliminar a ${name} del workspace?`)) return
-    await removeMember.mutateAsync({ workspaceId, uid })
-    toast.success('Miembro eliminado')
-  }
 
   const handleInvite = async () => {
     if (!workspaceId || !inviteEmail.trim() || !user) return
@@ -181,7 +175,7 @@ export default function WorkspaceMembers() {
                           variant="ghost"
                           size="icon"
                           className="text-destructive hover:text-destructive"
-                          onClick={() => handleRemove(m.uid, m.display_name)}
+                          onClick={() => setRemoving(m)}
                           aria-label={`Quitar a ${m.display_name} del workspace`}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -315,6 +309,16 @@ export default function WorkspaceMembers() {
           )}
         </DialogContent>
       </Dialog>
+
+      {removing && workspaceId && user && members && (
+        <RemoveMemberDialog
+          workspaceId={workspaceId}
+          member={removing}
+          members={members}
+          currentUid={user.uid}
+          onOpenChange={(open) => !open && setRemoving(null)}
+        />
+      )}
     </div>
   )
 }
