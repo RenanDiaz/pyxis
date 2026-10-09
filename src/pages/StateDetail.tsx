@@ -15,8 +15,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import StateEditDialog from '@/components/states/StateEditDialog'
+import QuickQuoteDialog from '@/components/quotes/QuickQuoteDialog'
+import { useUserProfile } from '@/hooks/useUserProfile'
 import { cn } from '@/lib/utils'
-import { ArrowLeft, ExternalLink, Pencil, Search } from 'lucide-react'
+import { ArrowLeft, ExternalLink, FileText, Pencil, Search } from 'lucide-react'
 
 export default function StateDetail() {
   const { abbreviation } = useParams<{ abbreviation: string }>()
@@ -27,6 +29,8 @@ export default function StateDetail() {
   const now = useNow(1000)
 
   const { data: isAdmin } = useIsGlobalAdmin()
+  const { workspace } = useUserProfile()
+  const [quoteOpen, setQuoteOpen] = useState(false)
   const canEdit = isFirebaseConfigured && !!isAdmin
 
   if (isLoading) {
@@ -125,6 +129,10 @@ export default function StateDetail() {
                 </SelectContent>
               </Select>
             </div>
+            <Button variant="outline" className="h-10 rounded-xl" onClick={() => setQuoteOpen(true)}>
+              <FileText className="mr-1 h-4 w-4" />
+              Cotización
+            </Button>
             {canEdit && (
               <Button
                 variant="outline"
@@ -283,6 +291,9 @@ export default function StateDetail() {
         </div>
       </div>
 
+      {quoteOpen && (
+        <QuickQuoteDialog state={state} workspace={workspace} onOpenChange={setQuoteOpen} />
+      )}
       {canEdit && editOpen && (
         <StateEditDialog state={state} open={editOpen} onOpenChange={setEditOpen} />
       )}

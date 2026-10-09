@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/select'
 import { ArrowLeft, Pencil, Trash2, Phone, Mail, FileDown, FileText, Archive, ArchiveRestore, UserCircle, RefreshCw, Info, Plus, CalendarPlus } from 'lucide-react'
 import QuoteDialog from '@/components/clients/QuoteDialog'
+import StatementDialog from '@/components/clients/StatementDialog'
 import ClientTimeline from '@/components/clients/ClientTimeline'
 import type { Client, ClientStatus, ClientProcess } from '@/types'
 import { clientMutations, type RunClientMutation } from '@/lib/processMutations'
@@ -201,6 +202,7 @@ export default function ClientDetail() {
   const [reassignUid, setReassignUid] = useState('')
   const [showAddProcess, setShowAddProcess] = useState(false)
   const [showQuote, setShowQuote] = useState(false)
+  const [showStatement, setShowStatement] = useState(false)
 
   if (isLoading) {
     return <p className="text-muted-foreground">Cargando...</p>
@@ -513,6 +515,10 @@ export default function ClientDetail() {
             <FileText className="mr-1 h-3 w-3" />
             Cotización
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShowStatement(true)}>
+            <FileText className="mr-1 h-3 w-3" />
+            Estado de cuenta
+          </Button>
           <Button asChild variant="ghost" size="sm">
             <Link to={`/clientes/${client.id}/editar`}>
               <Pencil className="mr-1 h-3 w-3" />
@@ -557,6 +563,9 @@ export default function ClientDetail() {
         </div>
       </div>
 
+      {showStatement && (
+        <StatementDialog client={client} workspace={workspace} onOpenChange={setShowStatement} />
+      )}
       {showQuote && (
         <QuoteDialog
           client={client}

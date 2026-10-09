@@ -121,3 +121,44 @@ export async function drawBrandHeader(
   doc.line(margin, y, pageW - margin, y)
   return y + 22
 }
+
+/**
+ * "CÓMO PAGAR" con las instrucciones del workspace (si hay) y la referencia del
+ * documento. Devuelve la `y` siguiente.
+ */
+export function drawPaymentInstructions(doc: jsPDF, workspace: Workspace, y: number, reference: string): number {
+  const instructions = workspace.payment_instructions?.trim()
+  if (!instructions) return y
+  const margin = PDF_MARGIN
+  const contentW = doc.internal.pageSize.getWidth() - margin * 2
+  const { muted, text } = PDF_COLORS
+  if (y > doc.internal.pageSize.getHeight() - 160) {
+    doc.addPage()
+    y = margin
+  }
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.setTextColor(...muted)
+  doc.text('CÓMO PAGAR', margin, y)
+  y += 16
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.setTextColor(...text)
+  const lines: string[] = doc.splitTextToSize(instructions, contentW)
+  doc.text(lines, margin, y)
+  y += lines.length * 13 + 12
+  doc.setFontSize(9)
+  doc.setTextColor(...muted)
+  doc.text(`Al pagar, menciona el documento N° ${reference}.`, margin, y)
+  return y + 20
+}
+
+/** Leyenda al pie de la última página. */
+export function drawFooterNote(doc: jsPDF, note: string): void {
+  const pageW = doc.internal.pageSize.getWidth()
+  const pageH = doc.internal.pageSize.getHeight()
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(...PDF_COLORS.muted)
+  doc.text(note, pageW / 2, pageH - PDF_MARGIN - 14, { align: 'center', maxWidth: pageW - PDF_MARGIN * 2 })
+}
