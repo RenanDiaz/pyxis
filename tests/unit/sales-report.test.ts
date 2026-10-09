@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import { Timestamp } from 'firebase/firestore'
 import type { Client, ClientProcess, StateInfo } from '@/types'
 import { buildReportInput, previewReport } from '@/lib/salesReportData'
-import { getProcessSaleDate, localDateKey } from '@/lib/processUtils'
+import { getProcessSaleDate, getProcessStateCost, localDateKey } from '@/lib/processUtils'
+import realStates from '@/data/states.json'
 import { buildWorkbook, type ExpenseConfig, type ReportInput } from '@/lib/generateSalesReport'
 
 // Mediodía UTC: 1-oct en cualquier zona horaria del continente.
@@ -57,13 +58,62 @@ describe('reporte de ventas — datos', () => {
     assert.equal(input.taxRate, 0.39)
   })
 
-  it('la vista previa lista los procesos del mes sin estado', () => {
+  it('la vista previa lista las ventas del mes sin costo estatal y el motivo', () => {
     const c = client({ state: 'TX' }, [
       proc({ id: 'a', state: 'NY', payments: [pay(300, '2026-10-02')] }),
+      // EIN: costo fijo 0, no se advierte.
       proc({ id: 'b', type: 'ein', payments: [pay(100, '2026-10-03')] }),
-      proc({ id: 'c', type: 'boi', payments: [pay(100, '2026-09-03')] }),
+      proc({ id: 'c', type: 'dissolution', payments: [pay(100, '2026-10-04')] }),
+      proc({ id: 'd', type: 'custom', custom_label: 'Certificado de Autoridad', payments: [pay(270, '2026-10-05')] }),
+      proc({ id: 'e', type: 'boi', payments: [pay(100, '2026-09-03')] }),
     ])
-    assert.deepEqual(previewReport([c], '2026-10').missingState, ['ANA PÉREZ — EIN'])
+    assert.deepEqual(previewReport([c], '2026-10', states).missingCost, [
+      { label: 'ANA PÉREZ — Dissolution', reason: 'no_state' },
+      { label: 'ANA PÉREZ — Certificado de Autoridad', reason: 'manual' },
+    ])
+  })
+})
+
+describe('reporte de ventas — costo estatal por proceso (P8)', () => {
+  const real = realStates as unknown as StateInfo[]
+  const cost = (p: Partial<ClientProcess>) =>
+    getProcessStateCost(proc(p), real.find((s) => s.abbreviation === p.state)).cost
+
+  it('cuadra con el Excel manual', () => {
+    assert.equal(cost({ type: 'dissolution', state: 'NY' }), 90)
+    assert.equal(cost({ type: 'amendment', state: 'NY' }), 90)
+    assert.equal(cost({ type: 'amendment', state: 'TX' }), 155)
+    assert.equal(cost({ type: 'registration', state: 'TN' }), 307.05)
+    assert.equal(cost({ type: 'registration', state: 'GA' }), 110)
+  })
+
+  it('fijos, manuales y capturados', () => {
+    assert.equal(cost({ type: 'itin' }), 250)
+    assert.equal(cost({ type: 'ein' }), 0)
+    assert.equal(cost({ type: 'custom' }), null)
+    assert.equal(cost({ type: 'custom', state_cost: 175 }), 175)
+    // Lo capturado manda sobre el estado.
+    assert.equal(cost({ type: 'registration', state: 'CA', state_cost: 110 }), 110)
+    // El estado no tiene ese costo (TX no admite dissolution en la tabla).
+    assert.deepEqual(getProcessStateCost(proc({ type: 'dissolution', state: 'TX' }), real.find((s) => s.abbreviation === 'TX')), {
+      cost: null, reason: 'no_state_value',
+    })
+  })
+
+  it('el reporte resta el costo de cada tipo de proceso, no el de registro', () => {
+    const c = client({}, [
+      proc({ id: 'r', state: 'TX', payments: [pay(759, '2026-10-01')] }),
+      proc({ id: 'a', type: 'amendment', state: 'TX', payments: [pay(300, '2026-10-02')] }),
+      proc({ id: 'e', type: 'ein', state: 'TX', payments: [pay(200, '2026-10-03')] }),
+      proc({ id: 'i', type: 'itin', payments: [pay(700, '2026-10-04')] }),
+    ])
+    const input = buildReportInput({
+      clients: [c], states: real, monthKey: '2026-10', monthLabel: 'October 2026',
+      expenses, stripeFeeMode: 'none', taxRate: 0.39, registeredAgentCost: 45,
+    })
+    assert.deepEqual(input.accounts.map((a) => [a.purchase, a.stateFee]), [
+      ['Registro de LLC', 310], ['Amendment', 155], ['EIN', 0], ['ITIN', 250],
+    ])
   })
 })
 
