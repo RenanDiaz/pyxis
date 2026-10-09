@@ -195,7 +195,8 @@ export default function ClientDetail() {
   const { data: assignableMembers } = useAssignableMembers(
     workspaceId,
     role,
-    member?.subteam_id ?? null
+    member?.subteam_id ?? null,
+    member?.uid
   )
   const [showReassign, setShowReassign] = useState(false)
   const [reassignUid, setReassignUid] = useState('')

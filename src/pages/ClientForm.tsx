@@ -196,7 +196,8 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
   const { data: assignableMembers } = useAssignableMembers(
     workspaceId,
     role,
-    wsCtx?.subteamId ?? null
+    wsCtx?.subteamId ?? null,
+    wsCtx?.uid
   )
   const [pickedAgentUid, setSelectedAgentUid] = useState<string>('')
   // Por defecto, el usuario actual (derivado: sin effect que lo sincronice).
@@ -257,7 +258,7 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
     if (stateManuallySet.current) return
     const primary = next.find((p) => p.is_primary) ?? next[0]
     if (!primary?.number) return
-    const detected = getStateByAreaCode(primary.number)
+    const detected = getStateByAreaCode(primary.number, states ?? undefined)
     if (detected) {
       setFormData((prev) => ({ ...prev, state: detected }))
       setStateAutoDetected(true)

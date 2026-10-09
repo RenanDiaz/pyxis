@@ -68,6 +68,8 @@ export default function States() {
               className="h-7 w-7 p-0"
               onClick={() => setView('cards')}
               title="Vista de tarjetas"
+              aria-label="Vista de tarjetas"
+              aria-pressed={view === 'cards'}
             >
               <LayoutGrid className="h-4 w-4" />
             </Button>
@@ -77,6 +79,8 @@ export default function States() {
               className="h-7 w-7 p-0"
               onClick={() => setView('map')}
               title="Vista de mapa"
+              aria-label="Vista de mapa"
+              aria-pressed={view === 'map'}
             >
               <Map className="h-4 w-4" />
             </Button>

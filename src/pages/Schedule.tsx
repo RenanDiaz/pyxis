@@ -20,8 +20,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import StateClock from '@/components/states/StateClock'
 import DraftBanner from '@/components/shared/DraftBanner'
 import ErrorState from '@/components/shared/ErrorState'
-import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
-import { getClientDisplayName } from '@/lib/clientUtils'
+import { getClientTimezone, getTimezoneLabel } from '@/lib/timezones'
+import { getClientDisplayName, getPrimaryPhoneNumber } from '@/lib/clientUtils'
 import {
   AGENDA_PAGE_SIZE,
   filterAgenda,
@@ -115,7 +115,10 @@ export default function Schedule() {
   })
 
   const selectedClient = clientsById.get(newCallClientId)
-  const clientTz = selectedClient?.state ? getStateTimezone(selectedClient.state) : null
+  const clientZone = selectedClient?.state
+    ? getClientTimezone(selectedClient.state, getPrimaryPhoneNumber(selectedClient))
+    : null
+  const clientTz = clientZone?.timezone ?? null
   // Sin estado del cliente no hay zona que usar: se captura en la hora del agente.
   const captureTz = timeMode === 'cliente' && clientTz ? clientTz : null
   const scheduledAt =
@@ -228,10 +231,16 @@ export default function Schedule() {
                   <StateClock timezone={clientTz} />
                 </div>
               )}
+              {clientZone && !clientZone.certain && (
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  {selectedClient?.state} tiene más de una zona horaria y el teléfono no la define:
+                  confirma la hora con el cliente.
+                </p>
+              )}
               {clientTz && (
                 <div className="space-y-1.5">
-                  <Label>La hora que vas a escribir es</Label>
-                  <div className="flex gap-2" role="radiogroup">
+                  <Label id="time-mode-label">La hora que vas a escribir es</Label>
+                  <div className="flex gap-2" role="radiogroup" aria-labelledby="time-mode-label">
                     {(['cliente', 'agente'] as const).map((mode) => (
                       <Button
                         key={mode}
@@ -344,7 +353,7 @@ export default function Schedule() {
           {shown.map((call) => {
             const client = clientsById.get(call.client_id)
             const scheduledDate = call.scheduled_at?.toDate?.()
-            const tz = client?.state ? getStateTimezone(client.state) : null
+            const tz = client?.state ? getClientTimezone(client.state, getPrimaryPhoneNumber(client)).timezone : null
             const overdue = isOverdue(call, now)
             return (
               <Card key={call.id} className={overdue ? 'border-amber-300 dark:border-amber-800' : undefined}>

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useIsGlobalAdmin, useStateByAbbreviation, useStates } from '@/hooks/useStates'
 import { formatPrice, formatDays, formatYesNo } from '@/lib/format'
-import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
+import { getStateTimezone, getTimezoneLabel, isMultiZoneState } from '@/lib/timezones'
 import { useNow } from '@/hooks/useNow'
 import { isGoodCallTime, getCallTimeLabel, formatLocalTime } from '@/lib/callTime'
 import { isFirebaseConfigured } from '@/lib/firebase'
@@ -87,6 +87,11 @@ export default function StateDetail() {
                 <LocalTime timezone={timezone} />{' '}
                 <span className="text-muted-foreground/70">({tzLabel})</span>
               </p>
+              {isMultiZoneState(state.abbreviation) && (
+                <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
+                  Este estado tiene más de una zona horaria: confirma la hora con el cliente.
+                </p>
+              )}
             </div>
           </div>
 

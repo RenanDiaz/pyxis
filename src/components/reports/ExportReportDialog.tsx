@@ -154,8 +154,9 @@ export default function ExportReportDialog({
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Nombre del empleado</Label>
+            <Label htmlFor="report-nombre-del-empleado">Nombre del empleado</Label>
             <Input
+              id="report-nombre-del-empleado"
               value={expenses.employeeName}
               onChange={(e) => patchExpenses({ employeeName: e.target.value })}
               placeholder="Ej: isabel"
@@ -164,8 +165,9 @@ export default function ExportReportDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Base pay ($)</Label>
+              <Label htmlFor="report-base-pay">Base pay ($)</Label>
               <Input
+                id="report-base-pay"
                 type="number"
                 min={0}
                 step="0.01"
@@ -174,8 +176,9 @@ export default function ExportReportDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label>Comisión (%)</Label>
+              <Label htmlFor="report-commission">Comisión (%)</Label>
               <Input
+                id="report-commission"
                 type="number"
                 min={0}
                 step="0.1"
@@ -188,8 +191,9 @@ export default function ExportReportDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Bonus ($) — opcional</Label>
+            <Label htmlFor="report-bonus-opcional">Bonus ($) — opcional</Label>
             <Input
+              id="report-bonus-opcional"
               type="number"
               min={0}
               step="0.01"
@@ -245,14 +249,14 @@ export default function ExportReportDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Stripe fee por pago</Label>
+            <Label htmlFor="report-stripe-fee-por-pago">Stripe fee por pago</Label>
             <Select
               value={settings.stripeFeeMode}
               onValueChange={(v) =>
                 setSettings((s) => ({ ...s, stripeFeeMode: v as StripeFeeMode }))
               }
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="report-stripe-fee-por-pago" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

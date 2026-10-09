@@ -45,3 +45,54 @@ export function getStateTimezone(abbreviation: string): string {
 export function getTimezoneLabel(timezone: string): string {
   return TIMEZONE_LABELS[timezone] ?? timezone
 }
+
+/**
+ * Estados con más de una zona horaria (spec 13). Para ellos la zona del
+ * estado es la mayoritaria y puede errar por una hora.
+ */
+const MULTI_ZONE_STATES = new Set(['TX', 'FL', 'TN', 'KY', 'IN', 'MI', 'ND', 'SD', 'NE', 'KS', 'OR', 'ID'])
+
+/**
+ * Por estado, códigos de área que caen enteros (o casi) en una sola zona. Los que mezclan zonas (850 FL, 812 IN, 906 MI, 208 ID…) no se
+ * listan: ahí la zona queda "por confirmar".
+ */
+const AREA_CODE_TIMEZONE: Record<string, Record<string, string>> = {
+  // El Paso
+  TX: { '915': 'America/Denver' },
+  // Nashville, Memphis y el oeste/centro son Central; el este (Knoxville,
+  // Chattanooga) es Eastern
+  TN: {
+    '615': 'America/Chicago', '629': 'America/Chicago', '731': 'America/Chicago',
+    '901': 'America/Chicago', '931': 'America/Chicago',
+    '423': 'America/New_York', '865': 'America/New_York',
+  },
+  // El oeste
+  KY: { '270': 'America/Chicago', '364': 'America/Chicago' },
+  // Noroeste (Gary)
+  IN: { '219': 'America/Chicago' },
+}
+
+export function isMultiZoneState(abbreviation: string): boolean {
+  return MULTI_ZONE_STATES.has(abbreviation)
+}
+
+export interface ClientTimezone {
+  timezone: string
+  /** `false`: estado con varias zonas y el teléfono no la resuelve. */
+  certain: boolean
+}
+
+/**
+ * Zona horaria del cliente: la de su código de área si cae entera en una
+ * zona de su estado, si no la del estado (spec 13).
+ */
+export function getClientTimezone(state: string, phone?: string | null): ClientTimezone {
+  const stateTz = getStateTimezone(state)
+  if (!isMultiZoneState(state)) return { timezone: stateTz, certain: true }
+  const digits = (phone ?? '').replace(/\D/g, '')
+  const areaCode = digits.length >= 11 && digits.startsWith('1') ? digits.slice(1, 4) : digits.slice(0, 3)
+  // Solo si el código es de ese mismo estado: un cliente que se mudó conserva
+  // su número viejo.
+  const byArea = AREA_CODE_TIMEZONE[state]?.[areaCode]
+  return byArea ? { timezone: byArea, certain: true } : { timezone: stateTz, certain: false }
+}

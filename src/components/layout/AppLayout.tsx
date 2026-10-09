@@ -4,7 +4,7 @@ import RouteErrorBoundary from './RouteErrorBoundary'
 import PageLoader from './PageLoader'
 import Sidebar from './Sidebar'
 import Header from './Header'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 
 export default function AppLayout() {
@@ -34,6 +34,8 @@ export default function AppLayout() {
       {/* Mobile sidebar */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent side="left" className="w-64 p-0">
+          <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
+          <SheetDescription className="sr-only">Secciones de Pyxis</SheetDescription>
           <Sidebar onNavigate={() => setSidebarOpen(false)} />
         </SheetContent>
       </Sheet>

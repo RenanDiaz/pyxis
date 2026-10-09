@@ -6,7 +6,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { ClientStatus } from '@/types'
-import { STATUS_CONFIG } from './StatusBadge'
+import { STATUS_CONFIG, StatusLabel } from './StatusBadge'
 
 interface StatusSelectProps {
   value: ClientStatus
@@ -24,8 +24,8 @@ export default function StatusSelect({ value, onChange }: StatusSelectProps) {
       <SelectContent>
         {ALL_STATUSES.map((s) => (
           <SelectItem key={s} value={s}>
-            <span className={STATUS_CONFIG[s].className.replace(/hover:\S+/g, '').trim() + ' px-1.5 py-0.5 rounded text-xs font-medium'}>
-              {STATUS_CONFIG[s].label}
+            <span className={STATUS_CONFIG[s].className.replace(/hover:\S+/g, '').trim() + ' inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium'}>
+              <StatusLabel status={s} />
             </span>
           </SelectItem>
         ))}

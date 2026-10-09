@@ -66,8 +66,9 @@ export default function Onboarding() {
                 Crea un nuevo workspace para tu equipo de ventas.
               </p>
               <div>
-                <Label>Nombre del workspace</Label>
+                <Label htmlFor="ws-name">Nombre del workspace</Label>
                 <Input
+                  id="ws-name"
                   value={workspaceName}
                   onChange={(e) => setWorkspaceName(e.target.value)}
                   placeholder="Ej: Mi Empresa"
@@ -100,8 +101,9 @@ export default function Onboarding() {
                 Ingresa el código de invitación que recibiste por email.
               </p>
               <div>
-                <Label>Código de invitación</Label>
+                <Label htmlFor="invite-code">Código de invitación</Label>
                 <Input
+                  id="invite-code"
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value)}
                   placeholder="Pega el enlace o código aquí"

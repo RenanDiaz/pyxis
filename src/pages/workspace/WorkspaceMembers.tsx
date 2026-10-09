@@ -182,6 +182,7 @@ export default function WorkspaceMembers() {
                           size="icon"
                           className="text-destructive hover:text-destructive"
                           onClick={() => handleRemove(m.uid, m.display_name)}
+                          aria-label={`Quitar a ${m.display_name} del workspace`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -262,8 +263,9 @@ export default function WorkspaceMembers() {
           ) : (
             <div className="space-y-4 pt-2">
               <div>
-                <Label>Email</Label>
+                <Label htmlFor="invite-email">Email</Label>
                 <Input
+                  id="invite-email"
                   type="email"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
@@ -272,9 +274,9 @@ export default function WorkspaceMembers() {
                 />
               </div>
               <div>
-                <Label>Rol</Label>
+                <Label htmlFor="invite-role">Rol</Label>
                 <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as 'supervisor' | 'agent')}>
-                  <SelectTrigger className="mt-1.5">
+                  <SelectTrigger id="invite-role" className="mt-1.5">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -285,9 +287,9 @@ export default function WorkspaceMembers() {
               </div>
               {subteams && subteams.length > 0 && (
                 <div>
-                  <Label>Subequipo (opcional)</Label>
+                  <Label htmlFor="invite-subteam">Subequipo (opcional)</Label>
                   <Select value={inviteSubteam} onValueChange={setInviteSubteam}>
-                    <SelectTrigger className="mt-1.5">
+                    <SelectTrigger id="invite-subteam" className="mt-1.5">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
