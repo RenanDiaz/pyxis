@@ -1,6 +1,7 @@
 import { after, before, beforeEach, describe, it } from 'node:test'
 import { assertFails, assertSucceeds, type RulesTestEnvironment } from '@firebase/rules-unit-testing'
 import {
+  arrayUnion,
   collection,
   deleteDoc,
   deleteField,
@@ -300,5 +301,22 @@ describe('llamadas a leads (spec 19)', () => {
 
   it('las llamadas existentes a clientes se siguen actualizando', async () => {
     await assertSucceeds(updateDoc(doc(db('ag'), `workspaces/${WS}/calls/callAg`), { outcome: 'completada' }))
+  })
+})
+
+describe('actividad del cliente (spec 03-R6)', () => {
+  const evento = { type: 'reassigned', text: 'Cliente reasignado de Ana a Beto', at: null, by: 'own' }
+  const path = `workspaces/${WS}/clients/cAg`
+
+  it('se agregan eventos (arrayUnion) junto con otros cambios', async () => {
+    await assertSucceeds(updateDoc(doc(db('own'), path), { activity: arrayUnion(evento), notes: 'x' }))
+    await assertSucceeds(updateDoc(doc(db('ag'), path), { notes: 'solo notas' }))
+  })
+
+  it('nadie borra ni edita eventos existentes', async () => {
+    await assertSucceeds(updateDoc(doc(db('own'), path), { activity: arrayUnion(evento) }))
+    await assertFails(updateDoc(doc(db('ag'), path), { activity: [] }))
+    await assertFails(updateDoc(doc(db('ag'), path), { activity: [{ ...evento, text: 'editado' }] }))
+    await assertFails(updateDoc(doc(db('own'), path), { activity: [] }))
   })
 })

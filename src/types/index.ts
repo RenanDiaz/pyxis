@@ -185,6 +185,19 @@ export interface Partner {
   ownership_percentage?: number
 }
 
+/**
+ * Evento del sistema en la ficha del cliente (spec 03-R6). Antes se escribían
+ * como líneas "[SISTEMA] …" dentro de `notes`, mezcladas con lo que el agente
+ * edita. Solo se agregan; las reglas no dejan editarlos ni borrarlos.
+ */
+export interface ClientActivity {
+  type: 'reassigned' | 'system'
+  text: string
+  /** `null` en eventos migrados desde notas viejas (la fecha va en el texto). */
+  at: Timestamp | null
+  by: string | null
+}
+
 export interface Client {
   id: string
   phone: string
@@ -209,6 +222,8 @@ export interface Client {
   status: ClientStatus
   /** Últimos cambios de status (máx. 50). Ver `src/lib/statusHistory.ts`. */
   status_history?: StatusEvent[]
+  /** Eventos del sistema (reasignaciones…), separados de `notes`. */
+  activity?: ClientActivity[]
   /** Primera vez que pasó a contactado o más avanzado. */
   contacted_at?: Timestamp | null
   /** Última vez que pasó a `cerrado`; `null` si salió de cerrado. */

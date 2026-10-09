@@ -1,6 +1,6 @@
 # 13 — UX, accesibilidad y limpieza
 
-**Prioridad:** 🟢 Baja · **Estado:** implementado (PR 1 y PR 2); pendiente: flashcards (P2) y validaciones de `ClientForm` · Se puede repartir en PRs chicos.
+**Prioridad:** 🟢 Baja · **Estado:** implementado (PR 1 y PR 2); pendiente: flashcards (P2) · Se puede repartir en PRs chicos.
 
 ## PR 1 — implementado (2026-10-09)
 - **Mayúsculas sin cursor que salta:** los inputs muestran mayúsculas con CSS
@@ -64,7 +64,7 @@
 ## UX
 - ✅ `toUpperCase()` en inputs controlados (`ClientForm`, notas en `ClientDetail`) hace saltar el cursor al final al editar en medio. **Req:** mostrar en mayúsculas con CSS (`uppercase`) y normalizar al guardar. En notas: ¿realmente deben ir en mayúsculas? (P1 → no).
 - ✅ `email` se guarda en MAYÚSCULAS (`clientUtils`): feo en .docx y recibo. **Req:** excluir email de los campos en mayúsculas; normalizar a minúsculas.
-- Validaciones de `ClientForm`: email, SSN/ITIN (formato), % de socios suma 100 (advertencia). Además `handleSubmit` muta un objeto del estado (`primaryPhone.is_primary = true`).
+- ✅ Validaciones de `ClientForm`: email, SSN/ITIN (formato), % de socios suma 100 (advertencia). *(2026-10-09: `src/lib/clientValidation.ts` con tests. Email y SSN/ITIN bloquean el guardado solo si el valor cambió, para que un dato viejo mal cargado no impida guardar otra edición; también valida el SSN/ITIN de los socios. Los porcentajes muestran un aviso en vivo y piden confirmación al guardar.)* Además `handleSubmit` muta un objeto del estado (`primaryPhone.is_primary = true`).
 - ✅ `AddProcessDialog`: "Cancelar" no resetea; `defaultState` solo se aplica al montar.
 - ✅ `OutcomeBadge`: "No contesto" → "No contestó"; outcome desconocido lanza `TypeError` (falta fallback).
 - ✅ Colores semafóricos (CLAUDE.md): `deuda_pendiente` (ámbar) casi idéntico a contactado (amarillo) y en_proceso (naranja). **Req:** paleta distinguible + ícono, verificada en claro/oscuro.

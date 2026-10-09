@@ -50,6 +50,7 @@ import { db } from '@/lib/firebase'
 import { getCall } from '@/lib/firestore'
 import { convertLeadCalls, convertedClientStatus, getLeadCalls } from '@/lib/leadConversion'
 import { isLeadCall, splitLeadName } from '@/lib/leads'
+import { isValidEmail, ownershipWarning, taxIdError } from '@/lib/clientValidation'
 import { toast } from 'sonner'
 import { deleteField } from 'firebase/firestore'
 
@@ -413,6 +414,36 @@ function ClientForm({
       toast.error(`Número inválido: ${invalidPhone.number}. Debe tener al menos 10 dígitos.`)
       return
     }
+
+    // Email y SSN/ITIN (spec 13). Solo si cambiaron: un dato viejo mal cargado
+    // no debe impedir guardar otra edición.
+    const changed = (field: 'email' | 'ssn_itin') =>
+      (formData[field] ?? '').trim().toLowerCase() !==
+      String(existingClient?.[field] ?? '').trim().toLowerCase()
+    const email = formData.email?.trim() ?? ''
+    if (email && changed('email') && !isValidEmail(email)) {
+      toast.error(`Correo electrónico inválido: ${email}`)
+      document.getElementById('email')?.focus()
+      return
+    }
+    const ssnError = changed('ssn_itin') ? taxIdError(formData.ssn_itin ?? '') : null
+    if (ssnError) {
+      toast.error(`SSN o ITIN del cliente: ${ssnError}`)
+      document.getElementById('ssn_itin')?.focus()
+      return
+    }
+    const existingPartners = existingClient?.partners ?? []
+    for (const [i, partner] of partners.entries()) {
+      const before = existingPartners[i]?.ssn_itin ?? ''
+      const err = (partner.ssn_itin ?? '').trim() !== before.trim() ? taxIdError(partner.ssn_itin ?? '') : null
+      if (err) {
+        toast.error(`SSN o ITIN del socio ${i + 1}: ${err}`)
+        document.getElementById(`partner_ssn_${i}`)?.focus()
+        return
+      }
+    }
+    const pctWarning = ownershipWarning(partners)
+    if (pctWarning && !confirm(`${pctWarning} ¿Guardar de todos modos?`)) return
 
     const cleanPhones = validPhones.map((p) => ({
       number: formatPhoneForDisplay(p.number.trim()),
@@ -859,6 +890,11 @@ function ClientForm({
                     </div>
                   </Card>
                 ))}
+                {ownershipWarning(partners) && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400" role="status">
+                    {ownershipWarning(partners)}
+                  </p>
+                )}
                 <Button type="button" variant="outline" size="sm" onClick={addPartner}>
                   <Plus className="mr-1 h-3 w-3" /> Agregar socio
                 </Button>
