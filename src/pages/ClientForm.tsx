@@ -44,7 +44,6 @@ import { getStateTimezone } from '@/lib/timezones'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, Plus, X, AlertTriangle } from 'lucide-react'
 import type { Client, ClientStatus, ClientPhone, PhoneLabel, Partner, ClientProcess } from '@/types'
-import { inferStatus } from '@/lib/statusUtils'
 import { toast } from 'sonner'
 import { deleteField } from 'firebase/firestore'
 
@@ -366,10 +365,10 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
     const clientData: Record<string, unknown> = {
       phone: formatPhoneForDisplay(primaryPhone.number.trim()),
       phones: cleanPhones,
-      status,
-      // Al editar no se reenvían las notas: se gestionan en el detalle y
-      // mandarlas aquí pisaría las agregadas mientras el formulario estaba abierto.
-      ...(!isEditing && { notes: '', archived: false }),
+      // Al editar no se reenvían las notas ni el status: se gestionan en el
+      // detalle, y mandar la copia de cuando se abrió el formulario pisaría lo
+      // que cambió mientras tanto (p. ej. un pago que cerró al cliente).
+      ...(!isEditing && { status, notes: '', archived: false }),
     }
 
     // Only include non-empty optional fields
@@ -402,12 +401,12 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
 
     try {
       if (isEditing && id) {
-        // Auto-infer status on edit (info_added trigger)
-        const newStatus = inferStatus(status, 'info_added')
-        if (newStatus) {
-          clientData.status = newStatus
-        }
-        await updateMutation.mutateAsync({ id, data: clientData as Partial<Client> })
+        // nuevo → contactado al agregar info, evaluado contra el status actual.
+        await updateMutation.mutateAsync({
+          id,
+          data: clientData as Partial<Client>,
+          trigger: 'info_added',
+        })
         draft.clear()
         toast.success('Cliente actualizado')
         navigate(`/clientes/${id}`)

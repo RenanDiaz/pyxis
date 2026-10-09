@@ -127,12 +127,9 @@ export default function DocumentGrid({
       }
     }
 
-    // Auto-infer status after successful document upload
-    if (clientStatus) {
-      const newStatus = inferStatus(clientStatus, 'document_uploaded')
-      if (newStatus) {
-        updateClient(workspaceId, clientId, { status: newStatus }).catch(() => {})
-      }
+    // nuevo → contactado tras subir documentos, evaluado contra el status actual.
+    if (clientStatus && inferStatus(clientStatus, 'document_uploaded')) {
+      updateClient(workspaceId, clientId, {}, 'document_uploaded').catch(() => {})
     }
 
     // Clear completed uploads after a short delay

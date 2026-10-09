@@ -199,6 +199,12 @@ export interface Client {
   /** @deprecated los pagos ahora viven por proceso en `processes`. Solo para migración. */
   payments?: Payment[]
   status: ClientStatus
+  /** Últimos cambios de status (máx. 50). Ver `src/lib/statusHistory.ts`. */
+  status_history?: StatusEvent[]
+  /** Primera vez que pasó a contactado o más avanzado. */
+  contacted_at?: Timestamp | null
+  /** Última vez que pasó a `cerrado`; `null` si salió de cerrado. */
+  closed_at?: Timestamp | null
   archived: boolean
   notes: string
   owner_uid: string
@@ -207,7 +213,19 @@ export interface Client {
   updated_at: Timestamp
 }
 
+export interface StatusEvent {
+  /** `null` en el alta del cliente. */
+  from: ClientStatus | null
+  to: ClientStatus
+  at: Timestamp
+  /** uid de quien hizo el cambio (`null` si no se conoce, p. ej. scripts). */
+  by: string | null
+}
+
 export type CallOutcome = 'pendiente' | 'completada' | 'no_contesto' | 'reagendada'
+
+/** `contact_attempt`: el agente tocó Llamar/WhatsApp/Email desde el detalle (no es una cita). */
+export type CallKind = 'scheduled' | 'contact_attempt'
 
 export interface Call {
   id: string
@@ -216,6 +234,9 @@ export interface Call {
   duration_minutes?: number
   notes: string
   outcome: CallOutcome
+  /** Ausente en llamadas viejas: equivale a `scheduled`. */
+  kind?: CallKind
+  channel?: 'WhatsApp' | 'Llamada' | 'Email'
   owner_uid: string
   subteam_id: string | null
   created_at: Timestamp
