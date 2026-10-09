@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { format } from 'date-fns'
+import { format, subMonths } from 'date-fns'
 import { toast } from 'sonner'
 import { FileSpreadsheet, Users } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
@@ -7,7 +7,6 @@ import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useWorkspaceMembers } from '@/hooks/useWorkspace'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -27,6 +26,21 @@ import { es } from 'date-fns/locale'
 import { describeError } from '@/lib/errors'
 
 const ALL_AGENTS = 'all'
+/** Meses que ofrece el selector, contando el actual. */
+const MONTH_OPTIONS = 24
+
+/**
+ * Últimos meses como `{ key: 'yyyy-MM', label }`, del actual hacia atrás. Un
+ * selector y no `<input type="month">`: Safari de escritorio no lo soporta y lo
+ * muestra como texto libre; un valor tecleado como "2026-9" daba Invalid Date y
+ * tumbaba la página (spec 04, #17).
+ */
+function recentMonths(now: Date): Array<{ key: string; label: string }> {
+  return Array.from({ length: MONTH_OPTIONS }, (_, i) => {
+    const d = subMonths(now, i)
+    return { key: format(d, 'yyyy-MM'), label: format(d, "MMMM 'de' yyyy", { locale: es }) }
+  })
+}
 
 function fmtCurrency(value: number): string {
   return `$${formatMoney(value)}`
@@ -34,7 +48,8 @@ function fmtCurrency(value: number): string {
 
 export default function Reports() {
   const { role, workspaceId, profile } = useUserProfile()
-  const [month, setMonth] = useState(() => format(new Date(), 'yyyy-MM'))
+  const monthOptions = useMemo(() => recentMonths(new Date()), [])
+  const [month, setMonth] = useState(() => monthOptions[0].key)
   const [agentUid, setAgentUid] = useState<string>(ALL_AGENTS)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -87,6 +102,7 @@ export default function Reports() {
         monthLabel,
         expenses: settings.expenses,
         stripeFeeMode: settings.stripeFeeMode,
+        taxRate: settings.taxRate,
       })
       // Carga diferida: ExcelJS es pesado y solo se necesita al exportar.
       const { downloadSalesReport } = await import('@/lib/generateSalesReport')
@@ -117,15 +133,18 @@ export default function Reports() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="report-month">Mes</Label>
-              <Input
-                id="report-month"
-                type="month"
-                value={month}
-                // Borrar el campo dejaba el mes vacío y la página se caía
-                // (Invalid Date): se ignora y queda el mes anterior.
-                onChange={(e) => e.target.value && setMonth(e.target.value)}
-                required
-              />
+              <Select value={month} onValueChange={setMonth}>
+                <SelectTrigger id="report-month" className="w-full capitalize">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map((m) => (
+                    <SelectItem key={m.key} value={m.key} className="capitalize">
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {showAgentFilter && (
@@ -185,6 +204,7 @@ export default function Reports() {
         onOpenChange={setDialogOpen}
         defaultEmployeeName={defaultEmployeeName}
         accountCount={preview.accountCount}
+        missingState={preview.missingState}
         isExporting={isExporting}
         onExport={handleExport}
       />

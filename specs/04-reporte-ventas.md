@@ -1,6 +1,6 @@
 # 04 — Correcciones del reporte de ventas (Excel)
 
-**Prioridad:** 🔴 Alta · **Estado:** bloqueado por decisiones de negocio (P3–P8) y por el error de #17 · **Tamaño:** M (antes S)
+**Prioridad:** 🔴 Alta · **Estado:** 🟡 parcial — fixes sin dependencias de negocio implementados (ver «Implementado»); el resto bloqueado por P3–P8 · **Tamaño:** M (antes S)
 
 ## Fuente de verdad
 - Excel manual `2026_ISABEL_PAY_SEPT` (hojas June, JULY, AUG, SEPT de 2026).
@@ -41,7 +41,7 @@ las referencias citan solo hoja + tipo + estado.
 ### C. Exportación y datos
 | # | Hallazgo | Impacto |
 |---|----------|---------|
-| 17 | Elegir **septiembre 2026** (clientes ya archivados) da error. Los clientes archivados sí se cargan (`useClients({ archived: true })` en `Reports.tsx`), así que el error es otro. **Falta el mensaje exacto** y si sale al elegir el mes o al exportar. | No se puede reportar un mes cerrado → bloquea el último criterio de aceptación. |
+| ✔ 17 | Elegir **septiembre 2026** tumbaba la página (`RangeError: Invalid time value`). **Causa:** no eran los archivados; Safari de escritorio no soporta `<input type="month">` y lo muestra como texto libre; un valor tecleado ("2026-9", "septiembre") pasaba el filtro y `format()` de date-fns fallaba en el render. | ✅ Resuelto: selector de los últimos 24 meses. |
 | ✔ 18 | Un nombre de LLC trae un emoji ("… LLC ✅"): el agente lo usa como marca de seguimiento. | Sale tal cual en el reporte (y en .docx y recibos). Higiene de datos, no del reporte: llevar a 13 o a un spec de validaciones. |
 | ✔ 19 | Default de base pay en el diálogo = 500; el manual usa 250 desde julio. | Solo un default; confirmar con P7. |
 
@@ -98,17 +98,31 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
 11. Corregir el error al exportar un mes con clientes archivados (#17).
 12. Catálogo: agregar ITIN y Certificado de Autoridad si P8 lo confirma.
 
+## Implementado (rama `claude/spec-04-reporte-ventas`)
+- #16: state fee y RA solo en la fila del primer pago de cada cuenta.
+- #14 y #13: WHAT I TOOK HOME = `K_total − (TOTAL PAY + gastos fijos)`; TOTAL PAY suma el bonus.
+- #6: tasa de TAX configurable en el diálogo (default 0.39, `DEFAULT_TAX_RATE`).
+- #1 (parcial): sin fallback a `client.state`; los procesos sin estado van en 0 y el
+  diálogo los lista. El costo por tipo de proceso (req. 1–2) sigue pendiente de P8.
+- #17: selector de mes en vez de `<input type="month">`.
+- #5: comentario corregido.
+- Tests: `tests/unit/sales-report.test.ts`.
+
+**Pendiente:** #7 (restar J antes del TAX), #8/P5 (Stripe), #9 (RA = 45), #10–#12
+(formato por cuenta, columnas, comisión — P6/P7), #2 (company), #3/P3, #4, costo por
+tipo de proceso (P8) y catálogo.
+
 ## Criterios de aceptación
 - [ ] Una dissolution de NY resta 90 de state fee, no 290 (precio).
 - [ ] Un EIN resta 0 de state fee.
 - [ ] Un proceso con `state_cost` editado usa ese valor, no el del catálogo.
-- [ ] Un proceso sin estado resta 0 y aparece en las advertencias.
-- [ ] Una cuenta con 2 pagos en el mes resta el state fee **una sola vez** en el NET total.
-- [ ] Se puede exportar septiembre 2026 (clientes archivados) sin error.
+- [x] Un proceso sin estado resta 0 y aparece en las advertencias.
+- [x] Una cuenta con 2 pagos en el mes resta el state fee **una sola vez** en el NET total.
+- [x] Se puede exportar septiembre 2026 (clientes archivados) sin error.
 - [ ] TAX de una fila con Stripe resta J antes de aplicar la tasa configurada.
-- [ ] WHAT I TOOK HOME = K_total − gastos fijos − TOTAL PAY (la base se resta una sola vez).
+- [x] WHAT I TOOK HOME = K_total − gastos fijos − TOTAL PAY (la base se resta una sola vez).
 - [ ] Test unitario de `buildReportInput` con un cliente que tiene registro + amendment + EIN en el mismo mes.
-- [ ] Test de fórmulas del generador (TAX, NET, comisión, TOTAL PAY, take-home) con un input fijo.
+- [x] Test de fórmulas del generador (TAX, NET, comisión, TOTAL PAY, take-home) con un input fijo.
 - [ ] Reporte de **septiembre 2026** generado por la app comparado contra la hoja SEPT
       del Excel manual: cada diferencia queda explicada (nombres, montos, filas agrupadas).
 
