@@ -1,7 +1,7 @@
 import { doc, runTransaction, Timestamp, updateDoc, type Firestore } from 'firebase/firestore'
 import type { Client } from '@/types'
 import type { ClientChange, ClientMutation } from '@/lib/processMutations'
-import { uppercaseClientFields } from '@/lib/clientUtils'
+import { normalizeClientFields } from '@/lib/clientUtils'
 import { statusChangeFields } from '@/lib/statusHistory'
 import { inferStatus, type StatusTrigger } from '@/lib/statusUtils'
 import { UserFacingError } from '@/lib/errors'
@@ -34,7 +34,7 @@ export async function runClientMutation(
     const { status, ...change } = mutation(client)
     const statusFields = status ? statusChangeFields(client, status, by) : null
     tx.update(ref, {
-      ...uppercaseClientFields({ ...change }),
+      ...normalizeClientFields({ ...change }),
       ...statusFields,
       updated_at: Timestamp.now(),
     })
@@ -67,7 +67,7 @@ export async function runClientUpdate(
 ): Promise<void> {
   const ref = clientRef(fs, workspaceId, clientId)
   const { status, ...rest } = data
-  const fields = { ...uppercaseClientFields(rest), updated_at: Timestamp.now() }
+  const fields = { ...normalizeClientFields(rest), updated_at: Timestamp.now() }
   if (!status && !trigger) {
     await updateDoc(ref, fields)
     return

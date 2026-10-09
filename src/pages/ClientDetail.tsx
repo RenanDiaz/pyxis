@@ -149,7 +149,7 @@ function ClientNotesCard({ client }: { client: Client }) {
         )}
         <Textarea
           value={currentNotes}
-          onChange={(e) => setNotes(e.target.value.toUpperCase())}
+          onChange={(e) => setNotes(e.target.value)}
           placeholder="Escribe notas sobre el cliente..."
           rows={6}
         />
@@ -444,7 +444,7 @@ export default function ClientDetail() {
                 variant="outline"
                 className="h-10 rounded-xl"
                 onClick={() => {
-                  window.location.href = `mailto:${client.email}`
+                  window.location.href = `mailto:${client.email?.toLowerCase()}`
                   handleContactClick('Email')
                 }}
               >
@@ -664,7 +664,7 @@ export default function ClientDetail() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-muted-foreground">Email</p>
-                  <p className="font-medium break-all">{client.email || '—'}</p>
+                  <p className="font-medium break-all">{client.email?.toLowerCase() || '—'}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">SSN/ITIN</p>

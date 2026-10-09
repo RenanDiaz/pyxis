@@ -42,7 +42,8 @@ export const PHONE_LABELS: Record<string, string> = {
 
 /**
  * Campos de texto del cliente que se almacenan siempre en mayúsculas.
- * Excluye códigos/enums (state, process, status), teléfonos e IDs.
+ * Excluye códigos/enums (state, process, status), teléfonos e IDs, el email
+ * (va en minúsculas) y las notas (texto libre, se guardan como se escriben).
  */
 const CLIENT_UPPERCASE_FIELDS = [
   'first_name',
@@ -50,10 +51,8 @@ const CLIENT_UPPERCASE_FIELDS = [
   'last_name',
   'llc_name',
   'ssn_itin',
-  'email',
   'business_address',
   'business_purpose',
-  'notes',
 ] as const
 
 const PARTNER_UPPERCASE_FIELDS = ['first_name', 'last_name', 'ssn_itin', 'address'] as const
@@ -64,9 +63,22 @@ const PROCESS_UPPERCASE_FIELDS = ['llc_name', 'business_address', 'business_purp
 export const CLIENT_UPPERCASE_FIELD_IDS: ReadonlySet<string> = new Set(CLIENT_UPPERCASE_FIELDS)
 export const PARTNER_UPPERCASE_FIELD_IDS: ReadonlySet<string> = new Set(PARTNER_UPPERCASE_FIELDS)
 
-/** Devuelve una copia del payload con los campos de texto del cliente en mayúsculas. */
-export function uppercaseClientFields<T extends Record<string, unknown>>(data: T): T {
+/**
+ * Inputs de campos en mayúsculas: se MUESTRAN en mayúsculas con CSS y se
+ * normalizan al guardar. Transformar el valor en cada tecla hacía saltar el
+ * cursor al final al editar en medio del texto (spec 13).
+ */
+export const UPPERCASE_INPUT_CLASS = 'uppercase placeholder:normal-case'
+
+/**
+ * Devuelve una copia del payload normalizada para guardar: campos de texto en
+ * mayúsculas y email en minúsculas.
+ */
+export function normalizeClientFields<T extends Record<string, unknown>>(data: T): T {
   const out: Record<string, unknown> = { ...data }
+  if (typeof out.email === 'string') {
+    out.email = out.email.trim().toLowerCase()
+  }
   for (const key of CLIENT_UPPERCASE_FIELDS) {
     const value = out[key]
     if (typeof value === 'string') {

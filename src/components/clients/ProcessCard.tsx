@@ -35,6 +35,7 @@ import {
   type CompanyKey,
 } from '@/lib/companyUtils'
 import type { Client, ClientProcess, ProcessStage, StateInfo, Workspace } from '@/types'
+import { UPPERCASE_INPUT_CLASS } from '@/lib/clientUtils'
 
 const STAGE_ORDER: ProcessStage[] = ['pendiente', 'en_proceso', 'completado', 'cancelado']
 
@@ -172,6 +173,7 @@ export default function ProcessCard({
                   id={`llc-name-${process.id}`}
                   value={currentCompany.llc_name}
                   onChange={(e) => setCompany({ ...currentCompany, llc_name: e.target.value })}
+                  className={UPPERCASE_INPUT_CLASS}
                   placeholder={
                     (inheritsCompany ? client.llc_name : '') || 'Ej: SUNRISE SERVICES LLC'
                   }
@@ -185,6 +187,7 @@ export default function ProcessCard({
                   id={`business-address-${process.id}`}
                   value={currentCompany.business_address}
                   onChange={(e) => setCompany({ ...currentCompany, business_address: e.target.value })}
+                  className={UPPERCASE_INPUT_CLASS}
                   placeholder={
                     (inheritsCompany ? client.business_address : '') || 'Dirección de esta compañía'
                   }
@@ -199,6 +202,7 @@ export default function ProcessCard({
                   id={`business-purpose-${process.id}`}
                   value={currentCompany.business_purpose}
                   onChange={(e) => setCompany({ ...currentCompany, business_purpose: e.target.value })}
+                  className={UPPERCASE_INPUT_CLASS}
                   placeholder={
                     (inheritsCompany ? client.business_purpose : '') || 'Propósito de esta compañía'
                   }

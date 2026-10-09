@@ -10,7 +10,8 @@ const OUTCOME_CONFIG: Record<CallOutcome, { label: string; className: string }> 
 }
 
 export default function OutcomeBadge({ outcome }: { outcome: CallOutcome }) {
-  const config = OUTCOME_CONFIG[outcome]
+  // Un valor desconocido (dato viejo o manual) no debe romper la pantalla.
+  const config = OUTCOME_CONFIG[outcome] ?? { label: String(outcome || 'Sin resultado'), className: '' }
   return (
     <Badge variant="secondary" className={cn(config.className)}>
       {config.label}

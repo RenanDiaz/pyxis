@@ -100,7 +100,7 @@ function buildDoc(client: Client, company: CompanyInfo): Document {
           field("● APELLIDOS", client.last_name, true),
           field("- SSN O ITIN", client.ssn_itin),
           field("- NÚMERO TELEFÓNICO", getPrimaryPhoneNumber(client)),
-          field("- CORREO ELECTRÓNICO", client.email),
+          field("- CORREO ELECTRÓNICO", client.email?.toLowerCase()),
           field("- DIRECCIÓN COMERCIAL DE LA EMPRESA", company.business_address),
           field("- PROPÓSITO DE LA EMPRESA", company.business_purpose),
           ...partnerSection(client.partners),

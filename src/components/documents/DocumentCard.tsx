@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { toast } from 'sonner'
 import type { ClientDocument, WorkspaceRole } from '@/types'
 import {
   getFileIcon,
   getFileIconColor,
   formatFileSize,
-  downloadFile,
+  downloadFileWithFeedback,
 } from '@/lib/storageUtils'
 import { Button } from '@/components/ui/button'
 import {
@@ -43,12 +42,7 @@ export default function DocumentCard({
   const handleDownload = async () => {
     setDownloading(true)
     try {
-      const result = await downloadFile(doc.download_url, doc.name)
-      if (result === 'opened') {
-        toast.warning('No se pudo descargar directamente. El archivo se abrió en otra pestaña.')
-      } else if (result === 'blocked') {
-        toast.error('El navegador bloqueó la descarga. Permite las ventanas emergentes e intenta de nuevo.')
-      }
+      await downloadFileWithFeedback(doc.download_url, doc.name)
     } finally {
       setDownloading(false)
     }

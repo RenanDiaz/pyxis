@@ -37,13 +37,21 @@ export async function fetchImageAsDataUrl(url: string): Promise<{
       reader.onerror = reject
       reader.readAsDataURL(blob)
     })
-    const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-      const img = new Image()
-      img.onload = () => resolve({ width: img.width, height: img.height })
-      img.onerror = reject
-      img.src = dataUrl
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image()
+      el.onload = () => resolve(el)
+      el.onerror = reject
+      el.src = dataUrl
     })
-    return { dataUrl, ...dimensions }
+    const { width, height } = img
+    if (/^data:image\/(png|jpe?g)/.test(dataUrl)) return { dataUrl, width, height }
+    // jsPDF solo dibuja PNG/JPEG: WebP (y otros) se pasan a PNG con un canvas.
+    // Antes se trataban como JPEG y el logo desaparecía sin aviso (spec 13).
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    canvas.getContext('2d')?.drawImage(img, 0, 0)
+    return { dataUrl: canvas.toDataURL('image/png'), width, height }
   } catch {
     return null
   }

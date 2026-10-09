@@ -25,7 +25,8 @@ import AddProcessDialog from '@/components/clients/AddProcessDialog'
 import DraftBanner from '@/components/shared/DraftBanner'
 import { getStateByAreaCode } from '@/lib/areaCodeMap'
 import { formatPhoneForDisplay, isValidPhone } from '@/lib/phoneUtils'
-import { CLIENT_UPPERCASE_FIELD_IDS, PARTNER_UPPERCASE_FIELD_IDS } from '@/lib/clientUtils'
+import { CLIENT_UPPERCASE_FIELD_IDS, UPPERCASE_INPUT_CLASS } from '@/lib/clientUtils'
+import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -71,7 +72,11 @@ function snapshotFromClient(client: Client): ClientFormSnapshot {
   for (const field of clientFormConfig.fields) {
     const value = client[field.id as keyof Client]
     const str = typeof value === 'string' ? value : ''
-    formData[field.id] = CLIENT_UPPERCASE_FIELD_IDS.has(field.id) ? str.toUpperCase() : str
+    formData[field.id] = CLIENT_UPPERCASE_FIELD_IDS.has(field.id)
+      ? str.toUpperCase()
+      : field.id === 'email'
+        ? str.toLowerCase() // emails guardados en mayúsculas antes del spec 13
+        : str
   }
   const phones = client.phones?.length
     ? client.phones
@@ -280,8 +285,7 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
 
   const handleChange = (fieldId: string, value: string) => {
     setFormData((prev) => {
-      const nextValue = CLIENT_UPPERCASE_FIELD_IDS.has(fieldId) ? value.toUpperCase() : value
-      const next = { ...prev, [fieldId]: nextValue }
+      const next = { ...prev, [fieldId]: value }
 
       if (fieldId === 'state') {
         stateManuallySet.current = true
@@ -309,7 +313,7 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
     updatePhones((prev) => {
       const next = prev.filter((_, i) => i !== index)
       if (next.length > 0 && !next.some((p) => p.is_primary)) {
-        next[0].is_primary = true
+        return next.map((p, i) => ({ ...p, is_primary: i === 0 }))
       }
       return next
     })
@@ -321,11 +325,7 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
   }
 
   const updatePartner = (index: number, field: keyof Partner, value: string | number) => {
-    const nextValue =
-      typeof value === 'string' && PARTNER_UPPERCASE_FIELD_IDS.has(field as string)
-        ? value.toUpperCase()
-        : value
-    setPartners((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: nextValue } : p)))
+    setPartners((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)))
   }
 
   const removePartner = (index: number) => {
@@ -342,9 +342,8 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
       return
     }
 
-    // Ensure one is primary
+    // Ensure one is primary (sin mutar el estado)
     const primaryPhone = validPhones.find((p) => p.is_primary) ?? validPhones[0]
-    if (!primaryPhone.is_primary) primaryPhone.is_primary = true
 
     // Validate phone format
     const invalidPhone = validPhones.find((p) => !isValidPhone(p.number))
@@ -356,7 +355,7 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
     const cleanPhones = validPhones.map((p) => ({
       number: formatPhoneForDisplay(p.number.trim()),
       label: p.label,
-      is_primary: p.is_primary,
+      is_primary: p === primaryPhone,
     }))
 
     const clientData: Record<string, unknown> = {
@@ -617,7 +616,7 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
                         id={field.id}
                         value={formData[field.id] || ''}
                         onChange={(e) => handleChange(field.id, e.target.value)}
-                        className="mt-1.5"
+                        className={cn('mt-1.5', CLIENT_UPPERCASE_FIELD_IDS.has(field.id) && UPPERCASE_INPUT_CLASS)}
                         rows={3}
                       />
                     ) : (
@@ -626,7 +625,7 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
                         type={field.type === 'phone' ? 'tel' : field.type === 'email' ? 'email' : 'text'}
                         value={formData[field.id] || ''}
                         onChange={(e) => handleChange(field.id, e.target.value)}
-                        className="mt-1.5"
+                        className={cn('mt-1.5', CLIENT_UPPERCASE_FIELD_IDS.has(field.id) && UPPERCASE_INPUT_CLASS)}
                         autoComplete={('sensitive' in field && field.sensitive) ? 'off' : undefined}
                       />
                     )}
@@ -735,7 +734,7 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
                           id={`partner_first_name_${index}`}
                           value={partner.first_name}
                           onChange={(e) => updatePartner(index, 'first_name', e.target.value)}
-                          className="mt-1.5"
+                          className={cn('mt-1.5', UPPERCASE_INPUT_CLASS)}
                           placeholder="Nombre"
                         />
                       </div>
@@ -745,7 +744,7 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
                           id={`partner_last_name_${index}`}
                           value={partner.last_name}
                           onChange={(e) => updatePartner(index, 'last_name', e.target.value)}
-                          className="mt-1.5"
+                          className={cn('mt-1.5', UPPERCASE_INPUT_CLASS)}
                           placeholder="Apellidos"
                         />
                       </div>
@@ -755,7 +754,7 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
                           id={`partner_ssn_${index}`}
                           value={partner.ssn_itin || ''}
                           onChange={(e) => updatePartner(index, 'ssn_itin', e.target.value)}
-                          className="mt-1.5"
+                          className={cn('mt-1.5', UPPERCASE_INPUT_CLASS)}
                           placeholder="SSN o ITIN"
                           autoComplete="off"
                         />
@@ -779,7 +778,7 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
                           id={`partner_address_${index}`}
                           value={partner.address || ''}
                           onChange={(e) => updatePartner(index, 'address', e.target.value)}
-                          className="mt-1.5"
+                          className={cn('mt-1.5', UPPERCASE_INPUT_CLASS)}
                           placeholder="Dirección del socio"
                         />
                       </div>

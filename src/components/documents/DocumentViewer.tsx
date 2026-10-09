@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { toast } from 'sonner'
 import type { ClientDocument } from '@/types'
 import {
   Dialog,
@@ -8,7 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { downloadFile } from '@/lib/storageUtils'
+import { downloadFileWithFeedback } from '@/lib/storageUtils'
 import { Download, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface Props {
@@ -26,12 +25,7 @@ export default function DocumentViewer({ doc, allImages, onClose, onNavigate }: 
   const handleDownload = async () => {
     setDownloading(true)
     try {
-      const result = await downloadFile(doc.download_url, doc.name)
-      if (result === 'opened') {
-        toast.warning('No se pudo descargar directamente. El archivo se abrió en otra pestaña.')
-      } else if (result === 'blocked') {
-        toast.error('El navegador bloqueó la descarga. Permite las ventanas emergentes e intenta de nuevo.')
-      }
+      await downloadFileWithFeedback(doc.download_url, doc.name)
     } finally {
       setDownloading(false)
     }
