@@ -1,11 +1,13 @@
 # 04 — Correcciones del reporte de ventas (Excel)
 
-**Prioridad:** 🔴 Alta · **Estado:** bloqueado por decisiones de negocio (P3–P8) · **Tamaño:** M (antes S)
+**Prioridad:** 🔴 Alta · **Estado:** bloqueado por decisiones de negocio (P3–P8) y por el error de #17 · **Tamaño:** M (antes S)
 
 ## Fuente de verdad
-Excel manual `2026_ISABEL_PAY_SEPT` (hojas June, JULY, AUG, SEPT de 2026),
-analizado el 2026-10-09. **No se versiona** (datos reales de clientes); las
-referencias de abajo citan solo hoja + tipo + estado.
+- Excel manual `2026_ISABEL_PAY_SEPT` (hojas June, JULY, AUG, SEPT de 2026).
+- Reporte generado por la app: `October 2026 Sales Report.xlsx` (parcial, al 2026-10-09).
+
+Ambos analizados el 2026-10-09. **No se versionan** (datos reales de clientes);
+las referencias citan solo hoja + tipo + estado.
 
 ## Problema
 ### A. Cálculo (`src/lib/salesReportData.ts`, `buildReportInput`)
@@ -33,9 +35,17 @@ referencias de abajo citan solo hoja + tipo + estado.
 | ✔ 12 | Comisión = `(K_total − basePay) × rate` | Comisión = `K_total × 0.15` (desde Jul; June sí restaba 500) | Ver P7. |
 | ✔ 13 | TOTAL PAY = comisión + base | TOTAL PAY = base + **bonus** + comisión | La app omite el bonus. |
 | ✔ 14 | WHAT I TOOK HOME = `(K − base) − (comisión + base + gastos)` → **resta la base dos veces** | `K − gastos − TOTAL PAY` | **Bug** independiente de P7. |
+| ✔ 16 | Con 2+ pagos, **cada fila de pago resta el state fee completo** (`I3=(F3-G2)*rate`, `K3=F3-G2-I3-J3`) | El fee se resta una vez por cuenta | **Bug crítico.** En el reporte de octubre, 2 cuentas a 2 pagos restan 312.40 de más (NY 210 + VA 102.40) → NET subestimado en ≈ 206 y comisión en ≈ 31. Lo mismo aplicaría a H. |
 | ✔ 15 | Un proceso = una fila | El manual agrupa servicios en una fila ("ENMIENDA/EIN/BOI", "EIN/BOI") | Aceptable: la app mantiene una fila por proceso. Diferencia esperada, no se corrige. |
 
-### C. Catálogo de procesos (`src/data/processes.ts`)
+### C. Exportación y datos
+| # | Hallazgo | Impacto |
+|---|----------|---------|
+| 17 | Elegir **septiembre 2026** (clientes ya archivados) da error. Los clientes archivados sí se cargan (`useClients({ archived: true })` en `Reports.tsx`), así que el error es otro. **Falta el mensaje exacto** y si sale al elegir el mes o al exportar. | No se puede reportar un mes cerrado → bloquea el último criterio de aceptación. |
+| ✔ 18 | Un nombre de LLC trae un emoji ("… LLC ✅"): el agente lo usa como marca de seguimiento. | Sale tal cual en el reporte (y en .docx y recibos). Higiene de datos, no del reporte: llevar a 13 o a un spec de validaciones. |
+| ✔ 19 | Default de base pay en el diálogo = 500; el manual usa 250 desde julio. | Solo un default; confirmar con P7. |
+
+### D. Catálogo de procesos (`src/data/processes.ts`)
 Aparecen en el Excel y no existen en el catálogo (hoy serían `custom`):
 
 | Servicio (Excel) | Precio visto | State fee visto |
@@ -51,6 +61,10 @@ Aparecen en el Excel y no existen en el catálogo (hoy serían `custom`):
   - Statement of Information CA → 20.
   - EIN, BOI, Sales Tax Certificate, Resale Certificate → **0**.
   - Annual report: **no hay ejemplos**.
+- **P5 (evidencia parcial, octubre):** un registro de NY de 659 se pagó en dos
+  pagos de 329.50 por Stripe, sin el 4 % → **Pyxis guarda el monto base**, y la app le
+  estima 2.9 % + 0.30 (9.86 por pago). En el manual esa cuenta tendría CHARGE ≈ 685.36
+  y J ≈ 26.36. Falta confirmar si el cliente pagó el recargo.
 - **P2 (resuelta en parte):** los manuales del catálogo (Sales Tax, Resale, EIN, BOI) van en 0;
   **sí hay servicios con costo** (ITIN 250, Certificado de Autoridad 175), así que hace
   falta capturar un costo por proceso.
@@ -77,16 +91,20 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
 6. Diálogo de exportación: tasa de TAX configurable (default 0.39), costo de
    Registered Agent (default 45) y lista de advertencias (procesos sin estado,
    procesos con costo manual vacío, clientes legacy con pagos en el mes).
-7. Fórmulas: TAX = `(F-G-H-J)*rate`; NET = `F-G-H-I-J`; H = costo de RA si aplica, si no 0.
-8. Arreglar WHAT I TOOK HOME (#14) y sumar el bonus a TOTAL PAY (#13).
-9. Stripe fee, layout por fila/OWES/columnas y comisión según P5–P7.
-10. Catálogo: agregar ITIN y Certificado de Autoridad si P8 lo confirma.
+7. **State fee y RA una sola vez por cuenta** (#16), aunque la cuenta tenga varias filas de pago.
+8. Fórmulas: TAX = `(F-G-H-J)*rate`; NET = `F-G-H-I-J`; H = costo de RA si aplica, si no 0.
+9. Arreglar WHAT I TOOK HOME (#14) y sumar el bonus a TOTAL PAY (#13).
+10. Stripe fee, layout por fila/OWES/columnas y comisión según P5–P7.
+11. Corregir el error al exportar un mes con clientes archivados (#17).
+12. Catálogo: agregar ITIN y Certificado de Autoridad si P8 lo confirma.
 
 ## Criterios de aceptación
 - [ ] Una dissolution de NY resta 90 de state fee, no 290 (precio).
 - [ ] Un EIN resta 0 de state fee.
 - [ ] Un proceso con `state_cost` editado usa ese valor, no el del catálogo.
 - [ ] Un proceso sin estado resta 0 y aparece en las advertencias.
+- [ ] Una cuenta con 2 pagos en el mes resta el state fee **una sola vez** en el NET total.
+- [ ] Se puede exportar septiembre 2026 (clientes archivados) sin error.
 - [ ] TAX de una fila con Stripe resta J antes de aplicar la tasa configurada.
 - [ ] WHAT I TOOK HOME = K_total − gastos fijos − TOTAL PAY (la base se resta una sola vez).
 - [ ] Test unitario de `buildReportInput` con un cliente que tiene registro + amendment + EIN en el mismo mes.
@@ -98,6 +116,6 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
 - **P3:** Un proceso cancelado con pagos, ¿se reembolsó? ¿Se reporta como venta, como negativo o se excluye? *(El Excel no trae casos.)*
 - **P4:** El state fee de registro en el Excel varía respecto del doc del estado (1c). ¿Cuál es el correcto: el del doc (hay que actualizarlo) o el del Excel (costo real del caso, p. ej. expedite)? CA aparece con 30, 70 y 110 en meses distintos: ¿de qué depende?
 - **P5:** La columna STRIPE FEE, ¿es la comisión real de Stripe o el recargo del 4 % que se le cobra al cliente? ¿El monto del pago que se registra en Pyxis **incluye** ese 4 %? ¿Por qué algunos casos son 2 %?
-- **P6:** ¿El reporte debe pasar a una fila por cuenta con CHARGE = total y OWES = saldo (como el Excel actual), o se mantiene una fila por pago? ¿Se agregan las columnas comisión por fila y FORMA DE PAGO?
+- **P6:** ¿El reporte debe pasar a una fila por cuenta con CHARGE = total y OWES = saldo (como el Excel actual), o se mantiene una fila por pago? ¿Se agregan las columnas comisión por fila y FORMA DE PAGO? **Recomendación: una fila por cuenta**: elimina #16 de raíz y es el formato que el negocio usa hoy. Con una fila por pago, #16 se arregla restando G/H solo en la primera fila del bloque.
 - **P7:** La comisión, ¿es `NET total × 15 %` (Jul–Sept) o `(NET total − base) × 15 %` (June, y lo que hace hoy la app)?
 - **P8:** ¿Cuál es el costo estatal de annual report, dissolution y amendment por estado? (Para llenar los campos nuevos; hoy solo conocemos NY y TX.) ¿ITIN y Certificado de Autoridad entran al catálogo con costos fijos de 250 y 175?
