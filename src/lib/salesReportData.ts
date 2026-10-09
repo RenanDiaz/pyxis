@@ -12,7 +12,9 @@
  *  - Una vez que el proceso pertenece al mes, se incluyen TODOS sus pagos, aunque
  *    alguno se haya hecho en un mes posterior (ese pago es parte de la misma
  *    venta y no debe contarse aparte en el mes en que se cobró).
- *  - `stateFee` se deriva del documento del estado (states.json).
+ *  - `stateFee` se deriva del documento del estado del PROCESO (states.json).
+ *    Sin `process.state` va en 0 y la UI lo advierte: no se usa `client.state`,
+ *    que puede ser el de otra compañía del cliente (spec 04).
  *  - El costo del Registered Agent no se registra en el CRM → columna H en 0;
  *    si el proceso incluye Registered Agent (`has_registered_agent`), las
  *    fórmulas de TAX y NET de esa cuenta restan H (se puede completar en Excel).
@@ -49,6 +51,7 @@ export interface BuildReportParams {
   monthLabel: string
   expenses: ExpenseConfig
   stripeFeeMode: StripeFeeMode
+  taxRate: number
 }
 
 /** Convierte "$245", "245.0", "N/A" → número (0 si no es parseable). */
@@ -102,7 +105,7 @@ function estimateStripeFee(charge: number, mode: StripeFeeMode): number {
  * en ese orden por el generador.
  */
 export function buildReportInput(params: BuildReportParams): ReportInput {
-  const { clients, states, monthKey, monthLabel, expenses, stripeFeeMode } = params
+  const { clients, states, monthKey, monthLabel, expenses, stripeFeeMode, taxRate } = params
 
   const stateFeeByAbbr = new Map<string, number>()
   for (const s of states) {
@@ -119,7 +122,7 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
 
       if (monthPayments.length === 0) continue
 
-      const stateAbbr = (process.state || client.state || '').toUpperCase()
+      const stateAbbr = (process.state ?? '').toUpperCase()
       const stateFee = stateAbbr ? stateFeeByAbbr.get(stateAbbr) ?? 0 : 0
 
       accounts.push({
@@ -132,7 +135,7 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
             ? getProcessCompanyName(client, process)
             : client.llc_name?.trim()) || getClientDisplayName(client),
         purchase: getProcessLabel(process),
-        state: process.state || client.state || '',
+        state: process.state ?? '',
         stateFee,
         registeredAgent: 0,
         hasRegisteredAgent: hasRegisteredAgent(process),
@@ -153,7 +156,7 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
     (a, b) => a.payments[0].date.getTime() - b.payments[0].date.getTime()
   )
 
-  return { monthLabel, accounts, expenses }
+  return { monthLabel, accounts, expenses, taxRate }
 }
 
 /**
@@ -164,6 +167,8 @@ export interface ReportPreview {
   accountCount: number
   paymentCount: number
   totalCharge: number
+  /** Cuentas del mes sin estado en el proceso: su state fee sale en 0. */
+  missingState: string[]
 }
 
 export function previewReport(
@@ -173,6 +178,7 @@ export function previewReport(
   let accountCount = 0
   let paymentCount = 0
   let totalCharge = 0
+  const missingState: string[] = []
 
   for (const client of clients) {
     for (const process of client.processes ?? []) {
@@ -181,8 +187,11 @@ export function previewReport(
       accountCount += 1
       paymentCount += monthPayments.length
       totalCharge = sumMoney([totalCharge, ...monthPayments.map(({ payment }) => payment.amount)])
+      if (!process.state) {
+        missingState.push(`${getClientDisplayName(client)} — ${getProcessLabel(process)}`)
+      }
     }
   }
 
-  return { accountCount, paymentCount, totalCharge }
+  return { accountCount, paymentCount, totalCharge, missingState }
 }

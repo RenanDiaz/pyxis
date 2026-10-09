@@ -18,13 +18,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Plus, Trash2 } from 'lucide-react'
-import type { ExpenseConfig } from '@/lib/generateSalesReport'
+import { DEFAULT_TAX_RATE, type ExpenseConfig } from '@/lib/generateSalesReport'
 import type { StripeFeeMode } from '@/lib/salesReportData'
 
 /** Config completa de exportación: gastos + opciones de cálculo. */
 export interface ExportSettings {
   expenses: ExpenseConfig
   stripeFeeMode: StripeFeeMode
+  taxRate: number
 }
 
 const STORAGE_KEY = 'pyxis.salesReport.exportSettings'
@@ -43,6 +44,7 @@ function defaultSettings(employeeName: string): ExportSettings {
       ],
     },
     stripeFeeMode: 'estimate',
+    taxRate: DEFAULT_TAX_RATE,
   }
 }
 
@@ -71,6 +73,8 @@ interface ExportReportDialogProps {
   defaultEmployeeName: string
   /** Nº de cuentas y pagos que entran en el mes (para avisar si es 0). */
   accountCount: number
+  /** Cuentas sin estado en el proceso (su state fee sale en 0). */
+  missingState: string[]
   isExporting: boolean
   onExport: (settings: ExportSettings) => void
 }
@@ -80,6 +84,7 @@ export default function ExportReportDialog({
   onOpenChange,
   defaultEmployeeName,
   accountCount,
+  missingState,
   isExporting,
   onExport,
 }: ExportReportDialogProps) {
@@ -152,6 +157,21 @@ export default function ExportReportDialog({
           </div>
         )}
 
+        {missingState.length > 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+            <p className="font-medium">
+              {missingState.length === 1
+                ? '1 proceso no tiene estado: su state fee saldrá en 0.'
+                : `${missingState.length} procesos no tienen estado: su state fee saldrá en 0.`}
+            </p>
+            <ul className="mt-1 list-disc pl-5">
+              {missingState.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="report-nombre-del-empleado">Nombre del empleado</Label>
@@ -190,20 +210,36 @@ export default function ExportReportDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="report-bonus-opcional">Bonus ($) — opcional</Label>
-            <Input
-              id="report-bonus-opcional"
-              type="number"
-              min={0}
-              step="0.01"
-              value={expenses.bonus ?? ''}
-              placeholder="Sin bonus"
-              onChange={(e) => {
-                const v = e.target.value
-                patchExpenses({ bonus: v === '' ? undefined : parseFloat(v) || 0 })
-              }}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="report-bonus-opcional">Bonus ($) — opcional</Label>
+              <Input
+                id="report-bonus-opcional"
+                type="number"
+                min={0}
+                step="0.01"
+                value={expenses.bonus ?? ''}
+                placeholder="Sin bonus"
+                onChange={(e) => {
+                  const v = e.target.value
+                  patchExpenses({ bonus: v === '' ? undefined : parseFloat(v) || 0 })
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="report-tax-rate">TAX (%)</Label>
+              <Input
+                id="report-tax-rate"
+                type="number"
+                min={0}
+                max={100}
+                step="0.1"
+                value={Math.round(settings.taxRate * 1000) / 10}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, taxRate: (parseFloat(e.target.value) || 0) / 100 }))
+                }
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

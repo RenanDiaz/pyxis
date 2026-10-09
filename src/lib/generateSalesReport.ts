@@ -47,11 +47,14 @@ export interface ReportInput {
   monthLabel: string
   accounts: ReportAccount[]
   expenses: ExpenseConfig
+  /** Tasa de TAX (0.39 = 39 %). El manual pasó de 0.34 a 0.39 en ago-2026. */
+  taxRate: number
 }
 
 /* ============================== Constantes ================================= */
 
-const TAX_RATE = 0.34
+/** Tasa de TAX por defecto (Excel manual desde ago-2026). */
+export const DEFAULT_TAX_RATE = 0.39
 
 const FONT_HEADER_BIG = { name: 'Arial Black', size: 12, color: { argb: 'FFFF0000' } }
 const FONT_HEADER_SM = { name: 'Arial Black', size: 8, color: { argb: 'FFFF0000' } }
@@ -152,10 +155,12 @@ function writeAccounts(ws: ExcelJS.Worksheet, input: ReportInput): number {
       const r = startRow + k
       setCell(ws, `B${r}`, normalizeDate(p.date), { font: FONT_DATA, numFmt: FMT_DATE })
       setCell(ws, `F${r}`, p.charge, { font: FONT_DATA, numFmt: FMT_NUM })
-      setCell(ws, `I${r}`, { formula: taxFormula(r, startRow, account.hasRegisteredAgent) },
+      // State fee y RA son de la cuenta: solo los resta la fila del primer pago.
+      const costs = k === 0 ? accountCosts(startRow, account.hasRegisteredAgent) : ''
+      setCell(ws, `I${r}`, { formula: `(F${r}${costs})*${input.taxRate}` },
         { font: FONT_DATA, numFmt: FMT_NUM })
       setCell(ws, `J${r}`, p.stripeFee, { font: FONT_DATA, numFmt: FMT_NUM })
-      setCell(ws, `K${r}`, { formula: netFormula(r, startRow, account.hasRegisteredAgent) },
+      setCell(ws, `K${r}`, { formula: `F${r}${costs}-I${r}-J${r}` },
         { font: FONT_DATA, numFmt: FMT_NUM })
     })
 
@@ -196,12 +201,9 @@ function normalizeDate(d: Date): Date {
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0))
 }
 
-function taxFormula(r: number, s: number, subH: boolean): string {
-  return subH ? `(F${r}-G${s}-H${s})*${TAX_RATE}` : `(F${r}-G${s})*${TAX_RATE}`
-}
-
-function netFormula(r: number, s: number, subH: boolean): string {
-  return subH ? `F${r}-G${s}-H${s}-I${r}-J${r}` : `F${r}-G${s}-I${r}-J${r}`
+/** Costos de la cuenta (state fee y, si aplica, RA) que se restan una sola vez. */
+function accountCosts(s: number, subH: boolean): string {
+  return subH ? `-G${s}-H${s}` : `-G${s}`
 }
 
 /* ------------------------------- Totales ---------------------------------- */
@@ -210,7 +212,7 @@ function writeTotals(ws: ExcelJS.Worksheet, totalsRow: number): void {
   const last = totalsRow - 1
   const cols = ['F', 'G', 'H', 'I', 'J', 'K']
   cols.forEach((col) => {
-    // Si no hay cuentas, `last` < 2: dejar la fila de totales en blanco.
+    // Si no hay cuentas, `last` < 2: los totales quedan en 0.
     const value = last >= 2 ? { formula: `SUM(${col}2:${col}${last})` } : 0
     setCell(ws, `${col}${totalsRow}`, value, {
       font: FONT_TOTAL,
@@ -236,7 +238,9 @@ function writeExpenses(ws: ExcelJS.Worksheet, input: ReportInput, totalsRow: num
   putLabel(ws, r, 'profit minus base pay', { formula: `K${T}-${basePay}` }, FONT_LABEL_BLACK)
   r++
 
+  let bonusRow: number | null = null
   if (bonus != null) {
+    bonusRow = r
     putLabel(ws, r, `Bonus de ${emp} `, bonus, FONT_LABEL_BLACK)
     r++
   }
@@ -259,13 +263,18 @@ function writeExpenses(ws: ExcelJS.Worksheet, input: ReportInput, totalsRow: num
 
   r++ // fila en blanco
 
+  // TOTAL PAY = comisión + base + bonus (como el Excel manual).
+  const totalPayParts = [commissionRow, basePayRow, ...(bonusRow ? [bonusRow] : [])]
+  const totalPayRow = r
   putLabel(ws, r, `${emp.toUpperCase()}  TOTAL PAY `,
-    { formula: `K${commissionRow}+K${basePayRow}` }, FONT_LABEL_RED)
+    { formula: totalPayParts.map((x) => `K${x}`).join('+') }, FONT_LABEL_RED)
   r++
 
-  const sumParts = [`K${commissionRow}`, `K${basePayRow}`, ...fixedRows.map((fr) => `K${fr}`)].join('+')
+  // Parte del NET total, no de "profit minus base pay": la base ya va dentro de
+  // TOTAL PAY y no se resta dos veces.
+  const sumParts = [totalPayRow, ...fixedRows].map((x) => `K${x}`).join('+')
   putLabel(ws, r, 'WHAT I TOOK HOME',
-    { formula: `K${profitMinusBaseRow}-(${sumParts})` }, FONT_LABEL_RED)
+    { formula: `K${T}-(${sumParts})` }, FONT_LABEL_RED)
 }
 
 function putLabel(
