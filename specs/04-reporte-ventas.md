@@ -76,7 +76,8 @@ monday) es un spec aparte, fuera del 04.
   **STRIPE FEE = ese 4 %**, que resta antes del TAX (#7), así que el NET no cambia. El
   saldo pendiente lleva recargo si el primer pago fue con Stripe. Es el default del
   diálogo («Recargo del 4 %»); «Sin recargo» deja ambos en 0. Se quita la estimación
-  2.9 % + 0.30. Los casos al 2 % del manual se ajustan a mano en el Excel.
+  2.9 % + 0.30. Los «casos al 2 %» del manual no son otra tasa: son el 4 % sobre la
+  parte pagada con Stripe (p. ej. OR: 274.50 de 549 → 10.98), y la app los reproduce.
 - **P9 (resuelta):** los 2 ITIN, el Certificado de Autoridad y el Amendment de TX de
   septiembre **no se capturaron en Pyxis** (triple captura, ver «Contexto de uso»). Los
   664.29 de diferencia son de captura. ITIN y Certificado de Autoridad deberían entrar
@@ -122,6 +123,23 @@ Otras observaciones:
 - **Stripe:** con *Stripe fee = ninguno*, TAX y NET de la app equivalen a los del manual,
   porque `F_app = F_manual − J_manual`. Solo cambia la columna CHARGE (sin el 4 %).
 - Coinciden exacto: NV y FL (CHARGE, fee y NET).
+
+## Comparación septiembre 2026, después de P5–P10 y #9
+Export de prod con #110–#114. NET: **app 2,788.77**, manual **3,429.53** → faltan **640.76**:
+
+| Causa | En NET |
+|-------|-------:|
+| 4 servicios que no se capturaron en Pyxis (2 ITIN, Certificado de Autoridad, Amendment TX) — P9, captura | +664.29 |
+| GA: la app cobra 579 y el manual 549 (+ 4 %); state fee 100 vs 110 | −24.37 |
+| CA: la app cobra 549 y el manual 579; state fee 75 vs 110 | −3.05 |
+| MN: state fee 160 vs 155 | +3.05 |
+| TN: state fee 308.25 vs 307; el manual aplica el 4 % a los 804 y Pyxis tiene 402 por Stripe | +0.79 |
+| Redondeo de CHARGE (TX, AZ) | +0.05 |
+| **Total** | **+640.76** |
+
+Las 10 cuentas capturadas en Pyxis quedan a **23.53** del manual: solo diferencias de
+precio capturado y de state fee de registro (P4: se corrige editando el estado en
+Estados). Ya no hay diferencias de fórmula, de mes ni de formato.
 
 ## Objetivo
 Que el reporte generado coincida con el Excel manual vigente (Ago–Sept 2026) en
