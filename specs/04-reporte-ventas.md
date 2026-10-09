@@ -1,6 +1,6 @@
 # 04 — Correcciones del reporte de ventas (Excel)
 
-**Prioridad:** 🔴 Alta · **Estado:** 🟡 parcial — fixes sin dependencias de negocio implementados (ver «Implementado»); el resto bloqueado por P3–P5, P7 y P8 · **Tamaño:** M (antes S)
+**Prioridad:** 🔴 Alta · **Estado:** 🟡 parcial — fixes sin dependencias de negocio implementados (ver «Implementado»); el resto bloqueado por P3–P5 y P8 · **Tamaño:** M (antes S)
 
 ## Fuente de verdad
 - Excel manual `2026_ISABEL_PAY_SEPT` (hojas June, JULY, AUG, SEPT de 2026).
@@ -33,7 +33,7 @@ las referencias citan solo hoja + tipo + estado.
 | ✔ 9 | REGISTERED AGENT siempre 0 | 45 cuando aplica | Llenar con un costo configurable (default 45) si `has_registered_agent`. |
 | ✔ 10 ✅ | Una fila **por pago**; CHARGE = monto del pago | Una fila **por cuenta**; CHARGE = total acordado; columna **OWES** = saldo pendiente | Diferencia de modelo. Ver P6. |
 | ✔ 11 | Columnas A–L, L = OWNER | L = comisión por fila (`K*0.15`), M = OWNER, N = OWES, O = FORMA DE PAGO | El generador replica un formato anterior. Ver P6. |
-| ✔ 12 | Comisión = `(K_total − basePay) × rate` | Comisión = `K_total × 0.15` (desde Jul; June sí restaba 500) | Ver P7. |
+| ✔ 12 ✅ | Comisión = `(K_total − basePay) × rate` | Comisión = `K_total × 0.15` (desde Jul; June sí restaba 500) | Resuelto (P7). |
 | ✔ 13 | TOTAL PAY = comisión + base | TOTAL PAY = base + **bonus** + comisión | La app omite el bonus. |
 | ✔ 14 | WHAT I TOOK HOME = `(K − base) − (comisión + base + gastos)` → **resta la base dos veces** | `K − gastos − TOTAL PAY` | **Bug** independiente de P7. |
 | ✔ 16 | Con 2+ pagos, **cada fila de pago resta el state fee completo** (`I3=(F3-G2)*rate`, `K3=F3-G2-I3-J3`) | El fee se resta una vez por cuenta | **Bug crítico.** En el reporte de octubre, 2 cuentas a 2 pagos restan 312.40 de más (NY 210 + VA 102.40) → NET subestimado en ≈ 206 y comisión en ≈ 31. Lo mismo aplicaría a H. |
@@ -89,6 +89,10 @@ monday) es un spec aparte, fuera del 04.
   proyecta su Stripe fee). La advertencia de montos proyectados va en el **diálogo de
   exportación, no en el Excel**. Las columnas «comisión por fila» y «FORMA DE PAGO» del
   manual no se agregan.
+- **P7 (resuelta, 2026-10-09):** comisión = **NET total × 15 %**, sin descontar la base
+  (como el manual desde julio). La fila «profit minus base pay» desaparece y la sección
+  de gastos sigue el orden del manual: base pay, bonus, comisión, gastos fijos, TOTAL
+  PAY, WHAT I TOOK HOME.
 - **P2 (resuelta en parte):** los manuales del catálogo (Sales Tax, Resale, EIN, BOI) van en 0;
   **sí hay servicios con costo** (ITIN 250, Certificado de Autoridad 175), así que hace
   falta capturar un costo por proceso.
@@ -174,8 +178,7 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
   con saldo proyectado.
 - Tests: `tests/unit/sales-report.test.ts`.
 
-**Pendiente:** #7 (restar J antes del TAX), #8/P5 (Stripe), #9 (RA = 45), #12/P7
-(comisión), #2 (company), #3/P3, #4, costo por tipo de proceso (P8), catálogo
+**Pendiente:** #7 (restar J antes del TAX), #8/P5 (Stripe), #9 (RA = 45), #2 (company), #3/P3, #4, costo por tipo de proceso (P8), catálogo
 (req. 12) y editar pagos (req. 14).
 
 ## Criterios de aceptación
@@ -199,5 +202,4 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
 - **P3:** Un proceso cancelado con pagos, ¿se reembolsó? ¿Se reporta como venta, como negativo o se excluye? *(El Excel no trae casos.)*
 - **P4:** El state fee de registro en el Excel varía respecto del doc del estado (1c). ¿Cuál es el correcto: el del doc (hay que actualizarlo) o el del Excel (costo real del caso, p. ej. expedite)? CA aparece con 30, 70 y 110 en meses distintos: ¿de qué depende?
 - **P5:** *(ver comparación: con «Stripe fee = ninguno» la app reproduce el NET del manual)* La columna STRIPE FEE, ¿es la comisión real de Stripe o el recargo del 4 % que se le cobra al cliente? ¿El monto del pago que se registra en Pyxis **incluye** ese 4 %? ¿Por qué algunos casos son 2 %?
-- **P7:** La comisión, ¿es `NET total × 15 %` (Jul–Sept) o `(NET total − base) × 15 %` (June, y lo que hace hoy la app)?
 - **P8:** ¿Cuál es el costo estatal de annual report, dissolution y amendment por estado? (Para llenar los campos nuevos; hoy solo conocemos NY y TX.) ¿ITIN y Certificado de Autoridad entran al catálogo con costos fijos de 250 y 175?
