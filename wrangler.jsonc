@@ -1,0 +1,38 @@
+// Cloudflare Workers (spec 17). Un solo Worker sirve la SPA (static assets) y
+// las rutas /api/*. Producción se despliega desde `main`; las demás ramas van a
+// `pyxis-staging` con `wrangler deploy --env staging` (ver el runbook del spec).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pyxis",
+  "main": "worker/index.ts",
+  // No puede ser posterior a la versión de workerd que trae el wrangler fijado
+  // en package.json: al subir wrangler se puede actualizar.
+  "compatibility_date": "2026-09-25",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // Deep links (/clientes/123) → index.html.
+    "not_found_handling": "single-page-application",
+    // /assets/* pasa por el Worker porque el fallback SPA también le respondería
+    // index.html a un chunk que ya no existe; el Worker lo convierte en 404 (spec 14).
+    "run_worker_first": ["/api/*", "/assets/*"]
+  },
+  // Sus `paths` resuelven `@/…` → src/, para que el Worker pueda importar
+  // módulos puros de src/lib (spec 18).
+  "tsconfig": "./tsconfig.worker.json",
+  "routes": [
+    { "pattern": "mipyxis.com", "custom_domain": true },
+    { "pattern": "www.mipyxis.com", "custom_domain": true }
+  ],
+  // Las versiones de preview compartirían los secretos de producción; las ramas
+  // se prueban en staging.
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "env": {
+    "staging": {
+      "name": "pyxis-staging",
+      "routes": [{ "pattern": "staging.mipyxis.com", "custom_domain": true }],
+      "preview_urls": false
+    }
+  }
+}

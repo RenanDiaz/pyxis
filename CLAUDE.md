@@ -15,7 +15,23 @@ para gestionar prospectos.
 - React Router v6
 - React Query (TanStack Query) para data fetching
 - date-fns para manejo de fechas y zonas horarias
-- Deploy: Vercel
+- Deploy: Cloudflare Workers (static assets + `/api/*`), dominio `mipyxis.com` (spec 17)
+
+---
+
+## Deploy (Cloudflare Workers)
+- `wrangler.jsonc` + `worker/index.ts`: un Worker sirve `dist/` con fallback SPA y
+  solo ejecuta código para `/api/*` y `/assets/*` (`run_worker_first`). `/assets/*`
+  pasa por el Worker para que un chunk inexistente dé 404 y no `index.html` (spec 14).
+- Producción `pyxis` → `mipyxis.com` (rama `main`); staging `pyxis-staging` →
+  `staging.mipyxis.com` (demás ramas, `wrangler deploy --env staging`).
+- El Worker importa módulos puros de `src/` con `@/…` (paths de `tsconfig.worker.json`).
+  Nunca importar el SDK de Firebase ni nada con DOM desde `worker/`.
+- Tras cambiar `wrangler.jsonc`: `npm run cf-typegen` (tipos de `Env` en
+  `worker/worker-configuration.d.ts`, generado y versionado).
+- Secretos del Worker: Cloudflare → Variables & Secrets; en local `.dev.vars`
+  (ver `.dev.vars.example`). Las `VITE_*` son variables **de build**.
+- Runbook de infraestructura y corte desde Vercel: `specs/17-migracion-cloudflare.md`.
 
 ---
 

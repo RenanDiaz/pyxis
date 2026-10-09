@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', '.wrangler', 'worker/worker-configuration.d.ts']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -24,6 +24,12 @@ export default defineConfig([
     // Componentes generados por shadcn/ui: exportan sus variantes (cva) junto al
     // componente por diseño.
     files: ['src/components/ui/**/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+  {
+    // Worker de Cloudflare (spec 17): runtime tipo service worker, sin DOM ni React.
+    files: ['worker/**/*.ts'],
+    languageOptions: { globals: globals.serviceworker },
     rules: { 'react-refresh/only-export-components': 'off' },
   },
 ])
