@@ -18,7 +18,7 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 | 01 | [Reglas de seguridad Firestore/Storage](01-seguridad-reglas.md) | 🔴 Crítica · ✅ hotfix | — (se implementa junto con 02) | L |
 | 02 | [Invitaciones y onboarding](02-invitaciones-onboarding.md) | 🔴 Crítica · 🟡 parcial | 01 | M |
 | 03 | [Integridad de escrituras del cliente y dinero](03-integridad-cliente-pagos.md) | 🔴 Alta · ✅ salvo R6 | — | L |
-| 04 | [Correcciones del reporte de ventas](04-reporte-ventas.md) | 🔴 Alta | Respuestas de negocio | S |
+| 04 | [Correcciones del reporte de ventas](04-reporte-ventas.md) | 🔴 Alta | Respuestas de negocio (P3–P8) | M |
 | 05 | [Historial de status y métricas confiables](05-historial-status-metricas.md) | 🟠 Alta · ✅ | — | M |
 | 06 | [Administración del workspace](06-administracion-workspace.md) | 🟠 Alta | 01 | M |
 | 07 | [Detección de teléfonos duplicados](07-duplicados-telefono.md) | 🟡 Media | 01 | S |
