@@ -100,6 +100,14 @@ export default function Schedule() {
   const [searchParams, setSearchParams] = useSearchParams()
   // "Agendar" desde el detalle del cliente llega como /agenda?client=ID.
   const clientParam = searchParams.get('client')
+  // "Reagendar" un lead desde la campana llega con sus datos (spec 20).
+  const leadParam = searchParams.get('lead_name') && searchParams.get('lead_phone')
+    ? {
+        name: searchParams.get('lead_name')!,
+        phone: searchParams.get('lead_phone')!,
+        state: searchParams.get('lead_state') ?? '',
+      }
+    : null
 
   // Si quedó un borrador de "Agendar llamada" (recarga, cierre del navegador),
   // se reabre el modal con lo que se había escrito.
@@ -107,7 +115,7 @@ export default function Schedule() {
     user ? readDraft<NewCallDraft>(draftKey(user.uid, NEW_CALL_FORM_ID)) : null,
   )
   const [callDraftSavedAt, setCallDraftSavedAt] = useState(storedCall?.savedAt ?? null)
-  const [dialogOpen, setDialogOpen] = useState(!!storedCall || !!clientParam)
+  const [dialogOpen, setDialogOpen] = useState(!!storedCall || !!clientParam || !!leadParam)
 
   const { data: calls, isLoading, error, refetch } = useCalls()
   const { data: activeClients } = useClients()
@@ -121,11 +129,13 @@ export default function Schedule() {
 
   // New call form state
   const restoredCall = { ...EMPTY_CALL, ...storedCall?.data }
-  const [target, setTarget] = useState<CallTarget>(clientParam ? 'cliente' : restoredCall.target)
+  const [target, setTarget] = useState<CallTarget>(
+    clientParam ? 'cliente' : leadParam ? 'lead' : restoredCall.target
+  )
   const [newCallClientId, setNewCallClientId] = useState(clientParam ?? restoredCall.clientId)
-  const [leadName, setLeadName] = useState(restoredCall.leadName)
-  const [leadPhone, setLeadPhone] = useState(restoredCall.leadPhone)
-  const [leadState, setLeadState] = useState(restoredCall.leadState)
+  const [leadName, setLeadName] = useState(leadParam?.name ?? restoredCall.leadName)
+  const [leadPhone, setLeadPhone] = useState(leadParam?.phone ?? restoredCall.leadPhone)
+  const [leadState, setLeadState] = useState(leadParam?.state ?? restoredCall.leadState)
   const [assignee, setAssignee] = useState(restoredCall.assignee)
   const [newCallDate, setNewCallDate] = useState(restoredCall.date)
   const [newCallTime, setNewCallTime] = useState(restoredCall.time)
@@ -145,7 +155,11 @@ export default function Schedule() {
       notes: newCallNotes,
       timeMode,
     },
-    initial: clientParam ? { ...EMPTY_CALL, clientId: clientParam } : EMPTY_CALL,
+    initial: clientParam
+      ? { ...EMPTY_CALL, clientId: clientParam }
+      : leadParam
+        ? { ...EMPTY_CALL, target: 'lead', leadName: leadParam.name, leadPhone: leadParam.phone, leadState: leadParam.state }
+        : EMPTY_CALL,
   })
 
   const { role, workspaceId, wsCtx } = useUserProfile()
@@ -190,8 +204,8 @@ export default function Schedule() {
   const handleDialogChange = (open: boolean) => {
     setDialogOpen(open)
     // Al cerrar, el parámetro ya cumplió su función: no reabrir al recargar.
-    if (!open && clientParam) {
-      searchParams.delete('client')
+    if (!open && (clientParam || leadParam)) {
+      for (const key of ['client', 'lead_name', 'lead_phone', 'lead_state']) searchParams.delete(key)
       setSearchParams(searchParams, { replace: true })
     }
   }

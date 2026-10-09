@@ -1,6 +1,6 @@
 # 20 — Notificaciones de llamadas vencidas que nunca se borran (bug)
 
-**Prioridad:** 🟠 Alta (bug en producción) · **Estado:** reportado · **Tamaño:** S · **Relacionado:** [05](05-historial-status-metricas.md), [08](08-agenda.md), [10](10-rendimiento.md)
+**Prioridad:** 🟠 Alta (bug en producción) · **Estado:** implementado · **Tamaño:** S · **Relacionado:** [05](05-historial-status-metricas.md), [08](08-agenda.md), [10](10-rendimiento.md)
 
 ## Reporte (2026-10-09)
 La campana muestra 5 "Llamada vencida" de **hace 6–7 meses**. Ninguna dice de
@@ -33,6 +33,34 @@ siempre.
    - Ocupa los 5 lugares de la campana y tapa las vencidas recientes, que
      son las importantes.
 
+## Implementación (2026-10-09)
+- **Diagnóstico confirmado:**
+  - `migrate-status-history.ts --dry-run` en producción dio **0 intentos de
+    contacto**, así que las 5 vencidas eran llamadas agendadas reales que
+    quedaron pendientes.
+  - "Cliente" en vez del nombre indica que eran de clientes archivados.
+- **Ventana de 14 días (P1):**
+  - `getOverdueCalls(ctx, max, since)` filtra por `scheduled_at >= hoy − 14d`
+    y usa el mismo índice de la spec 12.
+  - `countOverdueBefore` (`getCountFromServer`) cuenta las más viejas para el
+    resumen "Y N vencida(s) de hace más de 14 días: están en la Agenda →
+    Pendientes".
+- **Qué avisa:** `src/lib/bellCalls.ts` (`shouldNotify` y `selectBellCalls`,
+  con tests).
+  - Leads y clientes activos, sí.
+  - Clientes archivados o perdidos, o que ya no existen, no (P2). Siguen en
+    la Agenda.
+  - Se piden más llamadas de las que se muestran para que el filtro no deje la
+    campana vacía.
+- **Acciones en cada vencida:** Completada, No contestó y Reagendar.
+  - Reagendar marca la llamada `reagendada` y abre la Agenda con el modal
+    precargado: `?client=` para un cliente, o `?lead_name=&lead_phone=&lead_state=`
+    para un lead.
+  - Al cerrar el modal se limpian esos parámetros de la URL.
+- **Nombres:** la campana usa clientes activos y archivados y
+  `getCallDisplayName`, igual que la Agenda; también muestra leads.
+- **P3:** sin acción masiva; con la ventana alcanza.
+
 ## Requisitos
 1. **Resolver desde la campana:** cada llamada vencida tiene acciones rápidas
    "Completada", "No contestó" y "Reagendar". Reagendar abre la Agenda con el
@@ -55,10 +83,10 @@ siempre.
      de más de N días como 'No contestó'", solo para el owner (P3).
 
 ## Criterios de aceptación
-- [ ] Marcar "No contestó" desde la campana la quita de la lista y del contador al instante.
-- [ ] Una llamada pendiente de hace 7 meses no aparece en la campana; sí en Agenda → Pendientes como "Vencida".
-- [ ] La campana muestra el nombre real del cliente, también si está archivado, y el de los leads.
-- [ ] Tras correr `migrate-status-history.ts`, los intentos de contacto viejos no aparecen como vencidos.
+- [x] Marcar "No contestó" desde la campana la quita de la lista y del contador al instante.
+- [x] Una llamada pendiente de hace 7 meses no aparece en la campana; sí en Agenda → Pendientes como "Vencida".
+- [x] La campana muestra el nombre real del cliente, también si está archivado, y el de los leads.
+- [x] ~~Tras correr `migrate-status-history.ts`~~ (no aplica: el dry-run dio 0), los intentos de contacto viejos no aparecen como vencidos.
 
 ## Preguntas abiertas
 - **P1:** ¿14 días de ventana para la campana? *(Recomendación: 14.)*

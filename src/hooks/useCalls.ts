@@ -4,9 +4,11 @@ import {
   getCalls,
   getUpcomingCalls,
   getOverdueCalls,
+  countOverdueBefore,
   createCall,
   updateCall,
 } from '@/lib/firestore'
+import { bellWindowStart } from '@/lib/bellCalls'
 import { useUserProfile } from '@/hooks/useUserProfile'
 
 interface CallFilters {
@@ -42,11 +44,23 @@ export function useUpcomingCalls(max: number = 5) {
   })
 }
 
+/** Vencidas de la ventana de la campana (últimos 14 días, spec 20). */
 export function useOverdueCalls(max: number = 10) {
   const { wsCtx } = useUserProfile()
   return useQuery<Call[]>({
     queryKey: ['calls', 'overdue', wsCtx?.workspaceId, wsCtx?.role, wsCtx?.uid, max],
-    queryFn: () => getOverdueCalls(wsCtx!, max),
+    queryFn: () => getOverdueCalls(wsCtx!, max, bellWindowStart()),
+    enabled: !!wsCtx,
+    ...CALL_ALERTS_REFRESH,
+  })
+}
+
+/** Vencidas más antiguas que la ventana: la campana solo las resume. */
+export function useOlderOverdueCount() {
+  const { wsCtx } = useUserProfile()
+  return useQuery<number>({
+    queryKey: ['calls', 'overdue-older', wsCtx?.workspaceId, wsCtx?.role, wsCtx?.uid],
+    queryFn: () => countOverdueBefore(wsCtx!, bellWindowStart()),
     enabled: !!wsCtx,
     ...CALL_ALERTS_REFRESH,
   })
