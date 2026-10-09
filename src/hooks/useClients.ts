@@ -15,7 +15,6 @@ import { useUserProfile } from '@/hooks/useUserProfile'
 
 interface ClientFilters {
   status?: ClientStatus
-  search?: string
   archived?: boolean
 }
 

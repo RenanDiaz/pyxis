@@ -29,7 +29,6 @@ import {
   type RunClientMutation,
 } from '@/lib/processMutations'
 import { roundMoney, toCents } from '@/lib/money'
-import { generatePaymentReceipt } from '@/lib/receiptUtils'
 import { formatMoney } from '@/lib/format'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -79,6 +78,7 @@ export default function PaymentSection({
     if (!workspace) return
     setGeneratingKey(paymentKey(payment))
     try {
+      const { generatePaymentReceipt } = await import('@/lib/receiptUtils')
       await generatePaymentReceipt({ client, process, payment, workspace })
     } catch {
       toast.error('Error al generar el recibo')

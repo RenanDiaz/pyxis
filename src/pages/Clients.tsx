@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useClients } from '@/hooks/useClients'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { filterClientsBySearch } from '@/lib/clientSearch'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useWorkspaceMembers } from '@/hooks/useWorkspace'
 import StatusBadge from '@/components/clients/StatusBadge'
@@ -53,11 +55,16 @@ export default function Clients() {
     return map
   }, [members])
 
-  const { data: clients, isLoading, error, refetch } = useClients({
+  const { data: allClients, isLoading, error, refetch } = useClients({
     status: statusFilter !== 'all' ? (statusFilter as ClientStatus) : undefined,
-    search: search || undefined,
     archived: showArchived,
   })
+  // La búsqueda filtra en memoria la lista cacheada: escribir no lee Firestore.
+  const debouncedSearch = useDebouncedValue(search)
+  const clients = useMemo(
+    () => (allClients ? filterClientsBySearch(allClients, debouncedSearch) : allClients),
+    [allClients, debouncedSearch]
+  )
 
   return (
     <div className="space-y-4">

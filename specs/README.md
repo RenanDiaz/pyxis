@@ -24,7 +24,7 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 | 07 | [Detección de teléfonos duplicados](07-duplicados-telefono.md) | 🟡 Media | 01 | S |
 | 08 | [Agenda](08-agenda.md) | 🟡 Media · ✅ | 05 (intentos de contacto) | M |
 | 09 | [Manejo de errores y sesión](09-errores-sesion.md) | 🟡 Media · ✅ | — | M |
-| 10 | [Rendimiento](10-rendimiento.md) | 🟡 Media | — | M |
+| 10 | [Rendimiento](10-rendimiento.md) | 🟡 Media · ✅ | — | M |
 | 11 | [Metas por agente](11-metas.md) | 🟢 Media/Baja | 05 | M |
 | 12 | [Infra: índices, scripts y migraciones](12-infra-scripts.md) | 🟡 Media | — | S |
 | 13 | [UX, accesibilidad y limpieza](13-ux-accesibilidad.md) | 🟢 Baja | — | M |

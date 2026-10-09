@@ -35,7 +35,6 @@ import type { Client, ClientStatus, ClientProcess } from '@/types'
 import { clientMutations, type RunClientMutation } from '@/lib/processMutations'
 import { Timestamp } from 'firebase/firestore'
 import { toast } from 'sonner'
-import { exportClientDoc, exportRegistrationDoc } from '@/lib/exportClientDoc'
 import {
   getProcessCompanyName,
   getRegistrationProcesses,
@@ -328,6 +327,7 @@ export default function ClientDetail() {
 
   const handleExportAllDocs = async () => {
     try {
+      const { exportClientDoc } = await import('@/lib/exportClientDoc')
       const count = await exportClientDoc(client)
       if (count > 1) {
         toast.success(`${count} documentos generados, uno por compañía`)
@@ -339,6 +339,7 @@ export default function ClientDetail() {
 
   const handleExportRegistration = async (process: ClientProcess) => {
     try {
+      const { exportRegistrationDoc } = await import('@/lib/exportClientDoc')
       await exportRegistrationDoc(client, process)
     } catch {
       toast.error('No se pudo generar el documento')

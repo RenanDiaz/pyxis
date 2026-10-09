@@ -356,9 +356,10 @@ export async function cancelInvitation(workspaceId: string, invitationId: string
 
 // ── Clients ──
 
+// La búsqueda por texto no va aquí: se filtra en memoria con
+// `filterClientsBySearch` para no leer Firestore en cada tecla (spec 10).
 interface ClientFilters {
   status?: ClientStatus
-  search?: string
   archived?: boolean
 }
 
@@ -380,18 +381,6 @@ export async function getClients(ctx: WorkspaceCtx, filters?: ClientFilters): Pr
   let clients = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Client))
   if (!showArchived) {
     clients = clients.filter((c) => !c.archived)
-  }
-  if (filters?.search) {
-    const s = filters.search.toLowerCase()
-    clients = clients.filter(
-      (c) =>
-        (c.first_name || '').toLowerCase().includes(s) ||
-        (c.last_name || '').toLowerCase().includes(s) ||
-        (c.llc_name || '').toLowerCase().includes(s) ||
-        (c.state || '').toLowerCase().includes(s) ||
-        c.phone.toLowerCase().includes(s) ||
-        (c.phones || []).some((p) => p.number.toLowerCase().includes(s))
-    )
   }
   return clients
 }

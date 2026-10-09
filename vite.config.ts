@@ -31,4 +31,20 @@ export default defineConfig(({ command }) => ({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rolldownOptions: {
+      output: {
+        // Vendors estables en chunks propios (spec 10): cambian poco entre
+        // deploys, así que el navegador los reutiliza de la caché.
+        codeSplitting: {
+          groups: [
+            // Storage queda fuera: solo lo cargan documentos y logo.
+            { name: 'firebase', test: /node_modules[\\/](@firebase|firebase)[\\/](?!storage)/ },
+            { name: 'react', test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/ },
+            { name: 'map', test: /node_modules[\\/](react-simple-maps|us-atlas|d3-[^\\/]+|topojson-client)[\\/]/ },
+          ],
+        },
+      },
+    },
+  },
 }))

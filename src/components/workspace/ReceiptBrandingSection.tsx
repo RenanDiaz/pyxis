@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ImageIcon, Upload, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useUpdateWorkspace } from '@/hooks/useWorkspace'
-import { uploadWorkspaceLogo, deleteWorkspaceLogo } from '@/lib/receiptUtils'
+import { uploadWorkspaceLogo, deleteWorkspaceLogo } from '@/lib/workspaceLogo'
 import type { Workspace } from '@/types'
 import { describeError } from '@/lib/errors'
 

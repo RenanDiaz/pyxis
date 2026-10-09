@@ -25,12 +25,20 @@ export function useCalls(filters?: CallFilters) {
   })
 }
 
+// La campana y el inicio se refrescan solos (spec 10): una llamada que vence
+// con la app abierta aparece en ≤ 1 min, y al volver a la pestaña al instante.
+const CALL_ALERTS_REFRESH = {
+  refetchInterval: 60_000,
+  refetchOnWindowFocus: 'always',
+} as const
+
 export function useUpcomingCalls(max: number = 5) {
   const { wsCtx } = useUserProfile()
   return useQuery<Call[]>({
     queryKey: ['calls', 'upcoming', wsCtx?.workspaceId, wsCtx?.role, wsCtx?.uid, max],
     queryFn: () => getUpcomingCalls(wsCtx!, max),
     enabled: !!wsCtx,
+    ...CALL_ALERTS_REFRESH,
   })
 }
 
@@ -40,6 +48,7 @@ export function useOverdueCalls(max: number = 10) {
     queryKey: ['calls', 'overdue', wsCtx?.workspaceId, wsCtx?.role, wsCtx?.uid, max],
     queryFn: () => getOverdueCalls(wsCtx!, max),
     enabled: !!wsCtx,
+    ...CALL_ALERTS_REFRESH,
   })
 }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useIsGlobalAdmin, useStateByAbbreviation, useStates } from '@/hooks/useStates'
 import { formatPrice, formatDays, formatYesNo } from '@/lib/format'
@@ -26,7 +26,10 @@ export default function StateDetail() {
   const { data: state, isLoading } = useStateByAbbreviation(abbreviation)
   const { data: states } = useStates()
   const [editOpen, setEditOpen] = useState(false)
-  const now = useNow(1000)
+  const sortedStates = useMemo(
+    () => (states ?? []).slice().sort((a, b) => a.name.localeCompare(b.name)),
+    [states]
+  )
 
   const { data: isAdmin } = useIsGlobalAdmin()
   const { workspace } = useUserProfile()
@@ -50,9 +53,6 @@ export default function StateDetail() {
 
   const timezone = getStateTimezone(state.abbreviation)
   const tzLabel = getTimezoneLabel(timezone)
-  const localTime = formatLocalTime(now, timezone, 'h:mm a')
-  const goodTime = isGoodCallTime(now, timezone)
-  const callLabel = getCallTimeLabel(now, timezone)
 
   const amendments = formatYesNo(state.amendments.available)
   const bpSpecific = formatYesNo(state.business_purpose.specific)
@@ -62,7 +62,6 @@ export default function StateDetail() {
       ? state.annual_report.due_date
       : 'No disponible'
 
-  const sortedStates = (states ?? []).slice().sort((a, b) => a.name.localeCompare(b.name))
 
   return (
     <div className="space-y-4">
@@ -81,31 +80,11 @@ export default function StateDetail() {
                 <span className="rounded-md bg-secondary px-2 py-0.5 text-sm font-bold text-secondary-foreground">
                   {state.abbreviation}
                 </span>
-                <span
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold',
-                    goodTime
-                      ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400'
-                      : 'border-border bg-muted text-muted-foreground',
-                  )}
-                >
-                  <span className="relative flex h-2 w-2">
-                    {goodTime && (
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
-                    )}
-                    <span
-                      className={cn(
-                        'relative inline-flex h-2 w-2 rounded-full',
-                        goodTime ? 'bg-green-500' : 'bg-muted-foreground',
-                      )}
-                    />
-                  </span>
-                  {callLabel}
-                </span>
+                <CallTimeBadge timezone={timezone} />
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
                 Hora local del cliente ·{' '}
-                <strong className="tabular-nums text-foreground">{localTime}</strong>{' '}
+                <LocalTime timezone={timezone} />{' '}
                 <span className="text-muted-foreground/70">({tzLabel})</span>
               </p>
             </div>
@@ -298,5 +277,43 @@ export default function StateDetail() {
         <StateEditDialog state={state} open={editOpen} onOpenChange={setEditOpen} />
       )}
     </div>
+  )
+}
+
+// Relojes como componentes hoja (spec 10): el tic de cada segundo re-renderiza
+// solo estas piezas, no toda la ficha del estado.
+function CallTimeBadge({ timezone }: { timezone: string }) {
+  const now = useNow(1000)
+  const goodTime = isGoodCallTime(now, timezone)
+  const callLabel = getCallTimeLabel(now, timezone)
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold',
+        goodTime
+          ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400'
+          : 'border-border bg-muted text-muted-foreground',
+      )}
+    >
+      <span className="relative flex h-2 w-2">
+        {goodTime && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
+        )}
+        <span
+          className={cn(
+            'relative inline-flex h-2 w-2 rounded-full',
+            goodTime ? 'bg-green-500' : 'bg-muted-foreground',
+          )}
+        />
+      </span>
+      {callLabel}
+    </span>
+  )
+}
+
+function LocalTime({ timezone }: { timezone: string }) {
+  const now = useNow(1000)
+  return (
+    <strong className="tabular-nums text-foreground">{formatLocalTime(now, timezone, 'h:mm a')}</strong>
   )
 }
