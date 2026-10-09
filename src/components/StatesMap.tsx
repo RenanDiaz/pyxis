@@ -99,14 +99,14 @@ export default function StatesMap({ states, search, filteredStates }: StatesMapP
 
       <div className="w-full border rounded-lg bg-card overflow-hidden">
         <ComposableMap
-          projection={identityProjection as any}
+          projection={identityProjection}
           width={975}
           height={610}
           style={{ width: '100%', height: 'auto' }}
         >
           <ZoomableGroup center={[450, 310]}>
-            <Geographies geography={statesAlbers as any}>
-              {({ geographies }: { geographies: any[] }) =>
+            <Geographies geography={statesAlbers}>
+              {({ geographies }) =>
                 geographies.map((geo) => {
                   const geoName = geo.properties.name as string
                   const stateData = statesByName.get(geoName)
@@ -137,8 +137,8 @@ export default function StatesMap({ states, search, filteredStates }: StatesMapP
                         if (stateData) {
                           const svg = (e.target as SVGElement).closest('svg')
                           const rect = svg?.getBoundingClientRect()
-                          const clientX = (e as unknown as MouseEvent).clientX
-                          const clientY = (e as unknown as MouseEvent).clientY
+                          const clientX = e.clientX
+                          const clientY = e.clientY
                           if (rect) {
                             setTooltip({
                               state: stateData,
@@ -152,8 +152,8 @@ export default function StatesMap({ states, search, filteredStates }: StatesMapP
                         if (tooltip) {
                           const svg = (e.target as SVGElement).closest('svg')
                           const rect = svg?.getBoundingClientRect()
-                          const clientX = (e as unknown as MouseEvent).clientX
-                          const clientY = (e as unknown as MouseEvent).clientY
+                          const clientX = e.clientX
+                          const clientY = e.clientY
                           if (rect) {
                             setTooltip((prev) =>
                               prev

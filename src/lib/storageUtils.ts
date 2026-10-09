@@ -144,26 +144,31 @@ export async function uploadClientFile(
         })
       },
       reject,
-      async () => {
-        const url = await getDownloadURL(task.snapshot.ref)
-        resolve(url)
+      () => {
+        getDownloadURL(task.snapshot.ref).then(resolve, reject)
       }
     )
   })
 
-  const docRef = await addDoc(collection(db, 'workspaces', workspaceId, 'clients', clientId, 'documents'), {
-    name: file.name,
-    storage_path: storagePath,
-    download_url: downloadUrl,
-    type: getFileType(file.name),
-    mime_type: file.type,
-    size_bytes: file.size,
-    uploaded_by_uid: uploaderUid,
-    uploaded_by_name: uploaderName,
-    uploaded_at: Timestamp.now(),
-  })
-
-  return docRef.id
+  // Si el registro en Firestore falla, el archivo quedaría subido sin que nadie
+  // lo vea (spec 12): se borra antes de propagar el error.
+  try {
+    const docRef = await addDoc(collection(db, 'workspaces', workspaceId, 'clients', clientId, 'documents'), {
+      name: file.name,
+      storage_path: storagePath,
+      download_url: downloadUrl,
+      type: getFileType(file.name),
+      mime_type: file.type,
+      size_bytes: file.size,
+      uploaded_by_uid: uploaderUid,
+      uploaded_by_name: uploaderName,
+      uploaded_at: Timestamp.now(),
+    })
+    return docRef.id
+  } catch (err) {
+    await deleteObject(storageRef).catch(() => {})
+    throw err
+  }
 }
 
 export async function deleteClientFile(
@@ -173,6 +178,12 @@ export async function deleteClientFile(
   storagePath: string
 ): Promise<void> {
   if (!isFirebaseConfigured || !storage || !db) throw new Error('Firebase no configurado')
-  await deleteObject(ref(storage, storagePath))
+  // Primero el registro y después el archivo (spec 12): si falla lo segundo
+  // queda un archivo huérfano invisible, en vez de un documento con link roto.
   await deleteDoc(doc(db, 'workspaces', workspaceId, 'clients', clientId, 'documents', docId))
+  try {
+    await deleteObject(ref(storage, storagePath))
+  } catch (err) {
+    console.warn('No se pudo borrar el archivo de Storage', storagePath, err)
+  }
 }

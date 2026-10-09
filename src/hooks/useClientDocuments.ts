@@ -11,37 +11,33 @@ import type { ClientDocument } from '@/types'
 
 export function useClientDocuments(clientId: string | undefined) {
   const { workspaceId } = useUserProfile()
-  const [documents, setDocuments] = useState<ClientDocument[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const key = clientId && workspaceId && isFirebaseConfigured && db ? `${workspaceId}/${clientId}` : null
+  // El resultado guarda de qué cliente es: al cambiar de cliente, lo anterior
+  // se descarta al derivar (sin setState síncrono en el effect).
+  const [result, setResult] = useState<{ key: string; documents: ClientDocument[] } | null>(null)
 
   useEffect(() => {
-    if (!clientId || !workspaceId || !isFirebaseConfigured || !db) {
-      setDocuments([])
-      setIsLoading(false)
-      return
-    }
-
-    setIsLoading(true)
+    if (!key || !db) return
+    const [wsId, cId] = key.split('/')
     const q = query(
-      collection(db, 'workspaces', workspaceId, 'clients', clientId, 'documents'),
+      collection(db, 'workspaces', wsId, 'clients', cId, 'documents'),
       orderBy('uploaded_at', 'desc')
     )
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map((d) => ({
+      const documents = snapshot.docs.map((d) => ({
         id: d.id,
         ...d.data(),
       })) as ClientDocument[]
-      setDocuments(docs)
-      setIsLoading(false)
+      setResult({ key, documents })
     }, (error) => {
       console.error('Error loading documents:', error)
-      setDocuments([])
-      setIsLoading(false)
+      setResult({ key, documents: [] })
     })
 
     return unsubscribe
-  }, [clientId, workspaceId])
+  }, [key])
 
-  return { documents, isLoading }
+  const current = result?.key === key ? result : null
+  return { documents: current?.documents ?? [], isLoading: !!key && !current }
 }

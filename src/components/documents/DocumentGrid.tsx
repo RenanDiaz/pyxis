@@ -139,7 +139,7 @@ export default function DocumentGrid({
     }, 1500)
 
     if (fileInputRef.current) fileInputRef.current.value = ''
-  }, [clientId, currentUid, currentDisplayName, clientStatus, uploads.length])
+  }, [workspaceId, clientId, currentUid, currentDisplayName, clientStatus])
 
   const handleDelete = async (doc: ClientDocument) => {
     if (!confirm(`¿Eliminar "${doc.name}"?`)) return

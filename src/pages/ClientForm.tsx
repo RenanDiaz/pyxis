@@ -193,14 +193,9 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
     role,
     wsCtx?.subteamId ?? null
   )
-  const [selectedAgentUid, setSelectedAgentUid] = useState<string>('')
-
-  // Default to current user when assignable members load
-  useEffect(() => {
-    if (canAssign && wsCtx && !selectedAgentUid) {
-      setSelectedAgentUid(wsCtx.uid)
-    }
-  }, [canAssign, wsCtx, selectedAgentUid])
+  const [pickedAgentUid, setSelectedAgentUid] = useState<string>('')
+  // Por defecto, el usuario actual (derivado: sin effect que lo sincronice).
+  const selectedAgentUid = pickedAgentUid || (canAssign && wsCtx ? wsCtx.uid : '')
 
   // Borrador en localStorage: se autoguarda mientras se edita y se restaura al
   // volver al formulario tras recargar o cerrar el navegador.
@@ -249,21 +244,23 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
     setDraftNotice(null)
   }
 
-  // Auto-detect state from primary phone's area code
-  useEffect(() => {
+  // Auto-detecta el estado por el código de área del teléfono principal. Se
+  // evalúa al editar teléfonos (no en un effect) para no re-renderizar en cascada.
+  const updatePhones = (update: (prev: ClientPhone[]) => ClientPhone[]) => {
+    const next = update(phones)
+    setPhones(next)
     if (stateManuallySet.current) return
-    const primary = phones.find((p) => p.is_primary) ?? phones[0]
-    if (primary?.number) {
-      const detected = getStateByAreaCode(primary.number)
-      if (detected) {
-        setFormData((prev) => ({ ...prev, state: detected }))
-        setStateAutoDetected(true)
-      } else if (stateAutoDetected) {
-        setFormData((prev) => ({ ...prev, state: '' }))
-        setStateAutoDetected(false)
-      }
+    const primary = next.find((p) => p.is_primary) ?? next[0]
+    if (!primary?.number) return
+    const detected = getStateByAreaCode(primary.number)
+    if (detected) {
+      setFormData((prev) => ({ ...prev, state: detected }))
+      setStateAutoDetected(true)
+    } else if (stateAutoDetected) {
+      setFormData((prev) => ({ ...prev, state: '' }))
+      setStateAutoDetected(false)
     }
-  }, [phones, stateAutoDetected])
+  }
 
   // Duplicate phone detection (debounced)
   const [debouncedPhone, setDebouncedPhone] = useState('')
@@ -297,19 +294,19 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
 
   // Phone CRUD helpers
   const updatePhone = (index: number, field: keyof ClientPhone, value: string | boolean) => {
-    setPhones((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)))
+    updatePhones((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)))
   }
 
   const setPrimaryPhone = (index: number) => {
-    setPhones((prev) => prev.map((p, i) => ({ ...p, is_primary: i === index })))
+    updatePhones((prev) => prev.map((p, i) => ({ ...p, is_primary: i === index })))
   }
 
   const addPhone = () => {
-    setPhones((prev) => [...prev, { number: '', label: 'personal', is_primary: false }])
+    updatePhones((prev) => [...prev, { number: '', label: 'personal', is_primary: false }])
   }
 
   const removePhone = (index: number) => {
-    setPhones((prev) => {
+    updatePhones((prev) => {
       const next = prev.filter((_, i) => i !== index)
       if (next.length > 0 && !next.some((p) => p.is_primary)) {
         next[0].is_primary = true

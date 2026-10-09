@@ -10,7 +10,7 @@
  * Sin hora original disponible, se usa MEDIODÍA LOCAL (12:00) de la fecha
  * guardada, para no cruzar de día en ninguna zona horaria al serializar a ISO.
  *
- * Recorre `workspaces/*/clients` y convierte:
+ * Recorre `workspaces/{id}/clients` y convierte:
  *   - `processes[].payments[].date`  (modelo actual)
  *   - `payments[].date`              (modelo legacy a nivel cliente)
  * Solo toca valores con formato exacto `yyyy-MM-dd`; los que ya son ISO con
@@ -34,6 +34,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { updateIfUnchanged } from './lib/updateIfUnchanged'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DRY_RUN = process.argv.includes('--dry-run')
@@ -92,6 +93,7 @@ const summary = {
   clientsTotal: 0,
   clientsUpdated: 0,
   paymentsConverted: 0,
+  changedDuringRun: [] as string[],
   errors: [] as string[],
 }
 
@@ -103,10 +105,6 @@ async function migrateWorkspace(workspaceId: string): Promise<void> {
     .get()
 
   summary.clientsTotal += clientsSnap.size
-
-  const BATCH_SIZE = 400
-  let batch = db.batch()
-  let batchCount = 0
 
   for (const clientDoc of clientsSnap.docs) {
     try {
@@ -136,31 +134,22 @@ async function migrateWorkspace(workspaceId: string): Promise<void> {
 
       if (clientConverted === 0) continue
 
-      summary.clientsUpdated++
-      summary.paymentsConverted += clientConverted
-
       if (DRY_RUN) {
         console.log(
           `   [dry-run] ${workspaceId}/${clientDoc.id} → ${clientConverted} fecha(s) de pago a ISO`,
         )
-      } else {
-        batch.update(clientDoc.ref, update)
-        batchCount++
-        if (batchCount >= BATCH_SIZE) {
-          await batch.commit()
-          batch = db.batch()
-          batchCount = 0
-        }
+      } else if (!(await updateIfUnchanged(clientDoc, update))) {
+        summary.changedDuringRun.push(`${workspaceId}/${clientDoc.id}`)
+        continue
       }
+
+      summary.clientsUpdated++
+      summary.paymentsConverted += clientConverted
     } catch (err) {
       const msg = `Error en cliente ${workspaceId}/${clientDoc.id}: ${err}`
       summary.errors.push(msg)
       console.error(`   ❌ ${msg}`)
     }
-  }
-
-  if (!DRY_RUN && batchCount > 0) {
-    await batch.commit()
   }
 }
 
@@ -184,6 +173,11 @@ async function main() {
   console.log(`   Clientes revisados:       ${summary.clientsTotal}`)
   console.log(`   Clientes actualizados:    ${summary.clientsUpdated}`)
   console.log(`   Fechas convertidas:       ${summary.paymentsConverted}`)
+
+  if (summary.changedDuringRun.length > 0) {
+    console.log(`\n⚠️  Editados mientras corría el script, no se tocaron (vuelve a correrlo):`)
+    for (const r of summary.changedDuringRun) console.log(`   - ${r}`)
+  }
 
   if (summary.errors.length > 0) {
     console.log(`\n❌ Errores (${summary.errors.length}):`)

@@ -26,7 +26,7 @@
 - `Sheet` móvil sin `SheetTitle`.
 
 ## Limpieza
-- Código muerto: `components/shared/CallsList.tsx`, `ClientsTable.tsx`, `AgentFilter.tsx`; comentario huérfano en `statusUtils.ts`.
+- ~~Código muerto: `components/shared/CallsList.tsx`, `ClientsTable.tsx`, `AgentFilter.tsx`~~ (borrados en spec 12); comentario huérfano en `statusUtils.ts`.
 
 ## Criterios de aceptación
 - [ ] Editar una letra en medio de "JUAN PEREZ" no mueve el cursor.
