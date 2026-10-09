@@ -1,7 +1,6 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
 import { getAuth, type Auth } from 'firebase/auth'
 import { initializeFirestore, type Firestore } from 'firebase/firestore'
-import { getStorage, type FirebaseStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -17,7 +16,6 @@ export const isFirebaseConfigured = !!firebaseConfig.apiKey
 let app: FirebaseApp | undefined
 let auth: Auth | undefined
 let db: Firestore | undefined
-let storage: FirebaseStorage | undefined
 
 if (isFirebaseConfigured) {
   app = initializeApp(firebaseConfig)
@@ -25,7 +23,8 @@ if (isFirebaseConfigured) {
   db = initializeFirestore(app, {
     experimentalForceLongPolling: true,
   })
-  storage = getStorage(app)
 }
 
-export { app, auth, db, storage }
+// Storage vive en `firebaseStorage.ts`: solo lo cargan las pantallas que suben
+// archivos (spec 10).
+export { app, auth, db }

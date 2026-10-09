@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Outlet, Navigate, useLocation } from 'react-router-dom'
 import RouteErrorBoundary from './RouteErrorBoundary'
+import PageLoader from './PageLoader'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
@@ -42,7 +43,10 @@ export default function AppLayout() {
         <Header onMenuToggle={() => setSidebarOpen(true)} />
         <main className="p-4 lg:p-6">
           <RouteErrorBoundary key={pathname}>
-            <Outlet />
+            {/* Suspense propio: al cambiar de página el sidebar y el header se quedan. */}
+            <Suspense fallback={<PageLoader />}>
+              <Outlet />
+            </Suspense>
           </RouteErrorBoundary>
         </main>
       </div>

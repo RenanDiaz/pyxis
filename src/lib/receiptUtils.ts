@@ -1,20 +1,12 @@
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject,
-} from 'firebase/storage'
 import { jsPDF } from 'jspdf'
 import { drawBrandHeader, fmtCurrency, pdfFileBase, PDF_COLORS, PDF_MARGIN } from '@/lib/pdfBranding'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { storage, isFirebaseConfigured } from '@/lib/firebase'
 import { getProcessLabel, parsePaymentDate } from '@/lib/processUtils'
 import { getBalanceAfterPayment, getReceiptNumber } from '@/lib/processMutations'
 import { getClientDisplayName } from '@/lib/clientUtils'
 import { getProcessCompanyName } from '@/lib/companyUtils'
 import type { Client, ClientProcess, Payment, PaymentMethod, Workspace } from '@/types'
-import { UserFacingError } from '@/lib/errors'
 
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   efectivo: 'Efectivo',
@@ -22,46 +14,6 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   transferencia: 'Transferencia',
   stripe: 'Stripe',
   otro: 'Otro',
-}
-
-// ── Logo upload ──
-
-const ACCEPTED_LOGO_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
-const MAX_LOGO_BYTES = 2 * 1024 * 1024 // 2 MB
-
-export interface LogoUploadResult {
-  url: string
-  path: string
-}
-
-export async function uploadWorkspaceLogo(
-  workspaceId: string,
-  file: File
-): Promise<LogoUploadResult> {
-  if (!isFirebaseConfigured || !storage) throw new Error('Firebase no configurado')
-  if (!ACCEPTED_LOGO_TYPES.includes(file.type)) {
-    throw new UserFacingError('Formato no soportado. Usa PNG, JPG o WEBP.')
-  }
-  if (file.size > MAX_LOGO_BYTES) {
-    throw new UserFacingError('El logo no puede superar los 2 MB.')
-  }
-
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'png'
-  const safeExt = ['png', 'jpg', 'jpeg', 'webp'].includes(ext) ? ext : 'png'
-  const path = `workspaces/${workspaceId}/branding/logo_${Date.now()}.${safeExt}`
-  const storageRef = ref(storage, path)
-  await uploadBytes(storageRef, file, { contentType: file.type })
-  const url = await getDownloadURL(storageRef)
-  return { url, path }
-}
-
-export async function deleteWorkspaceLogo(path: string): Promise<void> {
-  if (!isFirebaseConfigured || !storage) return
-  try {
-    await deleteObject(ref(storage, path))
-  } catch {
-    // Ignore: file may already be gone
-  }
 }
 
 // ── PDF generation ──

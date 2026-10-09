@@ -13,7 +13,8 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { saveAs } from 'file-saver'
-import { storage, db, isFirebaseConfigured } from '@/lib/firebase'
+import { db, isFirebaseConfigured } from '@/lib/firebase'
+import { storage } from '@/lib/firebaseStorage'
 import type { DocFileType } from '@/types'
 import { FileText, FileSpreadsheet, FileImage, File } from 'lucide-react'
 

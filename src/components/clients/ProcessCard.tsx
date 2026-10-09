@@ -28,7 +28,6 @@ import {
   hasRegisteredAgent,
   PROCESS_STAGE_LABELS,
 } from '@/lib/processUtils'
-import { exportRegistrationDoc } from '@/lib/exportClientDoc'
 import {
   COMPANY_KEYS,
   getProcessCompanyName,
@@ -94,6 +93,7 @@ export default function ProcessCard({
 
   const handleExport = async () => {
     try {
+      const { exportRegistrationDoc } = await import('@/lib/exportClientDoc')
       await exportRegistrationDoc(client, process)
     } catch {
       toast.error('No se pudo generar el documento')
