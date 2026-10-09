@@ -31,6 +31,8 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 | 14 | [Aviso de nueva versión](14-aviso-nueva-version.md) | 🟠 Alta · ✅ | — | S |
 | 15 | [Cotización](15-cotizacion.md) | 🟠 Alta · ✅ | — | M |
 | 16 | [Estado de cuenta](16-estado-de-cuenta.md) | 🟠 Alta · ✅ | 15 | S |
+| 17 | [Migración a Cloudflare y dominio propio](17-migracion-cloudflare.md) | 🔴 Alta | — | M |
+| 18 | [Links de pago con Stripe](18-links-de-pago-stripe.md) | 🟠 Alta | 17 | L |
 | — | [Borradores de formularios](form-drafts.md) | ✅ Implementado | — | — |
 
 **Por qué este orden:** 01+02 cierran un hueco que permite tomar control de
