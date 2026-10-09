@@ -26,7 +26,7 @@ const expenses: ExpenseConfig = {
   fixedExpenses: [{ label: 'Zoom Phone', amount: 75 }],
 }
 
-function build(clients: Client[], monthKey = '2026-10', stripeFeeMode: 'none' | 'estimate' = 'none') {
+function build(clients: Client[], monthKey = '2026-10', stripeFeeMode: 'none' | 'surcharge' = 'none') {
   return buildReportInput({
     clients, states, monthKey, monthLabel: 'October 2026',
     expenses, stripeFeeMode, taxRate: 0.39,
@@ -122,19 +122,23 @@ describe('reporte de ventas — una fila por venta (P6)', () => {
     assert.equal(previewReport([c], '2026-10').accountCount, 0)
   })
 
-  it('el saldo se proyecta con el método del primer pago', () => {
+  it('recargo de Stripe del 4 %: se suma a CHARGE y se resta como STRIPE FEE', () => {
     const c = client({}, [
-      // 1er pago con Stripe: lo pagado y el saldo llevan comisión.
+      // Como el manual (TX, sept): 759 con Stripe → CHARGE 789.36, J 30.36.
+      proc({ id: 'tx', state: 'TX', total: 759, payments: [pay(759, '2026-10-01', 'stripe')] }),
+      // 1er pago con Stripe: lo pagado y el saldo llevan recargo (600 × 4 %).
       proc({ id: 'a', state: 'NY', total: 600, payments: [pay(300, '2026-10-02', 'stripe')] }),
-      // 1er pago con Zelle: solo el pago con Stripe lleva comisión, el saldo no.
-      proc({ id: 'b', state: 'NY', total: 600, payments: [pay(100, '2026-10-02'), pay(200, '2026-10-05', 'stripe')] }),
+      // 1er pago con Zelle: solo el pago con Stripe lleva recargo (200 × 4 %).
+      proc({ id: 'b', state: 'NY', total: 600, payments: [pay(100, '2026-10-03'), pay(200, '2026-10-05', 'stripe')] }),
     ])
-    const fee = (x: number) => Math.round((x * 0.029 + 0.3) * 100) / 100
-    assert.deepEqual(build([c], '2026-10', 'estimate').accounts.map((a) => a.stripeFee), [
-      fee(300) * 2,
-      fee(200),
-    ])
-    assert.deepEqual(build([c]).accounts.map((a) => a.stripeFee), [0, 0])
+    assert.deepEqual(
+      build([c], '2026-10', 'surcharge').accounts.map((a) => [a.charge, a.stripeFee]),
+      [[789.36, 30.36], [624, 24], [608, 8]],
+    )
+    assert.deepEqual(
+      build([c]).accounts.map((a) => [a.charge, a.stripeFee]),
+      [[759, 0], [600, 0], [600, 0]],
+    )
   })
 
   it('la vista previa resume lo vendido y lista los saldos proyectados', () => {
@@ -170,12 +174,12 @@ describe('reporte de ventas — fórmulas', () => {
   const ws = buildWorkbook(input).worksheets[0]
   const f = (addr: string) => (ws.getCell(addr).value as { formula: string }).formula
 
-  it('una fila por cuenta, sin celdas combinadas, con la tasa configurada', () => {
+  it('una fila por cuenta, sin celdas combinadas; TAX resta el Stripe fee antes de la tasa', () => {
     assert.equal(ws.getCell('F2').value, 659)
-    assert.equal(f('I2'), '(F2-G2-H2)*0.39')
-    assert.equal(f('K2'), 'F2-G2-H2-I2-J2')
-    assert.equal(f('I3'), '(F3-G3)*0.39')
-    assert.equal(f('K3'), 'F3-G3-I3-J3')
+    assert.equal(f('I2'), '(F2-G2-H2-J2)*0.39')
+    assert.equal(f('K2'), 'F2-G2-H2-J2-I2')
+    assert.equal(f('I3'), '(F3-G3-J3)*0.39')
+    assert.equal(f('K3'), 'F3-G3-J3-I3')
     assert.equal(ws.getCell('A3').value, 2)
     assert.equal(f('K4'), 'SUM(K2:K3)')
     assert.equal(ws.getCell('C2').isMerged, false)

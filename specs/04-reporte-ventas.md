@@ -1,6 +1,6 @@
 # 04 — Correcciones del reporte de ventas (Excel)
 
-**Prioridad:** 🔴 Alta · **Estado:** 🟡 parcial — fixes sin dependencias de negocio implementados (ver «Implementado»); el resto bloqueado por P3–P5 y P8 · **Tamaño:** M (antes S)
+**Prioridad:** 🔴 Alta · **Estado:** 🟡 parcial — fixes sin dependencias de negocio implementados (ver «Implementado»); el resto bloqueado por P3 y P8 · **Tamaño:** M (antes S)
 
 ## Fuente de verdad
 - Excel manual `2026_ISABEL_PAY_SEPT` (hojas June, JULY, AUG, SEPT de 2026).
@@ -28,8 +28,8 @@ las referencias citan solo hoja + tipo + estado.
 | # | App | Excel manual (Ago–Sept) | Notas |
 |---|-----|-------------------------|-------|
 | ✔ 6 | `TAX_RATE = 0.34` fijo | **0.39** (0.34 en Jun–Jul) | La tasa cambia; debe ser configurable en el diálogo. |
-| ✔ 7 | TAX = `(F-G[-H])*rate` | TAX = `(F-G-H-J)*rate` | El manual resta el Stripe fee **antes** del impuesto (desde Jul). |
-| ✔ 8 | Stripe fee estimado `2.9% + $0.30` | ≈ **4 % del precio base** (CHARGE = base × 1.04; J = CHARGE − base). Excepciones al 2 %. | Parece el *surcharge* que se cobra al cliente, no la comisión real de Stripe. Ver P5. |
+| ✔ 7 ✅ | TAX = `(F-G[-H])*rate` | TAX = `(F-G-H-J)*rate` | El manual resta el Stripe fee **antes** del impuesto (desde Jul). |
+| ✔ 8 ✅ | Stripe fee estimado `2.9% + $0.30` | ≈ **4 % del precio base** (CHARGE = base × 1.04; J = CHARGE − base). Excepciones al 2 %. | Parece el *surcharge* que se cobra al cliente, no la comisión real de Stripe. Ver P5. |
 | ✔ 9 | REGISTERED AGENT siempre 0 | 45 cuando aplica | Llenar con un costo configurable (default 45) si `has_registered_agent`. |
 | ✔ 10 ✅ | Una fila **por pago**; CHARGE = monto del pago | Una fila **por cuenta**; CHARGE = total acordado; columna **OWES** = saldo pendiente | Diferencia de modelo. Ver P6. |
 | ✔ 11 | Columnas A–L, L = OWNER | L = comisión por fila (`K*0.15`), M = OWNER, N = OWES, O = FORMA DE PAGO | El generador replica un formato anterior. Ver P6. |
@@ -70,10 +70,13 @@ monday) es un spec aparte, fuera del 04.
   - Statement of Information CA → 20.
   - EIN, BOI, Sales Tax Certificate, Resale Certificate → **0**.
   - Annual report: **no hay ejemplos**.
-- **P5 (evidencia parcial, octubre):** un registro de NY de 659 se pagó en dos
-  pagos de 329.50 por Stripe, sin el 4 % → **Pyxis guarda el monto base**, y la app le
-  estima 2.9 % + 0.30 (9.86 por pago). En el manual esa cuenta tendría CHARGE ≈ 685.36
-  y J ≈ 26.36. Falta confirmar si el cliente pagó el recargo.
+- **P5 (resuelta, 2026-10-09):** el 4 % es un **recargo que paga el cliente** al pagar
+  con Stripe. Pyxis guarda el pago **sin** recargo (el recargo no es venta, spec 18). El
+  reporte lo trata como el manual: **CHARGE = venta + 4 % de lo pagado con Stripe** y
+  **STRIPE FEE = ese 4 %**, que resta antes del TAX (#7), así que el NET no cambia. El
+  saldo pendiente lleva recargo si el primer pago fue con Stripe. Es el default del
+  diálogo («Recargo del 4 %»); «Sin recargo» deja ambos en 0. Se quita la estimación
+  2.9 % + 0.30. Los casos al 2 % del manual se ajustan a mano en el Excel.
 - **P9 (resuelta):** los 2 ITIN, el Certificado de Autoridad y el Amendment de TX de
   septiembre **no se capturaron en Pyxis** (triple captura, ver «Contexto de uso»). Los
   664.29 de diferencia son de captura. ITIN y Certificado de Autoridad deberían entrar
@@ -176,9 +179,12 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
   con al menos un pago (sin pagos es un prospecto o una cotización). La página de
   Reportes muestra Ventas / Total vendido / Por cobrar y el diálogo lista las ventas
   con saldo proyectado.
+- P5 / #7 / #8: recargo de Stripe del 4 % en CHARGE y STRIPE FEE (default del
+  diálogo; lo guardado en el navegador con el modo viejo se descarta una vez);
+  TAX = `(F-G[-H]-J)*rate`, NET = `F-G[-H]-J-I`.
 - Tests: `tests/unit/sales-report.test.ts`.
 
-**Pendiente:** #7 (restar J antes del TAX), #8/P5 (Stripe), #9 (RA = 45), #2 (company), #3/P3, #4, costo por tipo de proceso (P8), catálogo
+**Pendiente:** #9 (RA = 45), #2 (company), #3/P3, #4, costo por tipo de proceso (P8), catálogo
 (req. 12) y editar pagos (req. 14).
 
 ## Criterios de aceptación
@@ -201,5 +207,4 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
 ## Preguntas abiertas (bloquean)
 - **P3:** Un proceso cancelado con pagos, ¿se reembolsó? ¿Se reporta como venta, como negativo o se excluye? *(El Excel no trae casos.)*
 - **P4:** El state fee de registro en el Excel varía respecto del doc del estado (1c). ¿Cuál es el correcto: el del doc (hay que actualizarlo) o el del Excel (costo real del caso, p. ej. expedite)? CA aparece con 30, 70 y 110 en meses distintos: ¿de qué depende?
-- **P5:** *(ver comparación: con «Stripe fee = ninguno» la app reproduce el NET del manual)* La columna STRIPE FEE, ¿es la comisión real de Stripe o el recargo del 4 % que se le cobra al cliente? ¿El monto del pago que se registra en Pyxis **incluye** ese 4 %? ¿Por qué algunos casos son 2 %?
 - **P8:** ¿Cuál es el costo estatal de annual report, dissolution y amendment por estado? (Para llenar los campos nuevos; hoy solo conocemos NY y TX.) ¿ITIN y Certificado de Autoridad entran al catálogo con costos fijos de 250 y 175?

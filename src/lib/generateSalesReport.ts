@@ -142,8 +142,9 @@ function writeHeader(ws: ExcelJS.Worksheet): void {
 function writeAccounts(ws: ExcelJS.Worksheet, input: ReportInput): number {
   input.accounts.forEach((account, i) => {
     const r = i + 2
-    // State fee y, si aplica, RA: costos de la cuenta que restan TAX y NET.
-    const costs = account.hasRegisteredAgent ? `-G${r}-H${r}` : `-G${r}`
+    // State fee, RA (si aplica) y Stripe fee restan antes del TAX, como el
+    // manual: el recargo de Stripe no paga impuesto (spec 04, #7).
+    const costs = account.hasRegisteredAgent ? `-G${r}-H${r}-J${r}` : `-G${r}-J${r}`
     setCell(ws, `A${r}`, i + 1, { font: FONT_DATA })
     setCell(ws, `B${r}`, normalizeDate(account.date), { font: FONT_DATA, numFmt: FMT_DATE })
     setCell(ws, `C${r}`, account.company, { font: FONT_DATA, align: LEFT })
@@ -155,7 +156,7 @@ function writeAccounts(ws: ExcelJS.Worksheet, input: ReportInput): number {
     setCell(ws, `I${r}`, { formula: `(F${r}${costs})*${input.taxRate}` },
       { font: FONT_DATA, numFmt: FMT_NUM })
     setCell(ws, `J${r}`, account.stripeFee, { font: FONT_DATA, numFmt: FMT_NUM })
-    setCell(ws, `K${r}`, { formula: `F${r}${costs}-I${r}-J${r}` },
+    setCell(ws, `K${r}`, { formula: `F${r}${costs}-I${r}` },
       { font: FONT_DATA, numFmt: FMT_NUM })
     setCell(ws, `L${r}`, account.owner, { font: FONT_DATA, align: LEFT })
     ALL_COLS.forEach((col) => {
