@@ -13,6 +13,7 @@ import { getBalanceAfterPayment, getReceiptNumber } from '@/lib/processMutations
 import { getClientDisplayName } from '@/lib/clientUtils'
 import { getProcessCompanyName } from '@/lib/companyUtils'
 import type { Client, ClientProcess, Payment, PaymentMethod, Workspace } from '@/types'
+import { UserFacingError } from '@/lib/errors'
 
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   efectivo: 'Efectivo',
@@ -38,10 +39,10 @@ export async function uploadWorkspaceLogo(
 ): Promise<LogoUploadResult> {
   if (!isFirebaseConfigured || !storage) throw new Error('Firebase no configurado')
   if (!ACCEPTED_LOGO_TYPES.includes(file.type)) {
-    throw new Error('Formato no soportado. Usa PNG, JPG o WEBP.')
+    throw new UserFacingError('Formato no soportado. Usa PNG, JPG o WEBP.')
   }
   if (file.size > MAX_LOGO_BYTES) {
-    throw new Error('El logo no puede superar los 2 MB.')
+    throw new UserFacingError('El logo no puede superar los 2 MB.')
   }
 
   const ext = file.name.split('.').pop()?.toLowerCase() || 'png'

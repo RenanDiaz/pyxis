@@ -1,10 +1,12 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   onAuthStateChanged,
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
+  sendPasswordResetEmail,
   GoogleAuthProvider,
   type User,
 } from 'firebase/auth'
@@ -19,6 +21,10 @@ interface AuthContextType {
   signInWithEmail: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
+  resetPassword: (email: string) => Promise<void>
+  /** Falló crear/leer el perfil del usuario (red, reglas): la app no puede seguir. */
+  profileError: unknown
+  retryProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -46,6 +52,9 @@ async function ensureUserProfile(user: User): Promise<void> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(isFirebaseConfigured ? null : DEV_USER)
   const [loading, setLoading] = useState(isFirebaseConfigured)
+  const [profileError, setProfileError] = useState<unknown>(null)
+  const queryClient = useQueryClient()
+  const lastUid = useRef<string | null>(null)
 
   useEffect(() => {
     pruneExpiredDrafts()
@@ -54,14 +63,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) return
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        await ensureUserProfile(firebaseUser)
+      // Otro usuario (o ninguno) en este navegador: la caché del anterior no
+      // debe verse ni un instante (las query keys no incluyen el uid).
+      const uid = firebaseUser?.uid ?? null
+      if (uid !== lastUid.current) queryClient.clear()
+      lastUid.current = uid
+      setProfileError(null)
+      try {
+        if (firebaseUser) await ensureUserProfile(firebaseUser)
+      } catch (err) {
+        // Antes un error aquí dejaba la app en "Cargando…" para siempre.
+        console.error(err)
+        setProfileError(err)
+      } finally {
+        setUser(firebaseUser)
+        setLoading(false)
       }
-      setUser(firebaseUser)
-      setLoading(false)
     })
     return unsubscribe
-  }, [])
+  }, [queryClient])
+
+  const retryProfile = useCallback(async () => {
+    if (!user) return
+    setProfileError(null)
+    try {
+      await ensureUserProfile(user)
+    } catch (err) {
+      setProfileError(err)
+    }
+  }, [user])
 
   const signInWithGoogle = async () => {
     if (!isFirebaseConfigured || !auth) return
@@ -82,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Los borradores tienen datos de clientes: no deben quedar en un navegador
     // compartido después de cerrar sesión.
     if (user) clearUserDrafts(user.uid)
+    queryClient.clear()
     if (!isFirebaseConfigured || !auth) {
       setUser(null)
       return
@@ -89,8 +120,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseSignOut(auth)
   }
 
+  const resetPassword = async (email: string) => {
+    if (!isFirebaseConfigured || !auth) return
+    await sendPasswordResetEmail(auth, email)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithEmail, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        signInWithGoogle,
+        signInWithEmail,
+        signUp,
+        signOut,
+        resetPassword,
+        profileError,
+        retryProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

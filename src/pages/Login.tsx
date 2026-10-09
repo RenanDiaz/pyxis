@@ -1,17 +1,19 @@
 import { useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { describeError, errorCode } from '@/lib/errors'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function Login() {
-  const { user, loading, signInWithGoogle, signInWithEmail, signUp } = useAuth()
+  const { user, loading, signInWithGoogle, signInWithEmail, signUp, resetPassword } = useAuth()
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from
@@ -41,9 +43,8 @@ export default function Login() {
         await signInWithEmail(email, password)
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Error al iniciar sesión'
-      )
+      // Antes se mostraba el mensaje crudo de Firebase, en inglés.
+      setError(describeError(err, isSignUp ? 'No se pudo crear la cuenta.' : 'No se pudo iniciar sesión.'))
     } finally {
       setSubmitting(false)
     }
@@ -54,9 +55,25 @@ export default function Login() {
     try {
       await signInWithGoogle()
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Error al iniciar sesión con Google'
-      )
+      setError(describeError(err, 'No se pudo iniciar sesión con Google.'))
+    }
+  }
+
+  const handleResetPassword = async () => {
+    setError('')
+    setInfo('')
+    if (!email.trim()) {
+      setError('Escribe tu correo arriba y vuelve a tocar "¿Olvidaste tu contraseña?".')
+      return
+    }
+    // Mismo mensaje exista o no la cuenta: no revelamos qué correos están registrados.
+    const sent = 'Si existe una cuenta con ese correo, te enviamos un enlace para crear una contraseña nueva.'
+    try {
+      await resetPassword(email.trim())
+      setInfo(sent)
+    } catch (err) {
+      if (errorCode(err) === 'user-not-found') setInfo(sent)
+      else setError(describeError(err, 'No se pudo enviar el correo. Intenta de nuevo.'))
     }
   }
 
@@ -131,8 +148,9 @@ export default function Login() {
             </div>
 
             {error && (
-              <p className="text-sm text-destructive">{error}</p>
+              <p role="alert" className="text-sm text-destructive">{error}</p>
             )}
+            {info && <p className="text-sm text-muted-foreground">{info}</p>}
 
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting
@@ -143,6 +161,18 @@ export default function Login() {
             </Button>
           </form>
 
+          {!isSignUp && (
+            <p className="text-center text-sm">
+              <button
+                type="button"
+                className="text-muted-foreground underline-offset-4 hover:underline"
+                onClick={handleResetPassword}
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </p>
+          )}
+
           <p className="text-center text-sm text-muted-foreground">
             {isSignUp ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}{' '}
             <button
@@ -151,6 +181,7 @@ export default function Login() {
               onClick={() => {
                 setIsSignUp(!isSignUp)
                 setError('')
+                setInfo('')
               }}
             >
               {isSignUp ? 'Inicia sesión' : 'Regístrate'}

@@ -20,6 +20,7 @@ import { Archive, Search, Plus, Phone, Building2, MapPin, ChevronRight, Users, U
 import type { ClientStatus, WorkspaceMember } from '@/types'
 import { getPrimaryPhoneNumber } from '@/lib/clientUtils'
 import { formatPhoneForWhatsApp } from '@/lib/phoneUtils'
+import ErrorState from '@/components/shared/ErrorState'
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'all', label: 'Todos' },
@@ -52,7 +53,7 @@ export default function Clients() {
     return map
   }, [members])
 
-  const { data: clients, isLoading } = useClients({
+  const { data: clients, isLoading, error, refetch } = useClients({
     status: statusFilter !== 'all' ? (statusFilter as ClientStatus) : undefined,
     search: search || undefined,
     archived: showArchived,
@@ -122,6 +123,25 @@ export default function Clients() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      ) : error ? (
+        <ErrorState error={error} what="los clientes" onRetry={() => refetch()} />
+      ) : (!clients || clients.length === 0) && (search || statusFilter !== 'all' || showArchived) ? (
+        // Con filtros activos, "no hay clientes aún" confundía: sí hay, pero no coinciden.
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <Users className="h-12 w-12 mb-4 opacity-40" />
+          <p className="text-lg font-medium">Ningún cliente coincide con los filtros</p>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => {
+              setSearch('')
+              setStatusFilter('all')
+              setShowArchived(false)
+            }}
+          >
+            Limpiar filtros
+          </Button>
         </div>
       ) : !clients || clients.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">

@@ -40,8 +40,8 @@ export default function JoinWorkspace() {
       })
       toast.success('Te has unido al workspace')
       navigate('/')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al unirse')
+    } catch {
+      // El toast de error lo muestra el handler global de mutaciones.
     } finally {
       setJoining(false)
     }

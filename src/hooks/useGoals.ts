@@ -56,6 +56,7 @@ export function useCreateGoal() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: { errorMessage: 'No se pudo guardar la meta' },
     mutationFn: (data: {
       target_uid: string
       type: GoalType

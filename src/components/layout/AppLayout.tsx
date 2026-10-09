@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Outlet, Navigate } from 'react-router-dom'
+import { Outlet, Navigate, useLocation } from 'react-router-dom'
+import RouteErrorBoundary from './RouteErrorBoundary'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
@@ -8,6 +9,7 @@ import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { needsOnboarding, isLoading } = useWorkspaceContext()
+  const { pathname } = useLocation()
 
   if (isLoading) {
     return (
@@ -39,7 +41,9 @@ export default function AppLayout() {
       <div className="flex-1 min-w-0 lg:pl-64">
         <Header onMenuToggle={() => setSidebarOpen(true)} />
         <main className="p-4 lg:p-6">
-          <Outlet />
+          <RouteErrorBoundary key={pathname}>
+            <Outlet />
+          </RouteErrorBoundary>
         </main>
       </div>
     </div>

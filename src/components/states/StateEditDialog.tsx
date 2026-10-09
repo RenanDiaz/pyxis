@@ -167,7 +167,7 @@ export default function StateEditDialog({ state, open, onOpenChange }: StateEdit
       toast.success(`Información de ${state.name} actualizada`)
       onOpenChange(false)
     } catch {
-      toast.error('Error al guardar los cambios')
+      // El toast de error lo muestra el handler global de mutaciones.
     }
   }
 

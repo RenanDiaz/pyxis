@@ -95,8 +95,8 @@ export default function WorkspaceMembers() {
       const link = `${window.location.origin}/join?token=${inv.token}&workspace=${workspaceId}`
       setGeneratedLink(link)
       toast.success('Invitación creada')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al crear invitación')
+    } catch {
+      // El toast de error (p. ej. invitación duplicada) lo muestra el handler global.
     }
   }
 

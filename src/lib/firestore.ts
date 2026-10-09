@@ -37,6 +37,7 @@ import { runClientMutation, runClientUpdate } from '@/lib/clientTransactions'
 import type { StatusTrigger } from '@/lib/statusUtils'
 import { initialStatusFields } from '@/lib/statusHistory'
 import type { ClientChange, ClientMutation } from '@/lib/processMutations'
+import { UserFacingError } from '@/lib/errors'
 
 // ── Workspace context for role-based queries ──
 
@@ -254,7 +255,7 @@ export async function createInvitation(
   )
   const existingSnap = await getDocs(existing)
   if (!existingSnap.empty) {
-    throw new Error('Ya existe una invitación pendiente para este correo')
+    throw new UserFacingError('Ya existe una invitación pendiente para este correo')
   }
 
   const token = crypto.randomUUID()
@@ -310,15 +311,15 @@ export async function acceptInvitation(
 
   const invRef = wsDoc(workspaceId, 'invitations', invitationId)
   const invSnap = await getDoc(invRef)
-  if (!invSnap.exists()) throw new Error('Invitación no encontrada')
+  if (!invSnap.exists()) throw new UserFacingError('Invitación no encontrada')
   const invitation = invSnap.data() as Omit<WorkspaceInvitation, 'id'>
 
-  if (invitation.status !== 'pending') throw new Error('Esta invitación ya no está pendiente')
+  if (invitation.status !== 'pending') throw new UserFacingError('Esta invitación ya no está pendiente')
   if (invitation.expires_at.toMillis() < Date.now()) {
-    throw new Error('Esta invitación ha expirado')
+    throw new UserFacingError('Esta invitación ha expirado')
   }
   if (invitation.email && invitation.email.toLowerCase() !== user.email.toLowerCase()) {
-    throw new Error(`Esta invitación es para ${invitation.email}`)
+    throw new UserFacingError(`Esta invitación es para ${invitation.email}`)
   }
 
   // Todo en un batch: las reglas validan que el member se crea con el rol y

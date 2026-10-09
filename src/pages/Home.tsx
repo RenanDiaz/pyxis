@@ -32,6 +32,7 @@ import { es } from 'date-fns/locale'
 import { sumMoney } from '@/lib/money'
 import { countClosed, countContacted } from '@/lib/statusHistory'
 import { toast } from 'sonner'
+import ErrorState from '@/components/shared/ErrorState'
 
 /** Pequeño delta contextual (▲/▼ vs. ayer). */
 function Delta({ diff, prefix = '' }: { diff: number; prefix?: string }) {
@@ -59,7 +60,7 @@ function MetricSkeleton() {
 }
 
 export default function Home() {
-  const { data: clients, isLoading: clientsLoading } = useClients()
+  const { data: clients, isLoading: clientsLoading, error: clientsError, refetch: refetchClients } = useClients()
   const { data: upcomingCalls } = useUpcomingCalls(5)
   const { wsCtx } = useUserProfile()
   const { user } = useAuth()
@@ -133,10 +134,7 @@ export default function Home() {
     if (!confirm(`¿Marcar la deuda de ${name} como perdida? El cliente pasará a "perdido".`)) return
     updateClient.mutate(
       { id: clientId, data: { status: 'perdido' } },
-      {
-        onSuccess: () => toast.success('Cliente marcado como perdido'),
-        onError: () => toast.error('No se pudo actualizar el cliente'),
-      },
+      { onSuccess: () => toast.success('Cliente marcado como perdido') },
     )
   }
 
@@ -145,6 +143,11 @@ export default function Home() {
   const firstName = (user?.displayName || '').split(' ')[0]
   const dateLabel = format(now, "EEEE d 'de' MMMM", { locale: es })
   const dateLabelCap = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)
+
+  // Sin clientes, las métricas en 0 serían engañosas: mejor decir que no cargaron.
+  if (clientsError) {
+    return <ErrorState error={clientsError} what="los datos del inicio" onRetry={() => refetchClients()} />
+  }
 
   return (
     <div className="space-y-4">
