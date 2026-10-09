@@ -203,8 +203,9 @@ function writeExpenses(ws: ExcelJS.Worksheet, input: ReportInput, totalsRow: num
 
   let r = totalsRow + 2 // deja una fila en blanco
 
-  const profitMinusBaseRow = r
-  putLabel(ws, r, 'profit minus base pay', { formula: `K${T}-${basePay}` }, FONT_LABEL_BLACK)
+  // Mismo orden que el Excel manual: base, bonus, comisión.
+  const basePayRow = r
+  putLabel(ws, r, 'base pay ', basePay, FONT_LABEL_BLACK)
   r++
 
   let bonusRow: number | null = null
@@ -214,13 +215,10 @@ function writeExpenses(ws: ExcelJS.Worksheet, input: ReportInput, totalsRow: num
     r++
   }
 
+  // Comisión = NET total × tasa, sin descontar la base (spec 04, P7).
   const commissionRow = r
   putLabel(ws, r, `Commision de ${emp}`,
-    { formula: `K${profitMinusBaseRow}*${commissionRate}` }, FONT_LABEL_BLACK)
-  r++
-
-  const basePayRow = r
-  putLabel(ws, r, 'base pay ', basePay, FONT_LABEL_BLACK)
+    { formula: `K${T}*${commissionRate}` }, FONT_LABEL_BLACK)
   r++
 
   const fixedRows: number[] = []
@@ -239,8 +237,7 @@ function writeExpenses(ws: ExcelJS.Worksheet, input: ReportInput, totalsRow: num
     { formula: totalPayParts.map((x) => `K${x}`).join('+') }, FONT_LABEL_RED)
   r++
 
-  // Parte del NET total, no de "profit minus base pay": la base ya va dentro de
-  // TOTAL PAY y no se resta dos veces.
+  // La base ya va dentro de TOTAL PAY: no se resta dos veces.
   const sumParts = [totalPayRow, ...fixedRows].map((x) => `K${x}`).join('+')
   putLabel(ws, r, 'WHAT I TOOK HOME',
     { formula: `K${T}-(${sumParts})` }, FONT_LABEL_RED)

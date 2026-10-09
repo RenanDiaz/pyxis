@@ -181,12 +181,14 @@ describe('reporte de ventas — fórmulas', () => {
     assert.equal(ws.getCell('C2').isMerged, false)
   })
 
-  it('TOTAL PAY suma el bonus y WHAT I TOOK HOME resta la base una sola vez', () => {
-    // Totales en la fila 4. Gastos: 6 profit−base, 7 bonus, 8 comisión, 9 base,
-    // 10 Zoom, 12 TOTAL PAY, 13 take-home.
-    assert.equal(expenseFormula(ws, 'profit minus base pay'), 'K4-500')
-    assert.equal(expenseFormula(ws, 'Commision de Isabel'), 'K6*0.15')
-    assert.equal(expenseFormula(ws, 'ISABEL  TOTAL PAY'), 'K8+K9+K7')
-    assert.equal(expenseFormula(ws, 'WHAT I TOOK HOME'), 'K4-(K12+K10)')
+  it('comisión = NET × tasa; TOTAL PAY suma el bonus; WHAT I TOOK HOME resta la base una vez', () => {
+    // Totales en la fila 4. Gastos: 6 base, 7 bonus, 8 comisión, 9 Zoom,
+    // 11 TOTAL PAY, 12 take-home.
+    assert.equal(expenseFormula(ws, 'profit minus base pay'), undefined)
+    assert.equal(ws.getCell('D6').value, 'base pay ')
+    assert.equal(ws.getCell('K6').value, 500)
+    assert.equal(expenseFormula(ws, 'Commision de Isabel'), 'K4*0.15')
+    assert.equal(expenseFormula(ws, 'ISABEL  TOTAL PAY'), 'K8+K6+K7')
+    assert.equal(expenseFormula(ws, 'WHAT I TOOK HOME'), 'K4-(K11+K9)')
   })
 })
