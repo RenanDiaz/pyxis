@@ -27,6 +27,7 @@ export function useInvitationByToken(workspaceId: string | null, token: string |
 export function useCreateInvitation() {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo crear la invitación' },
     mutationFn: ({
       workspaceId,
       workspaceName,
@@ -58,6 +59,7 @@ export function useCreateInvitation() {
 export function useAcceptInvitation() {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo aceptar la invitación' },
     mutationFn: ({
       workspaceId,
       invitationId,
@@ -79,6 +81,7 @@ export function useAcceptInvitation() {
 export function useCancelInvitation() {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo cancelar la invitación' },
     mutationFn: ({ workspaceId, invitationId }: { workspaceId: string; invitationId: string }) =>
       cancelInvitation(workspaceId, invitationId),
     onSuccess: () => {

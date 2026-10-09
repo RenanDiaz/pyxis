@@ -47,6 +47,7 @@ export function useCreateCall() {
   const { wsCtx } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo guardar la llamada' },
     mutationFn: (data: Omit<Call, 'id' | 'created_at' | 'owner_uid' | 'subteam_id'>) =>
       createCall(wsCtx!, data),
     onSuccess: () => {
@@ -59,6 +60,7 @@ export function useUpdateCall() {
   const { workspaceId } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo actualizar la llamada' },
     mutationFn: ({ id, data }: { id: string; data: Partial<Call> }) =>
       updateCall(workspaceId!, id, data),
     onSuccess: () => {

@@ -18,6 +18,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import ReceiptBrandingSection from '@/components/workspace/ReceiptBrandingSection'
+import { describeError } from '@/lib/errors'
 
 export default function WorkspaceSettings() {
   const { workspace, workspaceId } = useUserProfile()
@@ -43,8 +44,8 @@ export default function WorkspaceSettings() {
       await updateWorkspace(workspaceId, { owner_uid: newOwner })
       toast.success('Propiedad transferida')
       navigate('/')
-    } catch {
-      toast.error('Error al transferir propiedad')
+    } catch (err) {
+      toast.error(describeError(err, 'No se pudo transferir la propiedad'))
     }
   }
 
@@ -57,7 +58,7 @@ export default function WorkspaceSettings() {
       toast.success('Workspace eliminado')
       navigate('/')
     } catch {
-      toast.error('Error al eliminar workspace')
+      // El toast de error lo muestra el handler global de mutaciones.
     }
   }
 

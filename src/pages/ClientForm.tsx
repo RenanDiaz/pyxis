@@ -427,7 +427,7 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
         navigate(`/clientes/${newId}`)
       }
     } catch {
-      toast.error('Error al guardar el cliente')
+      // El toast de error lo muestra el handler global de mutaciones.
     }
   }
 

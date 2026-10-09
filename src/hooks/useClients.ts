@@ -41,6 +41,7 @@ export function useCreateClient() {
   const { wsCtx } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo crear el cliente' },
     mutationFn: ({
       data,
       assignTo,
@@ -58,6 +59,7 @@ export function useUpdateClient() {
   const { workspaceId } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo guardar el cliente' },
     mutationFn: ({ id, data, trigger }: { id: string; data: Partial<Client>; trigger?: StatusTrigger }) =>
       updateClient(workspaceId!, id, data, trigger),
     onSuccess: () => {
@@ -71,6 +73,7 @@ export function useClientMutation() {
   const { workspaceId } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo guardar el cambio' },
     mutationFn: ({ clientId, mutation }: { clientId: string; mutation: ClientMutation }) =>
       mutateClient(workspaceId!, clientId, mutation),
     onSuccess: () => {
@@ -83,6 +86,7 @@ export function useDeleteClient() {
   const { workspaceId } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo eliminar el cliente' },
     mutationFn: (id: string) => deleteClient(workspaceId!, id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })

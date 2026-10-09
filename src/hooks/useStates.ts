@@ -57,6 +57,7 @@ export function useIsGlobalAdmin() {
 export function useUpdateState() {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudieron guardar los cambios del estado' },
     mutationFn: ({
       abbreviation,
       data,

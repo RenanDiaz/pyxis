@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from '@/lib/queryClient'
 import { ThemeProvider } from 'next-themes'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext'
@@ -24,15 +25,6 @@ import WorkspaceMembers from '@/pages/workspace/WorkspaceMembers'
 import WorkspaceSubteams from '@/pages/workspace/WorkspaceSubteams'
 import { Toaster } from '@/components/ui/sonner'
 import UpdateBanner from '@/components/layout/UpdateBanner'
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      retry: 1,
-    },
-  },
-})
 
 export default function App() {
   return (

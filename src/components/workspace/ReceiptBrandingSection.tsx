@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { useUpdateWorkspace } from '@/hooks/useWorkspace'
 import { uploadWorkspaceLogo, deleteWorkspaceLogo } from '@/lib/receiptUtils'
 import type { Workspace } from '@/types'
+import { describeError } from '@/lib/errors'
 
 interface Props {
   workspace: Workspace
@@ -44,14 +45,17 @@ export default function ReceiptBrandingSection({ workspace, workspaceId }: Props
       if (workspace.receipt_logo_path && workspace.receipt_logo_path !== path) {
         await deleteWorkspaceLogo(workspace.receipt_logo_path)
       }
-      await updateWs.mutateAsync({
-        id: workspaceId,
-        data: { receipt_logo_url: url, receipt_logo_path: path },
-      })
-      toast.success('Logo actualizado')
+      try {
+        await updateWs.mutateAsync({
+          id: workspaceId,
+          data: { receipt_logo_url: url, receipt_logo_path: path },
+        })
+        toast.success('Logo actualizado')
+      } catch {
+        // El toast de error lo muestra el handler global de mutaciones.
+      }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al subir el logo'
-      toast.error(msg)
+      toast.error(describeError(err, 'No se pudo subir el logo'))
     } finally {
       setUploading(false)
     }
@@ -62,13 +66,18 @@ export default function ReceiptBrandingSection({ workspace, workspaceId }: Props
     if (!confirm('¿Eliminar el logo actual?')) return
     try {
       await deleteWorkspaceLogo(workspace.receipt_logo_path)
+    } catch (err) {
+      toast.error(describeError(err, 'No se pudo eliminar el logo'))
+      return
+    }
+    try {
       await updateWs.mutateAsync({
         id: workspaceId,
         data: { receipt_logo_url: '', receipt_logo_path: '' },
       })
       toast.success('Logo eliminado')
     } catch {
-      toast.error('Error al eliminar el logo')
+      // El toast de error lo muestra el handler global de mutaciones.
     }
   }
 

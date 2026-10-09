@@ -23,6 +23,8 @@ import ExportReportDialog, {
 import { buildReportInput, previewReport } from '@/lib/salesReportData'
 import { formatMoney } from '@/lib/format'
 import type { Client } from '@/types'
+import { es } from 'date-fns/locale'
+import { describeError } from '@/lib/errors'
 
 const ALL_AGENTS = 'all'
 
@@ -64,7 +66,10 @@ export default function Reports() {
   )
 
   const monthDate = useMemo(() => new Date(`${month}-01T00:00:00`), [month])
+  // El Excel replica el formato original, en inglés ("October 2026 Sales
+  // Report"); la interfaz va en español.
   const monthLabel = format(monthDate, 'MMMM yyyy')
+  const monthLabelEs = format(monthDate, "MMMM 'de' yyyy", { locale: es })
 
   const selectedAgentName =
     agentUid === ALL_AGENTS
@@ -87,14 +92,12 @@ export default function Reports() {
       const { downloadSalesReport } = await import('@/lib/generateSalesReport')
       await downloadSalesReport(input)
       toast.success('Reporte generado', {
-        description: `${input.accounts.length} cuenta(s) exportada(s) para ${monthLabel}.`,
+        description: `${input.accounts.length} cuenta(s) exportada(s) para ${monthLabelEs}.`,
       })
       setDialogOpen(false)
     } catch (err) {
       console.error(err)
-      toast.error('No se pudo generar el reporte', {
-        description: err instanceof Error ? err.message : undefined,
-      })
+      toast.error(describeError(err, 'No se pudo generar el reporte. Intenta de nuevo.'))
     } finally {
       setIsExporting(false)
     }
@@ -118,7 +121,10 @@ export default function Reports() {
                 id="report-month"
                 type="month"
                 value={month}
-                onChange={(e) => setMonth(e.target.value)}
+                // Borrar el campo dejaba el mes vacío y la página se caía
+                // (Invalid Date): se ignora y queda el mes anterior.
+                onChange={(e) => e.target.value && setMonth(e.target.value)}
+                required
               />
             </div>
 
@@ -155,7 +161,7 @@ export default function Reports() {
                 ? 'Cargando clientes…'
                 : preview.accountCount === 0
                   ? 'No hay pagos registrados en este mes.'
-                  : `Reporte para ${monthLabel}.`}
+                  : `Reporte para ${monthLabelEs}.`}
             </p>
             <Button onClick={() => setDialogOpen(true)} disabled={isLoading}>
               <FileSpreadsheet className="mr-2 h-4 w-4" />

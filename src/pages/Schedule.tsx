@@ -38,6 +38,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useFormDraft } from '@/hooks/useFormDraft'
 import { draftKey, readDraft } from '@/lib/formDraft'
 import DraftBanner from '@/components/shared/DraftBanner'
+import ErrorState from '@/components/shared/ErrorState'
 
 type FilterTab = 'todas' | 'pendientes' | 'hoy' | 'semana'
 
@@ -75,7 +76,7 @@ export default function Schedule() {
   const [dialogOpen, setDialogOpen] = useState(!!storedCall)
 
   const dateFilters = getDateFilters(tab)
-  const { data: calls, isLoading } = useCalls({
+  const { data: calls, isLoading, error, refetch } = useCalls({
     ...dateFilters,
     outcome: tab === 'pendientes' ? 'pendiente' : undefined,
   })
@@ -121,7 +122,7 @@ export default function Schedule() {
       setDialogOpen(false)
       resetNewCall()
     } catch {
-      toast.error('Error al agendar llamada')
+      // El toast de error lo muestra el handler global de mutaciones.
     }
   }
 
@@ -248,6 +249,8 @@ export default function Schedule() {
 
       {isLoading ? (
         <p className="text-muted-foreground">Cargando llamadas...</p>
+      ) : error ? (
+        <ErrorState error={error} what="las llamadas" onRetry={() => refetch()} />
       ) : !calls || calls.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Phone className="mx-auto h-8 w-8 mb-2" />

@@ -58,6 +58,7 @@ export function useAssignableMembers(
 export function useUpdateMemberRole() {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo cambiar el rol' },
     mutationFn: ({ workspaceId, uid, role }: { workspaceId: string; uid: string; role: WorkspaceRole }) =>
       updateMemberRole(workspaceId, uid, role),
     onSuccess: () => {
@@ -70,6 +71,7 @@ export function useUpdateMemberRole() {
 export function useUpdateMemberSubteam() {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo cambiar el subequipo' },
     mutationFn: ({ workspaceId, uid, subteamId }: { workspaceId: string; uid: string; subteamId: string | null }) =>
       updateMemberSubteam(workspaceId, uid, subteamId),
     onSuccess: () => {
@@ -82,6 +84,7 @@ export function useUpdateMemberSubteam() {
 export function useRemoveMember() {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo quitar al miembro' },
     mutationFn: ({ workspaceId, uid }: { workspaceId: string; uid: string }) =>
       removeMember(workspaceId, uid),
     onSuccess: () => {
@@ -102,6 +105,7 @@ export function useSubteams(workspaceId: string | null | undefined) {
 export function useCreateSubteam() {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo crear el subequipo' },
     mutationFn: ({ workspaceId, name, createdBy }: { workspaceId: string; name: string; createdBy: string }) =>
       createSubteam(workspaceId, { name, created_by: createdBy }),
     onSuccess: () => {
@@ -113,6 +117,7 @@ export function useCreateSubteam() {
 export function useUpdateSubteam() {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo renombrar el subequipo' },
     mutationFn: ({ workspaceId, subteamId, name }: { workspaceId: string; subteamId: string; name: string }) =>
       updateSubteam(workspaceId, subteamId, { name }),
     onSuccess: () => {
@@ -124,6 +129,7 @@ export function useUpdateSubteam() {
 export function useDeleteSubteam() {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo eliminar el subequipo' },
     mutationFn: ({ workspaceId, subteamId }: { workspaceId: string; subteamId: string }) =>
       deleteSubteam(workspaceId, subteamId),
     onSuccess: () => {
@@ -135,6 +141,7 @@ export function useDeleteSubteam() {
 export function useUpdateWorkspace() {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo guardar el workspace' },
     mutationFn: ({ id, data }: {
       id: string
       data: {
@@ -154,6 +161,7 @@ export function useUpdateWorkspace() {
 export function useDeleteWorkspace() {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: { errorMessage: 'No se pudo eliminar el workspace' },
     mutationFn: (id: string) => deleteWorkspace(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspace'] })

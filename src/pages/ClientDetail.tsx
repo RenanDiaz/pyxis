@@ -100,7 +100,7 @@ function ClientNotesCard({ client }: { client: Client }) {
       setDraftNotice(null)
       toast.success('Notas guardadas')
     } catch {
-      toast.error('No se pudieron guardar las notas')
+      // El toast de error lo muestra el handler global de mutaciones.
     }
   }
 
@@ -264,7 +264,6 @@ export default function ClientDetail() {
                   updateMutation.mutate({ id: client.id, data: {}, trigger: 'info_added' })
                 }
               },
-              onError: () => toast.error('Error al registrar contacto'),
             },
           )
         },
@@ -308,10 +307,8 @@ export default function ClientDetail() {
       await clientMutation.mutateAsync({ clientId: client.id, mutation })
       toast.success(successMessage)
       return true
-    } catch (err) {
-      // Los errores propios (proceso/pago que ya no existe) vienen en español.
-      const own = err instanceof Error && !('code' in err)
-      toast.error(own ? err.message : 'No se pudo guardar el cambio. Intenta de nuevo.')
+    } catch {
+      // El toast de error lo muestra el handler global de mutaciones.
       return false
     }
   }

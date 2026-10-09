@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Building2, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
+import { describeError } from '@/lib/errors'
 
 export default function Onboarding() {
   const { user } = useAuth()
@@ -32,8 +33,8 @@ export default function Onboarding() {
       await queryClient.invalidateQueries({ queryKey: ['userProfile'] })
       toast.success('Workspace creado')
       navigate('/')
-    } catch {
-      toast.error('Error al crear workspace')
+    } catch (err) {
+      toast.error(describeError(err, 'No se pudo crear el workspace'))
     } finally {
       setCreating(false)
     }

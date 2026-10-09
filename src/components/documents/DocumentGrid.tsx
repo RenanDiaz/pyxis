@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Upload, FolderOpen } from 'lucide-react'
 import { toast } from 'sonner'
+import { describeError } from '@/lib/errors'
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20 MB
 
@@ -117,13 +118,13 @@ export default function DocumentGrid({
             u.file === file ? { ...u, status: 'done' } : u
           )
         )
-      } catch {
+      } catch (err) {
         setUploads((prev) =>
           prev.map((u) =>
             u.file === file ? { ...u, status: 'error' } : u
           )
         )
-        toast.error(`Error al subir "${file.name}"`)
+        toast.error(`No se pudo subir "${file.name}". ${describeError(err, 'Intenta de nuevo.')}`)
       }
     }
 
@@ -146,8 +147,8 @@ export default function DocumentGrid({
     try {
       await deleteClientFile(workspaceId, clientId, doc.id, doc.storage_path)
       toast.success('Documento eliminado')
-    } catch {
-      toast.error('Error al eliminar el documento')
+    } catch (err) {
+      toast.error(describeError(err, 'No se pudo eliminar el documento'))
     } finally {
       setDeleting(false)
     }

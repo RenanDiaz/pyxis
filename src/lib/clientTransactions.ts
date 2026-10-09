@@ -4,6 +4,7 @@ import type { ClientChange, ClientMutation } from '@/lib/processMutations'
 import { uppercaseClientFields } from '@/lib/clientUtils'
 import { statusChangeFields } from '@/lib/statusHistory'
 import { inferStatus, type StatusTrigger } from '@/lib/statusUtils'
+import { UserFacingError } from '@/lib/errors'
 
 // Escrituras del documento del cliente que dependen de su estado actual.
 // Reciben la instancia de Firestore para poder probarse contra el emulador.
@@ -28,7 +29,7 @@ export async function runClientMutation(
   return runTransaction(fs, async (tx) => {
     const ref = clientRef(fs, workspaceId, clientId)
     const snap = await tx.get(ref)
-    if (!snap.exists()) throw new Error('Cliente no encontrado')
+    if (!snap.exists()) throw new UserFacingError('Cliente no encontrado')
     const client = { id: snap.id, ...snap.data() } as Client
     const { status, ...change } = mutation(client)
     const statusFields = status ? statusChangeFields(client, status, by) : null
@@ -73,7 +74,7 @@ export async function runClientUpdate(
   }
   await runTransaction(fs, async (tx) => {
     const snap = await tx.get(ref)
-    if (!snap.exists()) throw new Error('Cliente no encontrado')
+    if (!snap.exists()) throw new UserFacingError('Cliente no encontrado')
     const current = snap.data() as Client
     const to = status ?? (trigger ? inferStatus(current.status, trigger) : null)
     const statusFields = to ? statusChangeFields(current, to, by) : null

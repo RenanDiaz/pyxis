@@ -3,6 +3,7 @@ import { backfillFirstRegistrationCompany } from '@/lib/companyUtils'
 import { getProcessPaid, parsePaymentDate } from '@/lib/processUtils'
 import { fromCents, roundMoney, sumMoney, toCents } from '@/lib/money'
 import { inferStatus } from '@/lib/statusUtils'
+import { UserFacingError } from '@/lib/errors'
 
 // Mutaciones de los procesos (y sus pagos) de un cliente, como funciones puras
 // sobre el estado FRESCO del documento. Se aplican dentro de una transacción
@@ -63,7 +64,7 @@ export function getBalanceAfterPayment(process: ClientProcess, payment: Payment)
 
 function indexOfProcess(processes: ClientProcess[], processId: string): number {
   const index = processes.findIndex((p) => p.id === processId)
-  if (index < 0) throw new Error('El proceso ya no existe. Recarga la página.')
+  if (index < 0) throw new UserFacingError('El proceso ya no existe. Recarga la página.')
   return index
 }
 
@@ -98,7 +99,7 @@ export function removePaymentFrom(
   const payments = process.payments ?? []
   // Solo el primero que coincide: dos pagos legacy idénticos comparten huella.
   const target = payments.findIndex((p) => paymentKey(p) === key)
-  if (target < 0) throw new Error('El pago ya no existe. Recarga la página.')
+  if (target < 0) throw new UserFacingError('El pago ya no existe. Recarga la página.')
   // Los demás pagos conservan su número de recibo: se fija el de los legacy
   // antes de quitar uno, para que no se renumeren.
   const kept = payments
