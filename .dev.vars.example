@@ -1,0 +1,3 @@
+# Secretos del Worker para `npm run dev:api` (copiar a .dev.vars, que no se versiona).
+# En producción/staging van en Cloudflare → Worker → Settings → Variables & Secrets.
+# El spec 18 (links de pago) agrega los de Stripe y la service account.

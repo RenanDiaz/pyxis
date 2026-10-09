@@ -3,8 +3,10 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
-// Versión de este build (spec 14): el commit en Vercel, la hora del build fuera.
-const APP_VERSION = process.env.VERCEL_GIT_COMMIT_SHA || `build-${Date.now()}`
+// Versión de este build (spec 14): el commit en Cloudflare Workers Builds (o en
+// Vercel, mientras dure el corte del spec 17), la hora del build fuera.
+const APP_VERSION =
+  process.env.WORKERS_CI_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || `build-${Date.now()}`
 
 /** Publica /version.json para que las pestañas abiertas detecten un deploy nuevo. */
 function appVersion(): Plugin {
@@ -25,6 +27,10 @@ export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss(), appVersion()],
   define: {
     __APP_VERSION__: JSON.stringify(command === 'build' ? APP_VERSION : 'dev'),
+  },
+  server: {
+    // /api/* lo atiende el Worker local: correr `npm run dev:api` en paralelo (spec 17).
+    proxy: { '/api': 'http://localhost:8787' },
   },
   resolve: {
     alias: {

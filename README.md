@@ -26,7 +26,7 @@ Pyxis es una web app en español para agentes de ventas telefónicas de empresas
 | Routing | React Router v7 |
 | Data fetching | TanStack Query (React Query) |
 | Fechas / TZ | date-fns + date-fns-tz |
-| Deploy | Vercel |
+| Deploy | Cloudflare Workers (static assets + `/api/*`) |
 
 ---
 
@@ -100,6 +100,26 @@ nueva) en lugar de guardar el archivo en disco.
 | `npm run build` | Compila TypeScript y genera el build de producción |
 | `npm run preview` | Previsualiza el build de producción localmente |
 | `npm run lint` | Ejecuta ESLint |
+| `npm run dev:api` | Worker local (`wrangler dev`, puerto 8787). Correr junto a `npm run dev`: Vite redirige `/api` ahí. Requiere un `npm run build` previo (sirve `dist/`) |
+| `npm run deploy` | Despliega a Cloudflare a mano (normalmente lo hace Workers Builds al hacer push) |
+| `npm run cf-typegen` | Regenera `worker/worker-configuration.d.ts` tras cambiar `wrangler.jsonc` |
+
+---
+
+## Deploy
+
+Cloudflare Workers con static assets: un solo Worker (`wrangler.jsonc`,
+`worker/index.ts`) sirve la SPA desde `dist/` y atiende `/api/*`.
+
+| Entorno | Worker | URL | Rama |
+|---|---|---|---|
+| Producción | `pyxis` | https://mipyxis.com | `main` |
+| Staging | `pyxis-staging` | https://staging.mipyxis.com | las demás |
+
+El deploy lo hace **Workers Builds** al hacer push. Las variables `VITE_FIREBASE_*`
+van como **variables de build** en Cloudflare, no como secretos de runtime. La
+configuración manual completa (dominio, Firebase, corte desde Vercel, rollback)
+está en el runbook de [`specs/17-migracion-cloudflare.md`](specs/17-migracion-cloudflare.md).
 
 ---
 
@@ -119,6 +139,7 @@ src/
   lib/            ← Firebase config, mapeo de zonas horarias
   data/           ← JSON estáticos (states, trades, client_form)
   scripts/        ← Seed de Firestore
+worker/           ← Worker de Cloudflare (/api/*, 404 de chunks)
 ```
 
 ---
