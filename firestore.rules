@@ -53,6 +53,14 @@ service cloud.firestore {
                  && get(memberPath(workspaceId, data.owner_uid)).data.get("subteam_id", null) == sub);
     }
 
+    // Eventos del sistema del cliente (spec 03-R6): solo se agregan; nadie
+    // edita ni borra los que ya existen.
+    function activityAppendOnly() {
+      let before = resource.data.get("activity", []);
+      let after = request.resource.data.get("activity", []);
+      return after.size() >= before.size() && after.hasAll(before);
+    }
+
     function ownershipUnchanged() {
       return request.resource.data.owner_uid == resource.data.owner_uid
              && request.resource.data.get("subteam_id", null) == resource.data.get("subteam_id", null);
@@ -175,7 +183,8 @@ service cloud.firestore {
       // Reasignar (cambiar owner_uid/subteam_id) exige poder asignar al destino.
       allow update: if isWorkspaceMember(workspaceId)
                     && canSee(workspaceId, resource.data)
-                    && (ownershipUnchanged() || canHold(workspaceId, request.resource.data));
+                    && (ownershipUnchanged() || canHold(workspaceId, request.resource.data))
+                    && activityAppendOnly();
       // Borrar de verdad (datos personales, SSN) solo el owner; el resto
       // archiva (spec 06).
       allow delete: if isOwner(workspaceId);
