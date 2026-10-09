@@ -28,6 +28,7 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 | 11 | [Metas por agente](11-metas.md) | 🟢 Media/Baja | 05 | M |
 | 12 | [Infra: índices, scripts y migraciones](12-infra-scripts.md) | 🟡 Media | — | S |
 | 13 | [UX, accesibilidad y limpieza](13-ux-accesibilidad.md) | 🟢 Baja | — | M |
+| 14 | [Aviso de nueva versión](14-aviso-nueva-version.md) | 🟠 Alta · ✅ | — | S |
 | — | [Borradores de formularios](form-drafts.md) | ✅ Implementado | — | — |
 
 **Por qué este orden:** 01+02 cierran un hueco que permite tomar control de
