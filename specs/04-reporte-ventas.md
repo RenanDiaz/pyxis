@@ -1,6 +1,6 @@
 # 04 — Correcciones del reporte de ventas (Excel)
 
-**Prioridad:** 🔴 Alta · **Estado:** 🟡 parcial — fixes sin dependencias de negocio implementados (ver «Implementado»); el resto bloqueado por P3–P8 · **Tamaño:** M (antes S)
+**Prioridad:** 🔴 Alta · **Estado:** 🟡 parcial — fixes sin dependencias de negocio implementados (ver «Implementado»); el resto bloqueado por P3–P5, P7 y P8 · **Tamaño:** M (antes S)
 
 ## Fuente de verdad
 - Excel manual `2026_ISABEL_PAY_SEPT` (hojas June, JULY, AUG, SEPT de 2026).
@@ -31,7 +31,7 @@ las referencias citan solo hoja + tipo + estado.
 | ✔ 7 | TAX = `(F-G[-H])*rate` | TAX = `(F-G-H-J)*rate` | El manual resta el Stripe fee **antes** del impuesto (desde Jul). |
 | ✔ 8 | Stripe fee estimado `2.9% + $0.30` | ≈ **4 % del precio base** (CHARGE = base × 1.04; J = CHARGE − base). Excepciones al 2 %. | Parece el *surcharge* que se cobra al cliente, no la comisión real de Stripe. Ver P5. |
 | ✔ 9 | REGISTERED AGENT siempre 0 | 45 cuando aplica | Llenar con un costo configurable (default 45) si `has_registered_agent`. |
-| ✔ 10 | Una fila **por pago**; CHARGE = monto del pago | Una fila **por cuenta**; CHARGE = total acordado; columna **OWES** = saldo pendiente | Diferencia de modelo. Ver P6. |
+| ✔ 10 ✅ | Una fila **por pago**; CHARGE = monto del pago | Una fila **por cuenta**; CHARGE = total acordado; columna **OWES** = saldo pendiente | Diferencia de modelo. Ver P6. |
 | ✔ 11 | Columnas A–L, L = OWNER | L = comisión por fila (`K*0.15`), M = OWNER, N = OWES, O = FORMA DE PAGO | El generador replica un formato anterior. Ver P6. |
 | ✔ 12 | Comisión = `(K_total − basePay) × rate` | Comisión = `K_total × 0.15` (desde Jul; June sí restaba 500) | Ver P7. |
 | ✔ 13 | TOTAL PAY = comisión + base | TOTAL PAY = base + **bonus** + comisión | La app omite el bonus. |
@@ -82,6 +82,13 @@ monday) es un spec aparte, fuera del 04.
   Pyxis a inicios de septiembre y el cliente pagó en septiembre. Para el negocio, **la
   venta cuenta en el mes en que se cierra, no en el que se cobra**. Pyxis no tenía ese
   dato (el reporte usaba el primer pago) → nueva **fecha de venta** por proceso (req. 13).
+- **P6 (resuelta, 2026-10-09):** **una fila por cuenta, sin OWES** (el saldo no
+  interesa para el cálculo). Lo importante es que aparezcan **todas las ventas aunque
+  deban**: CHARGE = total acordado. El saldo pendiente es un monto **proyectado**; el
+  pago que falta se asume con el **mismo método que el primero** (si fue Stripe, se
+  proyecta su Stripe fee). La advertencia de montos proyectados va en el **diálogo de
+  exportación, no en el Excel**. Las columnas «comisión por fila» y «FORMA DE PAGO» del
+  manual no se agregan.
 - **P2 (resuelta en parte):** los manuales del catálogo (Sales Tax, Resale, EIN, BOI) van en 0;
   **sí hay servicios con costo** (ITIN 250, Certificado de Autoridad 175), así que hace
   falta capturar un costo por proceso.
@@ -155,13 +162,17 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
 - #5: comentario corregido.
 - Req. 13: fecha de venta (`sold_at`) en `AddProcessDialog` y `ProcessCard`; el reporte
   y su vista previa agrupan por `getProcessSaleDate` y ordenan las cuentas por esa fecha.
+- P6 / #10 / #16: **una fila por venta**. B = fecha de venta; F = total acordado
+  (sin total, lo cobrado; nunca menos de lo cobrado); J = Stripe fee de lo pagado con
+  Stripe + el del saldo si el primer pago fue con Stripe. Una **venta** es un proceso
+  con al menos un pago (sin pagos es un prospecto o una cotización). La página de
+  Reportes muestra Ventas / Total vendido / Por cobrar y el diálogo lista las ventas
+  con saldo proyectado.
 - Tests: `tests/unit/sales-report.test.ts`.
 
-**Pendiente:** #7 (restar J antes del TAX), #8/P5 (Stripe), #9 (RA = 45), #10–#12
-(formato por cuenta, columnas, comisión — P6/P7), #2 (company), #3/P3, #4, costo por
-tipo de proceso (P8), catálogo (req. 12) y editar pagos (req. 14). Con la fecha de
-venta, una cuenta sin pagos todavía no entra al reporte: se resuelve con P6 (fila por
-cuenta con OWES).
+**Pendiente:** #7 (restar J antes del TAX), #8/P5 (Stripe), #9 (RA = 45), #12/P7
+(comisión), #2 (company), #3/P3, #4, costo por tipo de proceso (P8), catálogo
+(req. 12) y editar pagos (req. 14).
 
 ## Criterios de aceptación
 - [x] Una venta con fecha de venta en agosto y pagos en septiembre sale en el reporte de agosto, no en el de septiembre.
@@ -171,6 +182,8 @@ cuenta con OWES).
 - [x] Un proceso sin estado resta 0 y aparece en las advertencias.
 - [x] Una cuenta con 2 pagos en el mes resta el state fee **una sola vez** en el NET total.
 - [x] Se puede exportar septiembre 2026 (clientes archivados) sin error.
+- [x] Una venta con saldo pendiente sale en una sola fila con CHARGE = total, y el diálogo la lista como proyectada.
+- [x] Un proceso sin pagos no aparece en el reporte.
 - [ ] TAX de una fila con Stripe resta J antes de aplicar la tasa configurada.
 - [x] WHAT I TOOK HOME = K_total − gastos fijos − TOTAL PAY (la base se resta una sola vez).
 - [ ] Test unitario de `buildReportInput` con un cliente que tiene registro + amendment + EIN en el mismo mes.
@@ -182,6 +195,5 @@ cuenta con OWES).
 - **P3:** Un proceso cancelado con pagos, ¿se reembolsó? ¿Se reporta como venta, como negativo o se excluye? *(El Excel no trae casos.)*
 - **P4:** El state fee de registro en el Excel varía respecto del doc del estado (1c). ¿Cuál es el correcto: el del doc (hay que actualizarlo) o el del Excel (costo real del caso, p. ej. expedite)? CA aparece con 30, 70 y 110 en meses distintos: ¿de qué depende?
 - **P5:** *(ver comparación: con «Stripe fee = ninguno» la app reproduce el NET del manual)* La columna STRIPE FEE, ¿es la comisión real de Stripe o el recargo del 4 % que se le cobra al cliente? ¿El monto del pago que se registra en Pyxis **incluye** ese 4 %? ¿Por qué algunos casos son 2 %?
-- **P6:** ¿El reporte debe pasar a una fila por cuenta con CHARGE = total y OWES = saldo (como el Excel actual), o se mantiene una fila por pago? ¿Se agregan las columnas comisión por fila y FORMA DE PAGO? **Recomendación: una fila por cuenta**: elimina #16 de raíz y es el formato que el negocio usa hoy. Con una fila por pago, #16 se arregla restando G/H solo en la primera fila del bloque.
 - **P7:** La comisión, ¿es `NET total × 15 %` (Jul–Sept) o `(NET total − base) × 15 %` (June, y lo que hace hoy la app)?
 - **P8:** ¿Cuál es el costo estatal de annual report, dissolution y amendment por estado? (Para llenar los campos nuevos; hoy solo conocemos NY y TX.) ¿ITIN y Certificado de Autoridad entran al catálogo con costos fijos de 250 y 175?

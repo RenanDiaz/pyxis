@@ -19,7 +19,8 @@ import {
 } from '@/components/ui/select'
 import { Plus, Trash2 } from 'lucide-react'
 import { DEFAULT_TAX_RATE, type ExpenseConfig } from '@/lib/generateSalesReport'
-import type { StripeFeeMode } from '@/lib/salesReportData'
+import type { ProjectedSale, StripeFeeMode } from '@/lib/salesReportData'
+import { formatMoney } from '@/lib/format'
 
 /** Config completa de exportación: gastos + opciones de cálculo. */
 export interface ExportSettings {
@@ -75,6 +76,8 @@ interface ExportReportDialogProps {
   accountCount: number
   /** Cuentas sin estado en el proceso (su state fee sale en 0). */
   missingState: string[]
+  /** Ventas con saldo pendiente: su CHARGE incluye un monto proyectado. */
+  projected: ProjectedSale[]
   isExporting: boolean
   onExport: (settings: ExportSettings) => void
 }
@@ -85,6 +88,7 @@ export default function ExportReportDialog({
   defaultEmployeeName,
   accountCount,
   missingState,
+  projected,
   isExporting,
   onExport,
 }: ExportReportDialogProps) {
@@ -146,14 +150,14 @@ export default function ExportReportDialog({
         <DialogHeader>
           <DialogTitle>Configurar reporte de ventas</DialogTitle>
           <DialogDescription>
-            La tabla de cuentas se genera desde los pagos del mes. Estos valores completan
+            Una fila por cada venta del mes (según su fecha de venta). Estos valores completan
             la sección de gastos y pagos del reporte.
           </DialogDescription>
         </DialogHeader>
 
         {accountCount === 0 && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-            No hay pagos registrados en el mes seleccionado. El reporte saldrá sin cuentas.
+            No hay ventas en el mes seleccionado. El reporte saldrá sin cuentas.
           </div>
         )}
 
@@ -167,6 +171,29 @@ export default function ExportReportDialog({
             <ul className="mt-1 list-disc pl-5">
               {missingState.map((item, i) => (
                 <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {projected.length > 0 && (
+          <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">
+            <p className="font-medium">
+              {projected.length === 1
+                ? '1 venta tiene saldo pendiente: su CHARGE incluye lo que falta cobrar.'
+                : `${projected.length} ventas tienen saldo pendiente: su CHARGE incluye lo que falta cobrar.`}
+            </p>
+            {settings.stripeFeeMode === 'estimate' && projected.some((p) => p.stripe) && (
+              <p className="mt-0.5">
+                Si el primer pago fue con Stripe, se proyecta también su Stripe fee.
+              </p>
+            )}
+            <ul className="mt-1 list-disc pl-5">
+              {projected.map((p, i) => (
+                <li key={i}>
+                  {p.label}: ${formatMoney(p.pending)} por cobrar
+                  {settings.stripeFeeMode === 'estimate' && p.stripe ? ' (Stripe)' : ''}
+                </li>
               ))}
             </ul>
           </div>
