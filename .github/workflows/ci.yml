@@ -1,7 +1,6 @@
 name: CI
 
-# Typecheck, tests unitarios y build en cada PR. (El lint todavía tiene errores
-# preexistentes; se agrega cuando quede en verde, ver specs/12-infra-scripts.md.)
+# Lint, typecheck, tests unitarios y build en cada PR (spec 12).
 on:
   pull_request:
   push:
@@ -20,6 +19,9 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: Lint
+        run: npm run lint -- --max-warnings 0
 
       - name: Typecheck y build
         run: npm run build

@@ -7,13 +7,24 @@
  *   2. Save it as `scripts/serviceAccountKey.json` (gitignored)
  *
  * Run:
- *   npx tsx scripts/seed.ts
+ *   npx tsx scripts/seed.ts [--dry-run] [--overwrite-states]
+ *
+ * `states` se edita desde la app (StateEditDialog): por defecto solo se crean
+ * los estados que faltan y NUNCA se pisan los existentes. `--overwrite-states`
+ * fuerza reemplazarlos con `src/data/states.json` (pierde las ediciones).
+ * `trades` y `glossary` no se editan en la app: se reescriben siempre.
  */
 
 import { initializeApp, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'fs'
-import { resolve } from 'path'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+
+// `"type": "module"`: no existe __dirname.
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const DRY_RUN = process.argv.includes('--dry-run')
+const OVERWRITE_STATES = process.argv.includes('--overwrite-states')
 
 // Load service account
 const serviceAccountPath = resolve(__dirname, 'serviceAccountKey.json')
@@ -40,22 +51,28 @@ const statesData = JSON.parse(
 const tradesData = JSON.parse(
   readFileSync(resolve(__dirname, '../src/data/trades.json'), 'utf-8')
 )
-const clientFormData = JSON.parse(
-  readFileSync(resolve(__dirname, '../src/data/client_form.json'), 'utf-8')
-)
 const glossaryData = JSON.parse(
   readFileSync(resolve(__dirname, '../src/data/glossary.json'), 'utf-8')
 )
 
 async function seedStates() {
   console.log('📍 Seeding states...')
-  const batch = db.batch()
-  for (const state of statesData) {
-    const ref = db.collection('states').doc(state.abbreviation)
-    batch.set(ref, state)
+  const existing = new Set((await db.collection('states').get()).docs.map((d) => d.id))
+  const toWrite = OVERWRITE_STATES
+    ? statesData
+    : statesData.filter((s: { abbreviation: string }) => !existing.has(s.abbreviation))
+  const kept = statesData.length - toWrite.length
+  if (!DRY_RUN && toWrite.length > 0) {
+    const batch = db.batch()
+    for (const state of toWrite) {
+      batch.set(db.collection('states').doc(state.abbreviation), state)
+    }
+    await batch.commit()
   }
-  await batch.commit()
-  console.log(`   ✅ ${statesData.length} estados creados`)
+  console.log(
+    `   ✅ ${toWrite.length} estados ${OVERWRITE_STATES ? 'reemplazados' : 'creados'}` +
+      (kept ? ` · ${kept} existentes sin tocar (usa --overwrite-states para reemplazarlos)` : '')
+  )
 }
 
 async function seedTrades() {
@@ -65,14 +82,8 @@ async function seedTrades() {
     const ref = db.collection('trades').doc(String(trade.id))
     batch.set(ref, trade)
   }
-  await batch.commit()
+  if (!DRY_RUN) await batch.commit()
   console.log(`   ✅ ${tradesData.length} oficios creados`)
-}
-
-async function seedClientForm() {
-  console.log('📋 Seeding client form config...')
-  await db.collection('config').doc('clientForm').set(clientFormData)
-  console.log('   ✅ Configuración del formulario creada')
 }
 
 async function seedGlossary() {
@@ -82,15 +93,15 @@ async function seedGlossary() {
     const ref = db.collection('glossary').doc(term.term)
     batch.set(ref, term)
   }
-  await batch.commit()
+  if (!DRY_RUN) await batch.commit()
   console.log(`   ✅ ${glossaryData.length} términos creados`)
 }
 
 async function main() {
-  console.log('🚀 Iniciando seed de Firestore...\n')
+  console.log('🚀 Iniciando seed de Firestore...')
+  console.log(DRY_RUN ? '🔍 Dry run: no se escribe nada\n' : '')
   await seedStates()
   await seedTrades()
-  await seedClientForm()
   await seedGlossary()
   console.log('\n✅ Seed completado exitosamente')
 }

@@ -27,6 +27,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { updateIfUnchanged } from './lib/updateIfUnchanged'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DRY_RUN = process.argv.includes('--dry-run')
@@ -61,6 +62,7 @@ const summary = {
   updated: 0,
   skippedComplete: 0,
   noClientData: [] as string[],
+  changedDuringRun: [] as string[],
   errors: [] as string[],
 }
 
@@ -72,10 +74,6 @@ async function backfillWorkspace(workspaceId: string): Promise<void> {
     .get()
 
   summary.clientsTotal += clientsSnap.size
-
-  const BATCH_SIZE = 400
-  let batch = db.batch()
-  let batchCount = 0
 
   for (const clientDoc of clientsSnap.docs) {
     try {
@@ -113,14 +111,9 @@ async function backfillWorkspace(workspaceId: string): Promise<void> {
         console.log(
           `   [dry-run] ${workspaceId}/${clientDoc.id} → primer registro recibe ${Object.keys(patch).join(', ')} (${registrations.length} registros)`,
         )
-      } else {
-        batch.update(clientDoc.ref, { processes: nextProcesses })
-        batchCount++
-        if (batchCount >= BATCH_SIZE) {
-          await batch.commit()
-          batch = db.batch()
-          batchCount = 0
-        }
+      } else if (!(await updateIfUnchanged(clientDoc, { processes: nextProcesses }))) {
+        summary.changedDuringRun.push(`${workspaceId}/${clientDoc.id}`)
+        continue
       }
       summary.updated++
     } catch (err) {
@@ -128,10 +121,6 @@ async function backfillWorkspace(workspaceId: string): Promise<void> {
       summary.errors.push(msg)
       console.error(`   ❌ ${msg}`)
     }
-  }
-
-  if (!DRY_RUN && batchCount > 0) {
-    await batch.commit()
   }
 }
 
@@ -160,6 +149,11 @@ async function main() {
   if (summary.noClientData.length > 0) {
     console.log(`\n⚠️  Revisar manualmente (ni el registro ni el cliente tienen el dato):`)
     for (const r of summary.noClientData) console.log(`   - ${r}`)
+  }
+
+  if (summary.changedDuringRun.length > 0) {
+    console.log(`\n⚠️  Editados mientras corría el script, no se tocaron (vuelve a correrlo):`)
+    for (const r of summary.changedDuringRun) console.log(`   - ${r}`)
   }
 
   if (summary.errors.length > 0) {

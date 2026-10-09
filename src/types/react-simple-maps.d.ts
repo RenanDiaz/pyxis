@@ -1,5 +1,17 @@
 declare module 'react-simple-maps' {
-  import { ComponentType, SVGProps, ReactNode } from 'react'
+  import { ComponentType, SVGProps, ReactNode, MouseEvent } from 'react'
+  import type { GeoIdentityTransform } from 'd3-geo'
+
+  /** Feature de la topología que entrega `Geographies`. */
+  export interface MapGeography {
+    rsmKey: string
+    properties: Record<string, unknown>
+  }
+
+  interface ZoomPosition {
+    coordinates: [number, number]
+    zoom: number
+  }
 
   interface ProjectionConfig {
     rotate?: [number, number, number]
@@ -9,7 +21,7 @@ declare module 'react-simple-maps' {
   }
 
   interface ComposableMapProps extends SVGProps<SVGSVGElement> {
-    projection?: string
+    projection?: string | GeoIdentityTransform
     projectionConfig?: ProjectionConfig
     width?: number
     height?: number
@@ -22,15 +34,15 @@ declare module 'react-simple-maps' {
     minZoom?: number
     maxZoom?: number
     translateExtent?: [[number, number], [number, number]]
-    onMoveStart?: (event: any, position: any) => void
-    onMove?: (event: any, position: any) => void
-    onMoveEnd?: (event: any, position: any) => void
+    onMoveStart?: (event: unknown, position: ZoomPosition) => void
+    onMove?: (event: unknown, position: ZoomPosition) => void
+    onMoveEnd?: (event: unknown, position: ZoomPosition) => void
     children?: ReactNode
   }
 
   interface GeographiesProps {
     geography: string | Record<string, unknown>
-    children: (data: { geographies: any[] }) => ReactNode
+    children: (data: { geographies: MapGeography[] }) => ReactNode
   }
 
   interface GeographyStyleProps {
@@ -40,12 +52,12 @@ declare module 'react-simple-maps' {
   }
 
   interface GeographyProps extends Omit<SVGProps<SVGPathElement>, 'style'> {
-    geography: any
+    geography: MapGeography
     style?: GeographyStyleProps
-    onMouseEnter?: (event: any) => void
-    onMouseLeave?: (event: any) => void
-    onMouseMove?: (event: any) => void
-    onClick?: (event: any) => void
+    onMouseEnter?: (event: MouseEvent<SVGPathElement>) => void
+    onMouseLeave?: (event: MouseEvent<SVGPathElement>) => void
+    onMouseMove?: (event: MouseEvent<SVGPathElement>) => void
+    onClick?: (event: MouseEvent<SVGPathElement>) => void
   }
 
   interface MarkerProps extends SVGProps<SVGGElement> {
@@ -67,7 +79,7 @@ declare module 'react-simple-maps' {
   export const Geography: ComponentType<GeographyProps>
   export const Marker: ComponentType<MarkerProps>
   export const Annotation: ComponentType<AnnotationProps>
-  export const Graticule: ComponentType<any>
-  export const Sphere: ComponentType<any>
-  export const Line: ComponentType<any>
+  export const Graticule: ComponentType<SVGProps<SVGPathElement>>
+  export const Sphere: ComponentType<SVGProps<SVGPathElement>>
+  export const Line: ComponentType<SVGProps<SVGPathElement>>
 }

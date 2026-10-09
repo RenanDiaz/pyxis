@@ -22,7 +22,9 @@ function getInitialView(): ViewMode {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored === 'cards' || stored === 'map') return stored
-  } catch {}
+  } catch {
+    // localStorage bloqueado (modo privado): vista por defecto.
+  }
   return 'cards'
 }
 
@@ -40,7 +42,9 @@ export default function States() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, view)
-    } catch {}
+    } catch {
+      // Sin localStorage la vista simplemente no se recuerda.
+    }
   }, [view])
 
   const filtered = useMemo(() => {

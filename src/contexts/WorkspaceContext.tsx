@@ -60,6 +60,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// El hook vive junto a su Provider a propósito; solo afecta al fast refresh en dev.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useWorkspaceContext() {
   const context = useContext(WorkspaceContext)
   if (!context) {
