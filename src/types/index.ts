@@ -162,8 +162,8 @@ export interface ClientProcess {
   notes?: string
   /**
    * Fecha de venta (`yyyy-MM-dd`, hora local): el reporte de ventas cuenta el
-   * proceso en ESTE mes, aunque se cobre después. Sin ella, se usa la más
-   * temprana entre `created_at` y el primer pago (ver `getProcessSaleDate`).
+   * proceso en ESTE mes, aunque se cobre después. Opcional: sin ella, cuenta la
+   * fecha del primer pago (ver `getProcessSaleDate`).
    */
   sold_at?: string
   created_at: Timestamp

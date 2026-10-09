@@ -144,10 +144,14 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
 10. Stripe fee, layout por fila/OWES/columnas y comisión según P5–P7.
 11. Corregir el error al exportar un mes con clientes archivados (#17).
 12. Catálogo: agregar ITIN y Certificado de Autoridad (P9) con su costo (P8).
-13. **Fecha de venta por proceso** (`ClientProcess.sold_at`, `yyyy-MM-dd`). Se captura
-    al agregar el proceso (default hoy) y se edita en su tarjeta. El reporte asigna
-    la cuenta al mes de su fecha de venta, con todos sus pagos. Sin `sold_at`: la más
-    temprana entre `created_at` y el primer pago (`getProcessSaleDate`).
+13. **Fecha de venta por proceso** (`ClientProcess.sold_at`, `yyyy-MM-dd`, **opcional**).
+    Sin ella, la venta cuenta en el mes del **primer pago** (`getProcessSaleDate`). Se
+    llena solo cuando la venta se cerró antes de cobrarse o se capturó tarde (caso NJ),
+    al agregar el proceso o en su tarjeta; borrarla vuelve al primer pago.
+    **No se usa `created_at` ni se pone «hoy» por defecto:** un proceso se agrega al
+    cotizar a un prospecto, a veces un mes antes de la venta. El export de septiembre
+    con esa regla (prod tras #108) metió en septiembre dos ventas de octubre (TX y NY,
+    creadas en septiembre, primer pago el 1 y el 3-oct).
 14. **Editar un pago** (fecha, monto, método) sin perder su número de recibo. Hoy
     solo se puede eliminar y volver a crear, y eso renumera el recibo. Prioridad baja,
     pero hace falta si se captura tarde.

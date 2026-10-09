@@ -73,13 +73,16 @@ describe('reporte de ventas — fecha de venta', () => {
     return d ? localDateKey(d) : null
   }
 
-  it('sold_at manda; sin ella, la más temprana entre creación y primer pago', () => {
+  it('sold_at manda; sin ella, el primer pago (no la creación del proceso)', () => {
     const created = (y: number, m: number, d: number) => Timestamp.fromDate(new Date(y, m - 1, d, 12))
     assert.equal(saleKey(proc({ sold_at: '2026-08-28', payments: [pay(312, '2026-09-03')] })), '2026-08-28')
-    assert.equal(saleKey(proc({ created_at: created(2026, 8, 28), payments: [pay(312, '2026-09-03')] })), '2026-08-28')
-    // Proceso migrado: se creó después de que el cliente pagara.
-    assert.equal(saleKey(proc({ created_at: created(2026, 10, 1), payments: [pay(312, '2026-07-15')] })), '2026-07-15')
-    assert.equal(saleKey(proc({ sold_at: 'basura', created_at: created(2026, 9, 2) })), '2026-09-02')
+    // Prospecto cotizado en septiembre que pagó en octubre: venta de octubre.
+    assert.equal(
+      saleKey(proc({ created_at: created(2026, 9, 20), payments: [pay(400, '2026-10-09'), pay(329.5, '2026-10-03')] })),
+      '2026-10-03',
+    )
+    assert.equal(saleKey(proc({ sold_at: 'basura', payments: [pay(100, '2026-09-02')] })), '2026-09-02')
+    assert.equal(saleKey(proc({ created_at: created(2026, 9, 2) })), null)
   })
 
   it('una venta de agosto cobrada en septiembre sale en agosto, en una sola fila', () => {
