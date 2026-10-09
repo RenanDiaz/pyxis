@@ -63,9 +63,10 @@
 ### Pendiente (usuario)
 Comparar con la consola y desplegar:
 ```bash
-firebase firestore:indexes --project <id>        # ver los existentes
-firebase deploy --only firestore:indexes --project <id>
+firebase firestore:indexes                  # ver los existentes
+firebase deploy --only firestore:indexes
 ```
+(Usa el proyecto `default` de `.firebaserc`, `pyxis-crm`.)
 Si en la consola hay índices que no están en el archivo, el deploy pregunta si
 borrarlos: responder **No**.
 
