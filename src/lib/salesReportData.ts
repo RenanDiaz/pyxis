@@ -6,12 +6,13 @@
  *
  * Reglas de mapeo (ver decisiones en el SPEC):
  *  - Una "cuenta" del reporte = un PROCESO contratado ("una cuenta = una venta").
- *  - La venta cuenta en el mes en que EMPEZÓ el proceso, es decir el mes de su
- *    PRIMER pago. Un proceso se incluye en el reporte de un mes solo si su primer
- *    pago cae en ese mes (`yyyy-MM`).
+ *  - La venta cuenta en el mes de su FECHA DE VENTA (`getProcessSaleDate`:
+ *    `sold_at`, o la más temprana entre la creación y el primer pago), no en el
+ *    del primer pago: una venta cerrada a fin de mes y cobrada el siguiente es
+ *    del mes en que se cerró (spec 04, P10).
  *  - Una vez que el proceso pertenece al mes, se incluyen TODOS sus pagos, aunque
- *    alguno se haya hecho en un mes posterior (ese pago es parte de la misma
- *    venta y no debe contarse aparte en el mes en que se cobró).
+ *    alguno se haya hecho en otro mes (es parte de la misma venta y no debe
+ *    contarse aparte en el mes en que se cobró). Sin pagos no entra (aún).
  *  - `stateFee` se deriva del documento del estado del PROCESO (states.json).
  *    Sin `process.state` va en 0 y la UI lo advierte: no se usa `client.state`,
  *    que puede ser el de otra compañía del cliente (spec 04).
@@ -27,6 +28,7 @@
 import type { Client, ClientProcess, Payment, StateInfo } from '@/types'
 import {
   getProcessLabel,
+  getProcessSaleDate,
   hasRegisteredAgent,
   localMonthKey,
   parsePaymentDate,
@@ -77,20 +79,16 @@ function sortedPaymentsOf(
 }
 
 /**
- * Pagos que hacen que el proceso pertenezca al mes `monthKey`: si su PRIMER pago
- * (el que marca el inicio de la venta) cae en ese mes, devuelve TODOS los pagos
- * del proceso; si no, devuelve `[]` (el proceso pertenece a otro mes).
+ * Pagos del proceso si su fecha de venta cae en el mes `monthKey` (TODOS sus
+ * pagos, de cualquier mes); si no, `[]` (el proceso pertenece a otro mes).
  */
 function monthPaymentsOf(
   process: ClientProcess,
   monthKey: string,
 ): Array<{ payment: Payment; date: Date }> {
-  const payments = sortedPaymentsOf(process)
-  if (payments.length === 0) return []
-  // La venta cuenta en el mes de su primer pago; si no arrancó en este mes, no
-  // se incluye (y así el segundo pago tampoco reaparece en el mes en que se hizo).
-  if (localMonthKey(payments[0].date) !== monthKey) return []
-  return payments
+  const saleDate = getProcessSaleDate(process)
+  if (!saleDate || localMonthKey(saleDate) !== monthKey) return []
+  return sortedPaymentsOf(process)
 }
 
 function estimateStripeFee(charge: number, mode: StripeFeeMode): number {
@@ -101,8 +99,7 @@ function estimateStripeFee(charge: number, mode: StripeFeeMode): number {
 
 /**
  * Construye el `ReportInput` para el mes dado. Las cuentas quedan ordenadas por
- * la fecha del primer pago (mismo criterio que el reporte original) y numeradas
- * en ese orden por el generador.
+ * fecha de venta y numeradas en ese orden por el generador.
  */
 export function buildReportInput(params: BuildReportParams): ReportInput {
   const { clients, states, monthKey, monthLabel, expenses, stripeFeeMode, taxRate } = params
@@ -112,7 +109,7 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
     stateFeeByAbbr.set(s.abbreviation.toUpperCase(), parseMoney(s.state_fee))
   }
 
-  const accounts: ReportAccount[] = []
+  const entries: Array<{ saleTime: number; account: ReportAccount }> = []
 
   for (const client of clients) {
     const processes = client.processes ?? []
@@ -125,7 +122,7 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
       const stateAbbr = (process.state ?? '').toUpperCase()
       const stateFee = stateAbbr ? stateFeeByAbbr.get(stateAbbr) ?? 0 : 0
 
-      accounts.push({
+      const account: ReportAccount = {
         // Cada registro de LLC es una compañía distinta: se reporta la del
         // proceso, no la del cliente.
         // Un registro sin nombre propio no toma `client.llc_name` (sería la
@@ -147,16 +144,19 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
           stripeFee:
             payment.method === 'stripe' ? estimateStripeFee(payment.amount, stripeFeeMode) : 0,
         })),
-      })
+      }
+      entries.push({ saleTime: getProcessSaleDate(process)!.getTime(), account })
     }
   }
 
-  // Orden por fecha del primer pago de cada cuenta.
-  accounts.sort(
-    (a, b) => a.payments[0].date.getTime() - b.payments[0].date.getTime()
+  // Orden por fecha de venta (y, a igual fecha, por el primer pago).
+  entries.sort(
+    (a, b) =>
+      a.saleTime - b.saleTime ||
+      a.account.payments[0].date.getTime() - b.account.payments[0].date.getTime()
   )
 
-  return { monthLabel, accounts, expenses, taxRate }
+  return { monthLabel, accounts: entries.map((e) => e.account), expenses, taxRate }
 }
 
 /**

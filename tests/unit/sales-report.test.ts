@@ -3,9 +3,11 @@ import assert from 'node:assert/strict'
 import { Timestamp } from 'firebase/firestore'
 import type { Client, ClientProcess, StateInfo } from '@/types'
 import { buildReportInput, previewReport } from '@/lib/salesReportData'
+import { getProcessSaleDate, localDateKey } from '@/lib/processUtils'
 import { buildWorkbook, type ExpenseConfig, type ReportInput } from '@/lib/generateSalesReport'
 
-const now = Timestamp.fromMillis(Date.UTC(2026, 9, 1))
+// Mediodía UTC: 1-oct en cualquier zona horaria del continente.
+const now = Timestamp.fromMillis(Date.UTC(2026, 9, 1, 12))
 const proc = (over: Partial<ClientProcess>): ClientProcess => ({
   id: 'p', type: 'registration', payments: [], stage: 'en_proceso', created_at: now, ...over,
 })
@@ -24,9 +26,9 @@ const expenses: ExpenseConfig = {
   fixedExpenses: [{ label: 'Zoom Phone', amount: 75 }],
 }
 
-function build(clients: Client[]) {
+function build(clients: Client[], monthKey = '2026-10') {
   return buildReportInput({
-    clients, states, monthKey: '2026-10', monthLabel: 'October 2026',
+    clients, states, monthKey, monthLabel: 'October 2026',
     expenses, stripeFeeMode: 'none', taxRate: 0.39,
   })
 }
@@ -62,6 +64,42 @@ describe('reporte de ventas — datos', () => {
       proc({ id: 'c', type: 'boi', payments: [pay(100, '2026-09-03')] }),
     ])
     assert.deepEqual(previewReport([c], '2026-10').missingState, ['ANA PÉREZ — EIN'])
+  })
+})
+
+describe('reporte de ventas — fecha de venta', () => {
+  const saleKey = (p: ClientProcess) => {
+    const d = getProcessSaleDate(p)
+    return d ? localDateKey(d) : null
+  }
+
+  it('sold_at manda; sin ella, la más temprana entre creación y primer pago', () => {
+    const created = (y: number, m: number, d: number) => Timestamp.fromDate(new Date(y, m - 1, d, 12))
+    assert.equal(saleKey(proc({ sold_at: '2026-08-28', payments: [pay(312, '2026-09-03')] })), '2026-08-28')
+    assert.equal(saleKey(proc({ created_at: created(2026, 8, 28), payments: [pay(312, '2026-09-03')] })), '2026-08-28')
+    // Proceso migrado: se creó después de que el cliente pagara.
+    assert.equal(saleKey(proc({ created_at: created(2026, 10, 1), payments: [pay(312, '2026-07-15')] })), '2026-07-15')
+    assert.equal(saleKey(proc({ sold_at: 'basura', created_at: created(2026, 9, 2) })), '2026-09-02')
+  })
+
+  it('una venta de agosto cobrada en septiembre sale en agosto con todos sus pagos', () => {
+    const c = client({}, [
+      proc({ state: 'NY', sold_at: '2026-08-28', payments: [pay(312, '2026-09-03'), pay(312, '2026-09-09')] }),
+    ])
+    const aug = build([c], '2026-08')
+    assert.equal(aug.accounts.length, 1)
+    assert.deepEqual(aug.accounts[0].payments.map((p) => p.charge), [312, 312])
+    assert.equal(build([c], '2026-09').accounts.length, 0)
+    assert.equal(previewReport([c], '2026-08').accountCount, 1)
+    assert.equal(previewReport([c], '2026-09').accountCount, 0)
+  })
+
+  it('las cuentas se ordenan por fecha de venta', () => {
+    const c = client({}, [
+      proc({ id: 'tarde', state: 'NY', sold_at: '2026-10-20', payments: [pay(100, '2026-10-02')] }),
+      proc({ id: 'temprano', state: 'TX', sold_at: '2026-10-05', payments: [pay(100, '2026-10-25')] }),
+    ])
+    assert.deepEqual(build([c]).accounts.map((a) => a.state), ['TX', 'NY'])
   })
 })
 

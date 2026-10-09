@@ -160,6 +160,12 @@ export interface ClientProcess {
   /** Solo `registration`: propósito de esta compañía. Fallback (primer registro): `client.business_purpose`. */
   business_purpose?: string
   notes?: string
+  /**
+   * Fecha de venta (`yyyy-MM-dd`, hora local): el reporte de ventas cuenta el
+   * proceso en ESTE mes, aunque se cobre después. Sin ella, se usa la más
+   * temprana entre `created_at` y el primer pago (ver `getProcessSaleDate`).
+   */
+  sold_at?: string
   created_at: Timestamp
 }
 
