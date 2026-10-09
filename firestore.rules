@@ -2,112 +2,219 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function getMember(workspaceId) {
-      return get(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)).data;
+    // ── Helpers ──
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function memberPath(workspaceId, uid) {
+      return /databases/$(database)/documents/workspaces/$(workspaceId)/members/$(uid);
     }
 
     function isWorkspaceMember(workspaceId) {
-      return exists(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
+      return signedIn() && exists(memberPath(workspaceId, request.auth.uid));
     }
 
-    function memberRole(workspaceId) {
-      return getMember(workspaceId).role;
+    // Doc del miembro que hace la request (Firestore cachea el get dentro de
+    // una misma evaluación, así que llamarlo varias veces cuesta una lectura).
+    function me(workspaceId) {
+      return get(memberPath(workspaceId, request.auth.uid)).data;
     }
+
+    function isOwner(workspaceId) {
+      return isWorkspaceMember(workspaceId) && me(workspaceId).role == "owner";
+    }
+
+    function emailMatches(email) {
+      return request.auth.token.email != null
+             && request.auth.token.email.lower() == email.lower();
+    }
+
+    // Alcance de lectura por rol (clients, calls y sus documentos):
+    // owner todo · supervisor su subequipo (si tiene uno) · cualquiera lo suyo.
+    function canSee(workspaceId, data) {
+      let m = me(workspaceId);
+      let sub = m.get("subteam_id", null);
+      return m.role == "owner"
+             || data.owner_uid == request.auth.uid
+             || (m.role == "supervisor" && sub != null && data.subteam_id == sub);
+    }
+
+    // A quién puede pertenecer un registro que este usuario crea o reasigna:
+    // owner a cualquiera · uno mismo dentro de su subequipo · supervisor a
+    // miembros de su subequipo.
+    function canHold(workspaceId, data) {
+      let m = me(workspaceId);
+      let sub = m.get("subteam_id", null);
+      return m.role == "owner"
+             || (data.owner_uid == request.auth.uid && data.subteam_id == sub)
+             || (m.role == "supervisor" && sub != null && data.subteam_id == sub
+                 && get(memberPath(workspaceId, data.owner_uid)).data.get("subteam_id", null) == sub);
+    }
+
+    function ownershipUnchanged() {
+      return request.resource.data.owner_uid == resource.data.owner_uid
+             && request.resource.data.get("subteam_id", null) == resource.data.get("subteam_id", null);
+    }
+
+    // ── Usuarios ──
 
     match /users/{uid} {
-      allow read, write: if request.auth != null
-                         && request.auth.uid == uid;
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+                    && request.resource.data.workspace_id == null;
+      // workspace_id solo puede apuntar a un workspace donde el usuario queda
+      // como miembro al terminar la escritura (crear workspace o aceptar
+      // invitación), o volver a null.
+      allow update: if signedIn() && request.auth.uid == uid
+                    && (request.resource.data.get("workspace_id", null) == resource.data.get("workspace_id", null)
+                        || request.resource.data.get("workspace_id", null) == null
+                        || existsAfter(memberPath(request.resource.data.workspace_id, uid)));
+      // El owner puede desvincular a alguien que quitó de su workspace.
+      allow update: if signedIn()
+                    && resource.data.get("workspace_id", null) != null
+                    && isOwner(resource.data.workspace_id)
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["workspace_id"])
+                    && request.resource.data.workspace_id == null
+                    && !existsAfter(memberPath(resource.data.workspace_id, uid));
     }
 
+    // Admins globales (editan la referencia de estados). Solo se gestionan con
+    // el Admin SDK: `npx tsx scripts/set-admin.ts`.
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+    }
+
+    // ── Workspaces ──
+
     match /workspaces/{workspaceId} {
-      allow read: if request.auth != null
-                  && isWorkspaceMember(workspaceId);
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null
-                            && memberRole(workspaceId) == "owner";
+      allow read: if isWorkspaceMember(workspaceId);
+      allow create: if signedIn() && request.resource.data.owner_uid == request.auth.uid;
+      allow update, delete: if isOwner(workspaceId);
     }
 
     match /workspaces/{workspaceId}/members/{uid} {
-      allow read: if request.auth != null
-                  && isWorkspaceMember(workspaceId);
-      allow write: if request.auth != null
-                   && (memberRole(workspaceId) == "owner"
-                       || request.auth.uid == uid);
+      allow read: if isWorkspaceMember(workspaceId)
+                  || (signedIn() && request.auth.uid == uid);
+
+      // Nadie se crea a sí mismo como miembro salvo dos casos:
+      // 1) fundar un workspace nuevo en el mismo batch (queda como owner);
+      // 2) aceptar una invitación válida en el mismo batch.
+      allow create: if signedIn() && request.auth.uid == uid
+                    && (foundsWorkspace(workspaceId) || joinsViaInvitation(workspaceId));
+
+      // Rol y subequipo solo los cambia el owner (nadie se los cambia a sí mismo).
+      allow update: if isOwner(workspaceId) && request.auth.uid != uid;
+      allow update: if isOwner(workspaceId) && request.auth.uid == uid
+                    && request.resource.data.role == resource.data.role;
+      allow delete: if isOwner(workspaceId);
     }
 
-    match /workspaces/{workspaceId}/clients/{clientId} {
-      allow read: if request.auth != null
-                  && isWorkspaceMember(workspaceId)
-                  && (memberRole(workspaceId) == "owner"
-                      || (memberRole(workspaceId) == "supervisor"
-                          && resource.data.subteam_id == getMember(workspaceId).subteam_id)
-                      || resource.data.owner_uid == request.auth.uid);
-      allow create: if request.auth != null
-                    && isWorkspaceMember(workspaceId);
-      allow update: if request.auth != null
-                    && isWorkspaceMember(workspaceId)
-                    && (memberRole(workspaceId) == "owner"
-                        || (memberRole(workspaceId) == "supervisor"
-                            && resource.data.subteam_id == getMember(workspaceId).subteam_id)
-                        || resource.data.owner_uid == request.auth.uid);
-      allow delete: if request.auth != null
-                    && (memberRole(workspaceId) == "owner"
-                        || resource.data.owner_uid == request.auth.uid);
+    function foundsWorkspace(workspaceId) {
+      return request.resource.data.role == "owner"
+             && !exists(/databases/$(database)/documents/workspaces/$(workspaceId))
+             && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)).data.owner_uid == request.auth.uid;
+    }
 
+    function joinsViaInvitation(workspaceId) {
+      let invPath = /databases/$(database)/documents/workspaces/$(workspaceId)/invitations/$(request.resource.data.invitation_id);
+      let inv = get(invPath).data;
+      let invAfter = getAfter(invPath).data;
+      return inv.status == "pending"
+             && inv.expires_at > request.time
+             && emailMatches(inv.email)
+             && request.resource.data.role == inv.role
+             && request.resource.data.subteam_id == inv.subteam_id
+             && invAfter.status == "accepted"
+             && invAfter.accepted_by == request.auth.uid;
+    }
+
+    // ── Invitaciones ──
+    // El doc ID es el token del link: conocerlo equivale a tener la invitación,
+    // así que el invitado (que aún no es miembro) puede leerla por ID. Listar
+    // queda solo para el owner.
+
+    match /workspaces/{workspaceId}/invitations/{invId} {
+      allow get: if signedIn();
+      allow list: if isOwner(workspaceId);
+      allow create: if isOwner(workspaceId) && request.resource.data.status == "pending";
+      allow update: if isOwner(workspaceId);
+      allow update: if signedIn()
+                    && resource.data.status == "pending"
+                    && resource.data.expires_at > request.time
+                    && emailMatches(resource.data.email)
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "accepted_by", "accepted_at"])
+                    && request.resource.data.status == "accepted"
+                    && request.resource.data.accepted_by == request.auth.uid
+                    && existsAfter(memberPath(workspaceId, request.auth.uid));
+      allow delete: if isOwner(workspaceId);
+    }
+
+    // ── Clientes ──
+
+    match /workspaces/{workspaceId}/clients/{clientId} {
+      allow read: if isWorkspaceMember(workspaceId) && canSee(workspaceId, resource.data);
+      allow create: if isWorkspaceMember(workspaceId) && canHold(workspaceId, request.resource.data);
+      // Reasignar (cambiar owner_uid/subteam_id) exige poder asignar al destino.
+      allow update: if isWorkspaceMember(workspaceId)
+                    && canSee(workspaceId, resource.data)
+                    && (ownershipUnchanged() || canHold(workspaceId, request.resource.data));
+      allow delete: if isWorkspaceMember(workspaceId)
+                    && (me(workspaceId).role == "owner" || resource.data.owner_uid == request.auth.uid);
+
+      // Los documentos heredan el acceso de su cliente.
       match /documents/{docId} {
-        allow read: if request.auth != null
-                    && isWorkspaceMember(workspaceId);
-        allow create: if request.auth != null
-                      && isWorkspaceMember(workspaceId);
-        allow delete: if request.auth != null
-                      && (memberRole(workspaceId) == "owner"
+        function clientData() {
+          return get(/databases/$(database)/documents/workspaces/$(workspaceId)/clients/$(clientId)).data;
+        }
+
+        allow read: if isWorkspaceMember(workspaceId) && canSee(workspaceId, clientData());
+        allow create: if isWorkspaceMember(workspaceId)
+                      && canSee(workspaceId, clientData())
+                      && request.resource.data.uploaded_by_uid == request.auth.uid;
+        allow delete: if isWorkspaceMember(workspaceId)
+                      && canSee(workspaceId, clientData())
+                      && (me(workspaceId).role == "owner"
                           || resource.data.uploaded_by_uid == request.auth.uid);
       }
     }
 
+    // ── Llamadas (mismo modelo que clientes) ──
+
     match /workspaces/{workspaceId}/calls/{callId} {
-      allow read, write: if request.auth != null
-                         && isWorkspaceMember(workspaceId);
+      allow read: if isWorkspaceMember(workspaceId) && canSee(workspaceId, resource.data);
+      allow create: if isWorkspaceMember(workspaceId) && canHold(workspaceId, request.resource.data);
+      allow update: if isWorkspaceMember(workspaceId)
+                    && canSee(workspaceId, resource.data)
+                    && (ownershipUnchanged() || canHold(workspaceId, request.resource.data));
+      allow delete: if isWorkspaceMember(workspaceId)
+                    && (me(workspaceId).role == "owner" || resource.data.owner_uid == request.auth.uid);
     }
 
+    // ── Metas y subequipos ──
+
     match /workspaces/{workspaceId}/goals/{goalId} {
-      allow read: if request.auth != null
-                  && isWorkspaceMember(workspaceId);
-      allow write: if request.auth != null
-                   && isWorkspaceMember(workspaceId)
-                   && (memberRole(workspaceId) == "owner"
-                       || memberRole(workspaceId) == "supervisor");
+      allow read: if isWorkspaceMember(workspaceId);
+      allow write: if isWorkspaceMember(workspaceId)
+                   && (me(workspaceId).role == "owner" || me(workspaceId).role == "supervisor");
     }
 
     match /workspaces/{workspaceId}/subteams/{subteamId} {
-      allow read: if request.auth != null
-                  && isWorkspaceMember(workspaceId);
-      allow write: if request.auth != null
-                   && memberRole(workspaceId) == "owner";
+      allow read: if isWorkspaceMember(workspaceId);
+      allow write: if isOwner(workspaceId);
     }
 
-    match /workspaces/{workspaceId}/invitations/{invId} {
-      allow read: if request.auth != null
-                  && isWorkspaceMember(workspaceId);
-      allow create: if request.auth != null
-                    && memberRole(workspaceId) == "owner";
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null
-                    && memberRole(workspaceId) == "owner";
-    }
-
-    // La info de estados es referencia global editable solo por owners de workspace
-    function isWorkspaceOwner() {
-      let wsId = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.workspace_id;
-      return wsId != null
-             && get(/databases/$(database)/documents/workspaces/$(wsId)/members/$(request.auth.uid)).data.role == "owner";
-    }
+    // ── Referencia global ──
+    // `states` es global para toda la app: solo la editan admins globales, no
+    // los owners de cada workspace (cualquiera puede crear un workspace).
 
     match /states/{doc} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && isWorkspaceOwner();
+      allow read: if signedIn();
+      allow write: if signedIn()
+                   && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
-    match /trades/{doc} { allow read: if request.auth != null; }
-    match /glossary/{doc} { allow read: if request.auth != null; }
+    match /trades/{doc} { allow read: if signedIn(); }
+    match /glossary/{doc} { allow read: if signedIn(); }
   }
 }

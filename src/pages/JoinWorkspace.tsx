@@ -1,15 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useInvitationByToken, useAcceptInvitation } from '@/hooks/useWorkspaceInvitations'
-import { getWorkspace } from '@/lib/firestore'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
+const ROLE_LABELS: Record<string, string> = {
+  owner: 'Owner',
+  supervisor: 'Supervisor',
+  agent: 'Agente',
+}
+
 export default function JoinWorkspace() {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const acceptInvitation = useAcceptInvitation()
@@ -18,16 +23,7 @@ export default function JoinWorkspace() {
   const workspaceId = searchParams.get('workspace')
 
   const { data: invitation, isLoading: invLoading } = useInvitationByToken(workspaceId, token)
-  const [workspaceName, setWorkspaceName] = useState<string | null>(null)
   const [joining, setJoining] = useState(false)
-
-  useEffect(() => {
-    if (workspaceId) {
-      getWorkspace(workspaceId).then((ws) => {
-        if (ws) setWorkspaceName(ws.name)
-      })
-    }
-  }, [workspaceId])
 
   const handleJoin = async () => {
     if (!user || !invitation || !workspaceId) return
@@ -100,7 +96,8 @@ export default function JoinWorkspace() {
     )
   }
 
-  if (invitation.status !== 'pending') {
+  const expired = invitation.expires_at.toMillis() < Date.now()
+  if (invitation.status !== 'pending' || expired) {
     return (
       <div className="flex min-h-dvh items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -109,9 +106,37 @@ export default function JoinWorkspace() {
             <p className="font-medium">
               {invitation.status === 'accepted' ? 'Invitación ya aceptada' : 'Invitación expirada'}
             </p>
+            {invitation.status !== 'accepted' && (
+              <p className="text-sm text-muted-foreground">
+                Pide al administrador del workspace que te envíe un enlace nuevo.
+              </p>
+            )}
             <Button onClick={() => navigate('/')} variant="outline">
               Ir al inicio
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // La invitación es nominal: las reglas solo dejan aceptarla con la cuenta del
+  // correo invitado.
+  const userEmail = user?.email?.toLowerCase() ?? ''
+  if (invitation.email && invitation.email.toLowerCase() !== userEmail) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 text-center space-y-3">
+            <AlertCircle className="mx-auto h-10 w-10 text-amber-500" />
+            <p className="font-medium">Esta invitación es para otra cuenta</p>
+            <p className="text-sm text-muted-foreground">
+              La invitación se envió a <span className="font-medium">{invitation.email}</span>,
+              pero iniciaste sesión como <span className="font-medium">{user?.email || 'otra cuenta'}</span>.
+              Cierra sesión y entra con el correo invitado.
+            </p>
+            {/* Al cerrar sesión, PrivateRoute manda al login y vuelve a este link. */}
+            <Button onClick={() => signOut()}>Cerrar sesión y cambiar de cuenta</Button>
           </CardContent>
         </Card>
       </div>
@@ -128,10 +153,10 @@ export default function JoinWorkspace() {
           <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" />
           <div>
             <p className="font-medium text-lg">
-              {workspaceName ?? 'Workspace'}
+              {invitation.workspace_name || 'Workspace'}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Has sido invitado como <span className="font-medium">{invitation.role}</span>
+              Has sido invitado como <span className="font-medium">{ROLE_LABELS[invitation.role] ?? invitation.role}</span>
             </p>
           </div>
           <Button

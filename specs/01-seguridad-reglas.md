@@ -1,6 +1,6 @@
 # 01 — Reglas de seguridad Firestore y Storage
 
-**Prioridad:** 🔴 Crítica · **Estado:** propuesto · **Implementar junto con:** [02](02-invitaciones-onboarding.md)
+**Prioridad:** 🔴 Crítica · **Estado:** hotfix implementado (ver abajo); pendiente R8 · **Implementar junto con:** [02](02-invitaciones-onboarding.md)
 
 ## Problema
 Las reglas no hacen cumplir el modelo de roles que la app asume
@@ -17,6 +17,42 @@ Las reglas no hacen cumplir el modelo de roles que la app asume
 | ✔ 7 | `storage.rules`: `allow write` incluye delete; el `allow delete` solo-owner se suma con OR | Cualquier miembro borra/sobrescribe archivos de cualquier cliente. Sin límite de tamaño ni content-type. |
 | 8 | `download_url` con token | Una vez emitida, salta las reglas para siempre (se puede reenviar). |
 | 9 | `memberRole()`/`getMember()` hacen 3–4 `get()` por evaluación | Costo y riesgo de pegar el límite de lecturas en batches. |
+
+## Hotfix implementado (2026-10-09)
+Se implementaron R1–R7 (R6 con la decisión de P1) y quedan cubiertos los hallazgos 1–7.
+Queda pendiente: R8 (costo de reglas), el hallazgo 8 (`download_url`, P3) y
+precios por workspace si se pasa a multi-tenant real.
+
+- **Reglas:** `firestore.rules` y `storage.rules`.
+- **Tests:** `tests/rules/*.test.ts` (31 casos, emulador). Correr con `npm run test:rules` (requiere Java).
+- **Admins globales:** colección `admins/{uid}`, solo escribible con el Admin SDK:
+  `npx tsx scripts/set-admin.ts --add|--remove <email> | --list`.
+- **Auditoría:** `npx tsx scripts/audit-members.ts` (solo lectura). Busca owners que no son
+  `workspace.owner_uid`, miembros sin invitación aceptada y `users.workspace_id` inconsistentes.
+- **Código:**
+  - Invitaciones con doc ID = token y `workspace_name` denormalizado.
+  - Aceptación en un batch con `invitation_id`, `accepted_by` y `accepted_at`.
+  - Un supervisor sin subequipo consulta como agente.
+  - Al subir un archivo se guarda `uploaded_by` en la metadata.
+  - "Editar estado" visible solo para admins.
+
+### Despliegue (en este orden)
+1. `npx tsx scripts/audit-members.ts` y revisar los hallazgos con el dueño de cada workspace.
+2. `npx tsx scripts/set-admin.ts --add <email>` para quien editará precios (si no, nadie podrá).
+3. Desplegar el frontend (Vercel) e inmediatamente después las reglas:
+   `firebase deploy --only firestore:rules,storage`. Entre un paso y otro, aceptar
+   invitaciones falla; conviene hacerlo en un horario sin altas.
+4. **Invitaciones pendientes viejas dejan de funcionar** (su doc ID no es el token):
+   el owner las cancela y las reenvía desde Miembros.
+5. Smoke test en producción con una cuenta de cada rol (owner, supervisor, agente).
+
+### Cambios de comportamiento a comunicar
+- La invitación es nominal: solo se acepta con la cuenta del email invitado.
+  Si alguien entra con otra cuenta, la pantalla de unirse le ofrece cambiar de cuenta.
+- Precios de estados: solo admins globales (antes, cualquier owner).
+- Un supervisor sin subequipo ve solo sus propios clientes.
+- Archivos subidos antes del hotfix: solo el owner puede borrarlos.
+- Nadie se cambia su propio rol, ni siquiera el owner (así no se queda sin owner el workspace).
 
 ## Objetivo
 Que las reglas hagan cumplir exactamente el modelo de roles de `CLAUDE.md`,
@@ -105,7 +141,7 @@ si P2 se resuelve a favor.
 - [ ] Todos los flujos actuales de la UI siguen funcionando con cada rol (smoke test manual en staging).
 
 ## Preguntas abiertas
-- **P1 — ¿Pyxis es multi-empresa?** Si cada empresa tiene su workspace, los
+- **P1 — ¿Pyxis es multi-empresa?** *Resuelto:* por ahora es de una sola empresa ⇒ `states` solo lo editan admins globales (`admins/{uid}`). Si se pasa a multi-tenant real, mover precios a `workspaces/{wId}/states`. Texto original: Si cada empresa tiene su workspace, los
   precios de `states` no pueden ser globales editables por owners: o se mueven a
   `workspaces/{wId}/states` (cada empresa con sus precios) o se edita solo por
   admin global. Si es una sola empresa, basta con restringir a admin.

@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { StateInfo } from '@/types'
 import statesData from '@/data/states.json'
 import { isFirebaseConfigured } from '@/lib/firebase'
-import { getStates, updateState } from '@/lib/firestore'
+import { getStates, isGlobalAdmin, updateState } from '@/lib/firestore'
+import { useAuth } from '@/contexts/AuthContext'
 
 const localStates = statesData as StateInfo[]
 
@@ -40,6 +41,17 @@ export function useStateByAbbreviation(abbreviation: string | undefined) {
     ? states?.find((s) => s.abbreviation.toUpperCase() === abbreviation.toUpperCase())
     : undefined
   return { ...rest, data }
+}
+
+/** Admin global (colección `admins`): único rol que puede editar los estados. */
+export function useIsGlobalAdmin() {
+  const { user } = useAuth()
+  return useQuery<boolean>({
+    queryKey: ['isGlobalAdmin', user?.uid],
+    queryFn: () => isGlobalAdmin(user!.uid),
+    enabled: isFirebaseConfigured && !!user,
+    staleTime: Infinity,
+  })
 }
 
 export function useUpdateState() {

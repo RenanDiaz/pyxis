@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useStateByAbbreviation, useStates } from '@/hooks/useStates'
-import { useUserProfile } from '@/hooks/useUserProfile'
+import { useIsGlobalAdmin, useStateByAbbreviation, useStates } from '@/hooks/useStates'
 import { formatPrice, formatDays, formatYesNo } from '@/lib/format'
 import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
 import { useNow } from '@/hooks/useNow'
@@ -24,11 +23,11 @@ export default function StateDetail() {
   const navigate = useNavigate()
   const { data: state, isLoading } = useStateByAbbreviation(abbreviation)
   const { data: states } = useStates()
-  const { role } = useUserProfile()
   const [editOpen, setEditOpen] = useState(false)
   const now = useNow(1000)
 
-  const canEdit = isFirebaseConfigured && role === 'owner'
+  const { data: isAdmin } = useIsGlobalAdmin()
+  const canEdit = isFirebaseConfigured && !!isAdmin
 
   if (isLoading) {
     return <p className="text-muted-foreground">Cargando...</p>

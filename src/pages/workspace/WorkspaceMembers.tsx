@@ -41,7 +41,7 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 export default function WorkspaceMembers() {
-  const { workspaceId } = useUserProfile()
+  const { workspaceId, workspace } = useUserProfile()
   const { user } = useAuth()
   const { data: members, isLoading } = useWorkspaceMembers(workspaceId)
   const { data: subteams } = useSubteams(workspaceId)
@@ -86,6 +86,7 @@ export default function WorkspaceMembers() {
     try {
       const inv = await createInvitation.mutateAsync({
         workspaceId,
+        workspaceName: workspace?.name ?? '',
         email: inviteEmail.trim(),
         role: inviteRole,
         subteamId: inviteSubteam === '_none' ? null : inviteSubteam,

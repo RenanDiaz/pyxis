@@ -1,8 +1,9 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
+  const location = useLocation()
 
   if (loading) {
     return (
@@ -13,7 +14,8 @@ export default function PrivateRoute({ children }: { children: React.ReactNode }
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />
+    // Recordar a dónde iba (p. ej. un link de invitación) para volver tras el login.
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
   }
 
   return <>{children}</>

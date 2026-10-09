@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,10 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const location = useLocation()
+  const from = (location.state as { from?: string } | null)?.from
+  // Solo rutas internas: evita redirecciones abiertas (`//otro-sitio.com`).
+  const redirectTo = from && from.startsWith('/') && !from.startsWith('//') ? from : '/'
 
   if (loading) {
     return (
@@ -23,7 +27,7 @@ export default function Login() {
   }
 
   if (user) {
-    return <Navigate to="/" replace />
+    return <Navigate to={redirectTo} replace />
   }
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
