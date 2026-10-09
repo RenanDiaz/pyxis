@@ -23,6 +23,7 @@ import WorkspaceSettings from '@/pages/workspace/WorkspaceSettings'
 import WorkspaceMembers from '@/pages/workspace/WorkspaceMembers'
 import WorkspaceSubteams from '@/pages/workspace/WorkspaceSubteams'
 import { Toaster } from '@/components/ui/sonner'
+import UpdateBanner from '@/components/layout/UpdateBanner'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -113,6 +114,7 @@ export default function App() {
             </Routes>
           </BrowserRouter>
           <Toaster position="top-right" richColors />
+          <UpdateBanner />
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
