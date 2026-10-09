@@ -57,8 +57,13 @@ export function useCreateCall() {
   const queryClient = useQueryClient()
   return useMutation({
     meta: { errorMessage: 'No se pudo guardar la llamada' },
-    mutationFn: (data: Omit<Call, 'id' | 'created_at' | 'owner_uid' | 'subteam_id'>) =>
-      createCall(wsCtx!, data),
+    mutationFn: ({
+      data,
+      assignTo,
+    }: {
+      data: Omit<Call, 'id' | 'created_at' | 'owner_uid' | 'subteam_id'>
+      assignTo?: { owner_uid: string; subteam_id: string | null }
+    }) => createCall(wsCtx!, data, assignTo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calls'] })
     },

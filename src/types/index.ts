@@ -235,9 +235,24 @@ export type CallOutcome = 'pendiente' | 'completada' | 'no_contesto' | 'reagenda
 /** `contact_attempt`: el agente tocó Llamar/WhatsApp/Email desde el detalle (no es una cita). */
 export type CallKind = 'scheduled' | 'contact_attempt'
 
+/** Prospecto sin registrar al que se agenda una llamada (spec 19). */
+export interface CallLead {
+  name: string
+  /** Formateado como los teléfonos del cliente. */
+  phone: string
+  /** 10 dígitos: agrupa las llamadas de un mismo lead. */
+  phone_digits: string
+  state?: string
+  notes?: string
+}
+
 export interface Call {
   id: string
-  client_id: string
+  /** `null` ⇔ llamada a un lead (`lead` presente). */
+  client_id: string | null
+  lead?: CallLead
+  /** Cliente que se creó al convertir el lead (trazabilidad). */
+  converted_client_id?: string
   scheduled_at: Timestamp
   duration_minutes?: number
   notes: string

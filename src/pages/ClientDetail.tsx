@@ -270,12 +270,14 @@ export default function ClientDetail() {
           // como llamada vencida).
           createCallMutation.mutate(
             {
-              client_id: client.id,
-              scheduled_at: Timestamp.now(),
-              notes: `Contacto iniciado vía ${channel}`,
-              outcome: 'completada',
-              kind: 'contact_attempt',
-              channel,
+              data: {
+                client_id: client.id,
+                scheduled_at: Timestamp.now(),
+                notes: `Contacto iniciado vía ${channel}`,
+                outcome: 'completada',
+                kind: 'contact_attempt',
+                channel,
+              },
             },
             {
               onSuccess: () => {

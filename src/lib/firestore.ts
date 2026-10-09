@@ -39,24 +39,8 @@ import { initialStatusFields } from '@/lib/statusHistory'
 import type { ClientChange, ClientMutation } from '@/lib/processMutations'
 import { UserFacingError } from '@/lib/errors'
 
-// ── Workspace context for role-based queries ──
-
-export interface WorkspaceCtx {
-  uid: string
-  workspaceId: string
-  role: WorkspaceRole
-  subteamId: string | null
-}
-
-function addWorkspaceRoleConstraints(ctx: WorkspaceCtx): QueryConstraint[] {
-  if (ctx.role === 'owner') return []
-  // Un supervisor sin subequipo solo ve lo suyo (las reglas no le dejan ver
-  // los registros sin subequipo de otros).
-  if (ctx.role === 'supervisor' && ctx.subteamId) {
-    return [where('subteam_id', '==', ctx.subteamId)]
-  }
-  return [where('owner_uid', '==', ctx.uid)]
-}
+import { addWorkspaceRoleConstraints, type WorkspaceCtx } from '@/lib/roleScope'
+export type { WorkspaceCtx }
 
 // ── Helper: workspace collection path ──
 
@@ -501,15 +485,23 @@ export async function getOverdueCalls(ctx: WorkspaceCtx, max: number = 10): Prom
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Call))
 }
 
+export async function getCall(workspaceId: string, id: string): Promise<Call | null> {
+  if (!isFirebaseConfigured || !db) return null
+  const snap = await getDoc(wsDoc(workspaceId, 'calls', id))
+  return snap.exists() ? ({ id: snap.id, ...snap.data() } as Call) : null
+}
+
 export async function createCall(
   ctx: WorkspaceCtx,
-  data: Omit<Call, 'id' | 'created_at' | 'owner_uid' | 'subteam_id'>
+  data: Omit<Call, 'id' | 'created_at' | 'owner_uid' | 'subteam_id'>,
+  // Owner/supervisor pueden agendar un lead para uno de sus agentes (spec 19).
+  assignTo?: { owner_uid: string; subteam_id: string | null }
 ): Promise<string> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   const ref = await addDoc(wsCol(ctx.workspaceId, 'calls'), {
     ...data,
-    owner_uid: ctx.uid,
-    subteam_id: ctx.subteamId,
+    owner_uid: assignTo?.owner_uid ?? ctx.uid,
+    subteam_id: assignTo?.subteam_id ?? ctx.subteamId,
     created_at: Timestamp.now(),
   })
   return ref.id

@@ -83,7 +83,8 @@ export function countContacted(clients: Client[], calls: Call[], inRange: (d: Da
   }
   for (const call of calls) {
     const d = call.scheduled_at?.toDate?.()
-    if (call.outcome === 'completada' && d && inRange(d)) ids.add(call.client_id)
+    // Las llamadas a leads (spec 19) no cuentan: un lead no es cliente.
+    if (call.client_id && call.outcome === 'completada' && d && inRange(d)) ids.add(call.client_id)
   }
   return ids.size
 }

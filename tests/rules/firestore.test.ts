@@ -3,6 +3,7 @@ import { assertFails, assertSucceeds, type RulesTestEnvironment } from '@firebas
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -264,5 +265,40 @@ describe('administración del workspace (spec 06)', () => {
     batch.delete(doc(fs, `workspaces/${WS}/members/ag2`))
     batch.update(doc(fs, 'users/ag2'), { workspace_id: null })
     await assertSucceeds(batch.commit())
+  })
+})
+
+describe('llamadas a leads (spec 19)', () => {
+  const lead = { name: 'Juan Pérez', phone: '+1 (305) 555-1234', phone_digits: '3055551234' }
+  const base = { owner_uid: 'ag', subteam_id: 'A', outcome: 'pendiente', notes: '' }
+
+  it('un agente agenda una llamada a un lead sin cliente', async () => {
+    await assertSucceeds(setDoc(doc(db('ag'), `workspaces/${WS}/calls/l1`), { ...base, client_id: null, lead }))
+  })
+
+  it('se rechaza una llamada sin cliente ni lead, o con lead sin nombre o teléfono', async () => {
+    const fs = db('ag')
+    await assertFails(setDoc(doc(fs, `workspaces/${WS}/calls/l2`), { ...base, client_id: null }))
+    await assertFails(setDoc(doc(fs, `workspaces/${WS}/calls/l3`), { ...base, client_id: null, lead: { ...lead, name: '' } }))
+    await assertFails(setDoc(doc(fs, `workspaces/${WS}/calls/l4`), { ...base, client_id: null, lead: { name: 'X' } }))
+    await assertFails(setDoc(doc(fs, `workspaces/${WS}/calls/l5`), { ...base, client_id: 'cAg', lead }))
+  })
+
+  it('otro agente no ve la llamada a un lead ajeno; el supervisor del subequipo sí', async () => {
+    await assertSucceeds(setDoc(doc(db('ag'), `workspaces/${WS}/calls/l1`), { ...base, client_id: null, lead }))
+    await assertFails(getDoc(doc(db('ag2'), `workspaces/${WS}/calls/l1`)))
+    await assertSucceeds(getDoc(doc(db('sup'), `workspaces/${WS}/calls/l1`)))
+  })
+
+  it('convertir: la llamada pasa a un cliente y pierde el lead', async () => {
+    const fs = db('ag')
+    await assertSucceeds(setDoc(doc(fs, `workspaces/${WS}/calls/l1`), { ...base, client_id: null, lead }))
+    await assertSucceeds(
+      updateDoc(doc(fs, `workspaces/${WS}/calls/l1`), { client_id: 'cAg', lead: deleteField(), converted_client_id: 'cAg' }),
+    )
+  })
+
+  it('las llamadas existentes a clientes se siguen actualizando', async () => {
+    await assertSucceeds(updateDoc(doc(db('ag'), `workspaces/${WS}/calls/callAg`), { outcome: 'completada' }))
   })
 })
