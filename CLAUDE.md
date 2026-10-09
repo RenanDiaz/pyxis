@@ -238,19 +238,3 @@ partir de `process`+`payment_total`+`payments`, sin borrar los campos viejos.
 Clientes que ya tenían 2+ registros antes de la regla de herencia (ver 4b):
 `npx tsx scripts/backfill-registration-company.ts [--dry-run]` — copia los datos
 de compañía del cliente al primer registro que los estaba heredando.
-# Feature - Borradores de formularios (localStorage)
-Los formularios largos se autoguardan en localStorage para no perder datos al
-recargar o cerrar el navegador.
-- `src/lib/formDraft.ts` — lectura/escritura con key por usuario
-  (`pyxis:draft:{uid}:{formId}`), TTL de 7 días, serializa `Timestamp`/`Date`.
-  `clearUserDrafts(uid)` se llama al cerrar sesión; `pruneExpiredDrafts()` al iniciar.
-- `src/hooks/useFormDraft.ts` — autoguardado con debounce, flush en
-  `pagehide`/`visibilitychange`/desmontaje; borra el borrador si el form vuelve
-  a su valor inicial. La restauración la hace cada formulario al inicializar
-  (lazy `useState`), con `DraftBanner` para avisar/descartar.
-- Usado en: `ClientForm` (nuevo y editar), modal "Agendar llamada" (`Schedule`)
-  y notas del cliente (`ClientDetail`).
-- **Nunca** se guarda SSN/ITIN (cliente ni socios).
-- Editando un registro existente se guarda `base` (`updated_at` o las notas
-  originales): si no coincide al volver, el borrador NO se aplica solo y el
-  banner ofrece restaurar o descartar (evita pisar pagos/cambios posteriores).
