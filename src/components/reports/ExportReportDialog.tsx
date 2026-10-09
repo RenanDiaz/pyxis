@@ -30,6 +30,12 @@ export interface ExportSettings {
 }
 
 const STORAGE_KEY = 'pyxis.salesReport.exportSettings'
+/**
+ * Versión de lo guardado. v2: el Stripe fee pasa a ser el recargo del 4 % del
+ * Excel manual (spec 04, P5); el modo guardado antes («estimar» 2.9 % + $0.30
+ * era el default) ya no existe, así que no se arrastra.
+ */
+const SETTINGS_VERSION = 2
 
 /** Valores por defecto (basados en el ejemplo de junio del SPEC). */
 function defaultSettings(employeeName: string): ExportSettings {
@@ -44,7 +50,7 @@ function defaultSettings(employeeName: string): ExportSettings {
         { label: 'Zoom Phone', amount: 0 },
       ],
     },
-    stripeFeeMode: 'estimate',
+    stripeFeeMode: 'surcharge',
     taxRate: DEFAULT_TAX_RATE,
   }
 }
@@ -53,7 +59,8 @@ function loadSettings(employeeName: string): ExportSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
-      const parsed = JSON.parse(raw) as ExportSettings
+      const parsed = JSON.parse(raw) as Partial<ExportSettings> & { version?: number }
+      if (parsed.version !== SETTINGS_VERSION) delete parsed.stripeFeeMode
       // El nombre del empleado sigue al agente seleccionado, no al guardado.
       return {
         ...defaultSettings(employeeName),
@@ -137,7 +144,7 @@ export default function ExportReportDialog({
       },
     }
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cleaned, version: SETTINGS_VERSION }))
     } catch {
       // Ignorar si localStorage no está disponible.
     }
@@ -183,16 +190,16 @@ export default function ExportReportDialog({
                 ? '1 venta tiene saldo pendiente: su CHARGE incluye lo que falta cobrar.'
                 : `${projected.length} ventas tienen saldo pendiente: su CHARGE incluye lo que falta cobrar.`}
             </p>
-            {settings.stripeFeeMode === 'estimate' && projected.some((p) => p.stripe) && (
+            {settings.stripeFeeMode === 'surcharge' && projected.some((p) => p.stripe) && (
               <p className="mt-0.5">
-                Si el primer pago fue con Stripe, se proyecta también su Stripe fee.
+                Si el primer pago fue con Stripe, el saldo también lleva el recargo del 4 %.
               </p>
             )}
             <ul className="mt-1 list-disc pl-5">
               {projected.map((p, i) => (
                 <li key={i}>
                   {p.label}: ${formatMoney(p.pending)} por cobrar
-                  {settings.stripeFeeMode === 'estimate' && p.stripe ? ' (Stripe)' : ''}
+                  {settings.stripeFeeMode === 'surcharge' && p.stripe ? ' (Stripe)' : ''}
                 </li>
               ))}
             </ul>
@@ -312,7 +319,7 @@ export default function ExportReportDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="report-stripe-fee-por-pago">Stripe fee por pago</Label>
+            <Label htmlFor="report-stripe-fee-por-pago">Stripe fee</Label>
             <Select
               value={settings.stripeFeeMode}
               onValueChange={(v) =>
@@ -323,12 +330,13 @@ export default function ExportReportDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="estimate">Estimar (2.9% + $0.30)</SelectItem>
-                <SelectItem value="none">Sin comisión ($0.00)</SelectItem>
+                <SelectItem value="surcharge">Recargo del 4 % (como el Excel manual)</SelectItem>
+                <SelectItem value="none">Sin recargo ($0.00)</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Solo se aplica a los pagos hechos con el método Stripe; se estima o se deja en cero.
+              El cliente paga un 4 % extra por pagar con Stripe y Pyxis guarda el pago sin él.
+              El recargo se suma a CHARGE y se resta como STRIPE FEE, así que no cambia el NET.
             </p>
           </div>
         </div>

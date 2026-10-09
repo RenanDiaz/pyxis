@@ -21,9 +21,12 @@
  *  - El costo del Registered Agent no se registra en el CRM → columna H en 0;
  *    si el proceso incluye Registered Agent (`has_registered_agent`), las
  *    fórmulas de TAX y NET de esa cuenta restan H (se puede completar en Excel).
- *  - `stripeFee` solo se estima para lo pagado con `stripe` (0 o 2.9% + $0.30
- *    según `stripeFeeMode`). El saldo pendiente se proyecta con el método del
- *    PRIMER pago: si fue Stripe, también se le estima la comisión.
+ *  - Stripe (P5): el cliente paga un RECARGO del 4 % sobre lo que paga con
+ *    Stripe, y Pyxis guarda el pago SIN recargo (el recargo no es venta, spec 18).
+ *    Como el Excel manual, el recargo se suma a CHARGE y se resta como STRIPE FEE
+ *    (efecto neutro en NET). El saldo pendiente se proyecta con el método del
+ *    PRIMER pago: si fue Stripe, también lleva recargo. Con `stripeFeeMode`
+ *    `'none'` no se suma ni se resta nada.
  * -----------------------------------------------------------------------------
  */
 
@@ -40,11 +43,11 @@ import { getProcessCompanyName } from '@/lib/companyUtils'
 import type { ExpenseConfig, ReportAccount, ReportInput } from '@/lib/generateSalesReport'
 import { fromCents, sumMoney, toCents } from '@/lib/money'
 
-export type StripeFeeMode = 'none' | 'estimate'
+/** `surcharge` = recargo del 4 % como el Excel manual; `none` = sin recargo. */
+export type StripeFeeMode = 'surcharge' | 'none'
 
-// Stripe: 2.9% + $0.30 por transacción (estimación estándar).
-const STRIPE_PERCENT = 0.029
-const STRIPE_FLAT = 0.3
+/** Recargo que paga el cliente sobre lo cobrado con Stripe (Excel manual). */
+export const STRIPE_SURCHARGE_RATE = 0.04
 
 export interface BuildReportParams {
   clients: Client[]
@@ -65,10 +68,9 @@ function parseMoney(raw: string | undefined): number {
   return Number.isNaN(num) ? 0 : num
 }
 
-function estimateStripeFee(amount: number, mode: StripeFeeMode): number {
-  if (mode === 'none') return 0
-  if (amount <= 0) return 0
-  return Math.round((amount * STRIPE_PERCENT + STRIPE_FLAT) * 100) / 100
+function stripeSurcharge(amount: number, mode: StripeFeeMode): number {
+  if (mode === 'none' || amount <= 0) return 0
+  return fromCents(Math.round(toCents(amount) * STRIPE_SURCHARGE_RATE))
 }
 
 /** Una venta del mes, con lo cobrado y lo proyectado ya calculados. */
@@ -141,12 +143,13 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
   const accounts = monthSalesOf(clients, monthKey).map((sale): ReportAccount => {
     const { client, process } = sale
     const stateAbbr = (process.state ?? '').toUpperCase()
-    // La comisión de Stripe solo aplica a lo pagado con Stripe, y al saldo si
-    // el primer pago fue con Stripe.
-    const stripeFees = sale.payments
-      .filter((p) => p.method === 'stripe')
-      .map((p) => estimateStripeFee(p.amount, stripeFeeMode))
-    if (projectsStripe(sale)) stripeFees.push(estimateStripeFee(sale.pending, stripeFeeMode))
+    // El recargo aplica a lo pagado con Stripe, y al saldo si el primer pago
+    // fue con Stripe. Se suma a CHARGE y se resta como STRIPE FEE.
+    const stripeBase = sumMoney([
+      ...sale.payments.filter((p) => p.method === 'stripe').map((p) => p.amount),
+      projectsStripe(sale) ? sale.pending : 0,
+    ])
+    const surcharge = stripeSurcharge(stripeBase, stripeFeeMode)
 
     return {
       date: sale.saleDate,
@@ -160,11 +163,11 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
           : client.llc_name?.trim()) || getClientDisplayName(client),
       purchase: getProcessLabel(process),
       state: process.state ?? '',
-      charge: sale.charge,
+      charge: sumMoney([sale.charge, surcharge]),
       stateFee: stateAbbr ? stateFeeByAbbr.get(stateAbbr) ?? 0 : 0,
       registeredAgent: 0,
       hasRegisteredAgent: hasRegisteredAgent(process),
-      stripeFee: sumMoney(stripeFees),
+      stripeFee: surcharge,
       owner: getClientDisplayName(client),
     }
   })
