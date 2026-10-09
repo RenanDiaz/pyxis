@@ -244,15 +244,26 @@ export default function ClientDetail() {
       action: {
         label: 'Sí, registrar',
         onClick: () => {
+          // Es un contacto que ya ocurrió, no una cita: se guarda completado
+          // (antes quedaba "pendiente" con fecha de ahora y aparecía al instante
+          // como llamada vencida).
           createCallMutation.mutate(
             {
               client_id: client.id,
               scheduled_at: Timestamp.now(),
               notes: `Contacto iniciado vía ${channel}`,
-              outcome: 'pendiente',
+              outcome: 'completada',
+              kind: 'contact_attempt',
+              channel,
             },
             {
-              onSuccess: () => toast.success('Contacto registrado'),
+              onSuccess: () => {
+                toast.success('Contacto registrado')
+                // nuevo → contactado, evaluado contra el status actual.
+                if (client.status === 'nuevo') {
+                  updateMutation.mutate({ id: client.id, data: {}, trigger: 'info_added' })
+                }
+              },
               onError: () => toast.error('Error al registrar contacto'),
             },
           )

@@ -10,6 +10,7 @@ import {
   mutateClient,
 } from '@/lib/firestore'
 import type { ClientMutation } from '@/lib/processMutations'
+import type { StatusTrigger } from '@/lib/statusUtils'
 import { useUserProfile } from '@/hooks/useUserProfile'
 
 interface ClientFilters {
@@ -57,8 +58,8 @@ export function useUpdateClient() {
   const { workspaceId } = useUserProfile()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) =>
-      updateClient(workspaceId!, id, data),
+    mutationFn: ({ id, data, trigger }: { id: string; data: Partial<Client>; trigger?: StatusTrigger }) =>
+      updateClient(workspaceId!, id, data, trigger),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },

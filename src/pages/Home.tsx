@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useClients, useUpdateClient } from '@/hooks/useClients'
-import { useUpcomingCalls } from '@/hooks/useCalls'
+import { useCalls, useUpcomingCalls } from '@/hooks/useCalls'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useGoals } from '@/hooks/useGoals'
 import { useAuth } from '@/contexts/AuthContext'
@@ -27,9 +27,11 @@ import { getClientPayments, getClientPaymentSummary, parsePaymentDate } from '@/
 import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
 import { formatMoney } from '@/lib/format'
 import { formatLocalTime } from '@/lib/callTime'
-import { isToday, isYesterday, formatDistanceToNow, format } from 'date-fns'
+import { isToday, isYesterday, formatDistanceToNow, format, startOfDay, endOfDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { sumMoney } from '@/lib/money'
+import { countClosed, countContacted } from '@/lib/statusHistory'
+import { toast } from 'sonner'
 
 /** Pequeño delta contextual (▲/▼ vs. ayer). */
 function Delta({ diff, prefix = '' }: { diff: number; prefix?: string }) {
@@ -51,8 +53,13 @@ function Delta({ diff, prefix = '' }: { diff: number; prefix?: string }) {
   )
 }
 
+/** Placeholder mientras cargan los datos (antes se veía $0 / 0 como si fuera real). */
+function MetricSkeleton() {
+  return <span className="inline-block h-8 w-16 animate-pulse rounded-md bg-muted align-middle" aria-label="Cargando" />
+}
+
 export default function Home() {
-  const { data: clients } = useClients()
+  const { data: clients, isLoading: clientsLoading } = useClients()
   const { data: upcomingCalls } = useUpcomingCalls(5)
   const { wsCtx } = useUserProfile()
   const { user } = useAuth()
@@ -60,6 +67,8 @@ export default function Home() {
   const updateClient = useUpdateClient()
   const [goalModalOpen, setGoalModalOpen] = useState(false)
   const now = useNow(30_000)
+  // Llamadas de hoy (incluye intentos de contacto) para "Contactados hoy".
+  const { data: callsToday } = useCalls({ fromDate: startOfDay(now), toDate: endOfDay(now) })
 
   const allClients = clients ?? []
 
@@ -73,17 +82,10 @@ export default function Home() {
     return d && isYesterday(d)
   }).length
 
-  const contactedToday = allClients.filter((c) => {
-    if (c.status !== 'contactado') return false
-    const d = c.updated_at?.toDate?.()
-    return d && isToday(d)
-  }).length
-
-  const closedToday = allClients.filter((c) => {
-    if (c.status !== 'cerrado') return false
-    const d = c.updated_at?.toDate?.()
-    return d && isToday(d)
-  }).length
+  // Con las fechas del historial de status, no con `updated_at`: editar un
+  // cliente cerrado hace meses ya no lo cuenta como venta de hoy.
+  const contactedToday = countContacted(allClients, callsToday ?? [], isToday)
+  const closedToday = countClosed(allClients, isToday)
 
   const sumPaymentsFor = (predicate: (d: Date) => boolean) =>
     sumMoney(
@@ -102,13 +104,10 @@ export default function Home() {
 
   // ── Meta mensual ──
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  const closedThisMonth = allClients.filter((c) => {
-    if (c.status !== 'cerrado') return false
-    const d = c.updated_at?.toDate?.()
-    if (!d) return false
-    const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-    return m === currentMonth
-  }).length
+  const closedThisMonth = countClosed(
+    allClients,
+    (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === currentMonth,
+  )
   const monthlyPct = monthlyGoal
     ? Math.min(Math.round((closedThisMonth / monthlyGoal.value) * 100), 100)
     : 0
@@ -130,8 +129,15 @@ export default function Home() {
   // ── Listas secundarias ──
   const recentClients = allClients.filter((c) => !c.archived).slice(0, 5)
 
-  const handleMarkLost = (clientId: string) => {
-    updateClient.mutate({ id: clientId, data: { status: 'perdido' } })
+  const handleMarkLost = (clientId: string, name: string) => {
+    if (!confirm(`¿Marcar la deuda de ${name} como perdida? El cliente pasará a "perdido".`)) return
+    updateClient.mutate(
+      { id: clientId, data: { status: 'perdido' } },
+      {
+        onSuccess: () => toast.success('Cliente marcado como perdido'),
+        onError: () => toast.error('No se pudo actualizar el cliente'),
+      },
+    )
   }
 
   const hour = now.getHours()
@@ -217,7 +223,7 @@ export default function Home() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Creados hoy</p>
-            <p className="mt-1 text-3xl font-extrabold tracking-tight">{createdToday}</p>
+            <p className="mt-1 text-3xl font-extrabold tracking-tight">{clientsLoading ? <MetricSkeleton /> : createdToday}</p>
             <p className="mt-1.5">
               <Delta diff={createdToday - createdYesterday} />
             </p>
@@ -226,17 +232,16 @@ export default function Home() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Contactados hoy</p>
-            <p className="mt-1 text-3xl font-extrabold tracking-tight">{contactedToday}</p>
-            <p className="mt-1.5 text-xs font-semibold text-muted-foreground/70">
-              {dailyGoal ? `meta del día · ${dailyGoal.value}` : 'sin meta definida'}
-            </p>
+            <p className="mt-1 text-3xl font-extrabold tracking-tight">{clientsLoading ? <MetricSkeleton /> : contactedToday}</p>
+            {/* La meta diaria es de ventas: no aplica a contactos. */}
+            <p className="mt-1.5 text-xs font-semibold text-muted-foreground/70">clientes distintos</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Ventas cerradas hoy</p>
             <p className="mt-1 text-3xl font-extrabold tracking-tight text-green-600 dark:text-green-400">
-              {closedToday}
+              {clientsLoading ? <MetricSkeleton /> : closedToday}
             </p>
             <p className="mt-1.5 text-xs font-semibold text-muted-foreground/70">
               {dailyGoal ? `meta del día · ${dailyGoal.value}` : 'sin meta definida'}
@@ -247,7 +252,7 @@ export default function Home() {
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Pagos recibidos hoy</p>
             <p className="mt-1 text-3xl font-extrabold tracking-tight">
-              ${formatMoney(paymentsToday)}
+              {clientsLoading ? <MetricSkeleton /> : `$${formatMoney(paymentsToday)}`}
             </p>
             <p className="mt-1.5">
               <Delta diff={paymentsToday - paymentsYesterday} prefix="$" />
@@ -350,7 +355,7 @@ export default function Home() {
                         <Button
                           variant="outline"
                           size="xs"
-                          onClick={() => handleMarkLost(client.id)}
+                          onClick={() => handleMarkLost(client.id, getClientDisplayName(client))}
                           disabled={updateClient.isPending}
                         >
                           Deuda perdida

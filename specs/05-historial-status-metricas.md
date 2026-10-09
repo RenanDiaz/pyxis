@@ -1,6 +1,6 @@
 # 05 — Historial de status y métricas confiables
 
-**Prioridad:** 🟠 Alta · **Estado:** propuesto · **Base para:** [08](08-agenda.md), [11](11-metas.md)
+**Prioridad:** 🟠 Alta · **Estado:** implementado (ver abajo); pendiente meta por ámbito (→ 11) · **Base para:** [08](08-agenda.md), [11](11-metas.md)
 
 ## Problema
 - ✔ `Home.tsx`: "Contactados hoy", "Cerrados hoy" y "Meta del mes" cuentan
@@ -14,6 +14,34 @@
 - "Contactados hoy" muestra la meta de ventas.
 - Sin estado de carga: se ven $0 / "sin llamadas" mientras carga.
 - "Deuda perdida" (`Home.tsx`) marca `perdido` sin confirmación ni toast.
+
+## Implementación (2026-10-09)
+- **R1:**
+  - `src/lib/statusHistory.ts` arma los eventos (`statusChangeFields`, `initialStatusFields`).
+  - Escriben el historial: `createClient`, `updateClient` (cuando trae `status` o un `trigger`) y la transacción de pagos.
+  - El evento siempre se calcula sobre el status actual del documento, dentro de la transacción.
+  - Las transiciones automáticas (`info_added`, `document_uploaded`) viajan como `trigger` y se evalúan contra el status actual. Antes el formulario de edición mandaba el status que tenía al abrirse y podía revertir un cierre hecho mientras tanto.
+- **R2:**
+  - El intento de contacto se guarda como llamada `completada` con `kind: 'contact_attempt'` y `channel`.
+  - Si el cliente está `nuevo`, pasa a `contactado`.
+- **R3:**
+  - "Cerrados hoy/mes" se calcula con `closed_at`.
+  - "Contactados hoy" cuenta clientes distintos (`contacted_at` hoy o una llamada completada hoy, incluidos los intentos). La tarjeta ya no muestra la meta de ventas.
+  - Se muestra un skeleton mientras carga.
+  - Clientes sin migrar: caen a `updated_at` (el criterio anterior).
+- **R4:** "Deuda perdida" pide confirmación y muestra un toast.
+- **R5:** `npx tsx scripts/migrate-status-history.ts [--dry-run]`.
+  - Backfill aproximado de `closed_at` y `contacted_at`.
+  - Corrige los intentos de contacto viejos que quedaron como `pendiente`.
+- **Tests:**
+  - 10 unitarios (`tests/unit/status-history.test.ts`).
+  - 2 de emulador: el cierre por pagos registra el historial, y un `trigger` no revierte un status cambiado.
+
+**Decisiones (P1/P2):**
+- Los intentos de contacto siguen siendo llamadas, marcadas con `kind`, y se ven en el historial del cliente. Ocultarlos de la Agenda queda para el spec 08.
+- "Contactados hoy" cuenta clientes distintos, no intentos.
+
+**Pendiente:** comparar contra la meta del ámbito (equipo para owner/supervisor). Va con el [spec 11](11-metas.md).
 
 ## Objetivo
 Métricas que respondan "¿cuántos contacté/cerré hoy/este mes?" con eventos

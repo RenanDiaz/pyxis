@@ -16,7 +16,7 @@ import {
   writeBatch,
   type QueryConstraint,
 } from 'firebase/firestore'
-import { db, isFirebaseConfigured } from '@/lib/firebase'
+import { auth, db, isFirebaseConfigured } from '@/lib/firebase'
 import type {
   Client,
   ClientStatus,
@@ -33,7 +33,9 @@ import type {
   StateInfo,
 } from '@/types'
 import { uppercaseClientFields } from '@/lib/clientUtils'
-import { runClientMutation } from '@/lib/clientTransactions'
+import { runClientMutation, runClientUpdate } from '@/lib/clientTransactions'
+import type { StatusTrigger } from '@/lib/statusUtils'
+import { initialStatusFields } from '@/lib/statusHistory'
 import type { ClientChange, ClientMutation } from '@/lib/processMutations'
 
 // ── Workspace context for role-based queries ──
@@ -409,6 +411,7 @@ export async function createClient(
   const now = Timestamp.now()
   const ref = await addDoc(wsCol(ctx.workspaceId, 'clients'), {
     ...uppercaseClientFields(data),
+    ...initialStatusFields(data.status, ctx.uid, now),
     archived: false,
     owner_uid: assignTo?.owner_uid ?? ctx.uid,
     subteam_id: assignTo?.subteam_id ?? ctx.subteamId,
@@ -421,13 +424,12 @@ export async function createClient(
 export async function updateClient(
   workspaceId: string,
   id: string,
-  data: Partial<Omit<Client, 'id' | 'created_at'>>
+  data: Partial<Omit<Client, 'id' | 'created_at'>>,
+  trigger?: StatusTrigger,
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  await updateDoc(wsDoc(workspaceId, 'clients', id), {
-    ...uppercaseClientFields(data),
-    updated_at: Timestamp.now(),
-  })
+  // Con `status` o `trigger`, el cambio queda en el historial (statusHistory.ts).
+  await runClientUpdate(db, workspaceId, id, data, { trigger, by: currentUid() })
 }
 
 /** Cambios a procesos y pagos: transaccionales (ver `processMutations.ts`). */
@@ -437,7 +439,11 @@ export async function mutateClient(
   mutation: ClientMutation,
 ): Promise<ClientChange> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  return runClientMutation(db, workspaceId, id, mutation)
+  return runClientMutation(db, workspaceId, id, mutation, currentUid())
+}
+
+function currentUid(): string | null {
+  return auth?.currentUser?.uid ?? null
 }
 
 export async function deleteClient(workspaceId: string, id: string): Promise<void> {
