@@ -29,7 +29,7 @@ const expenses: ExpenseConfig = {
 function build(clients: Client[], monthKey = '2026-10', stripeFeeMode: 'none' | 'surcharge' = 'none') {
   return buildReportInput({
     clients, states, monthKey, monthLabel: 'October 2026',
-    expenses, stripeFeeMode, taxRate: 0.39,
+    expenses, stripeFeeMode, taxRate: 0.39, registeredAgentCost: 45,
   })
 }
 
@@ -141,6 +141,14 @@ describe('reporte de ventas — una fila por venta (P6)', () => {
     )
   })
 
+  it('Registered Agent: H = costo configurado solo si el registro lo incluye', () => {
+    const c = client({}, [
+      proc({ id: 'ra', state: 'TN', has_registered_agent: true, payments: [pay(402, '2026-10-01')] }),
+      proc({ id: 'sin', state: 'NY', payments: [pay(300, '2026-10-02')] }),
+    ])
+    assert.deepEqual(build([c]).accounts.map((a) => a.registeredAgent), [45, 0])
+  })
+
   it('la vista previa resume lo vendido y lista los saldos proyectados', () => {
     const c = client({}, [
       proc({ id: 'a', state: 'NY', total: 609, payments: [pay(304.5, '2026-10-02', 'stripe')] }),
@@ -161,12 +169,12 @@ describe('reporte de ventas — fórmulas', () => {
     accounts: [
       {
         date: new Date(2026, 9, 1), company: 'ACME, LLC', purchase: 'Registro de LLC', state: 'NY',
-        charge: 659, stateFee: 210, registeredAgent: 45, hasRegisteredAgent: true, stripeFee: 0,
+        charge: 659, stateFee: 210, registeredAgent: 45, stripeFee: 0,
         owner: 'ANA PÉREZ',
       },
       {
         date: new Date(2026, 9, 2), company: 'ANA PÉREZ', purchase: 'EIN', state: '',
-        charge: 150, stateFee: 0, registeredAgent: 0, hasRegisteredAgent: false, stripeFee: 4.65,
+        charge: 150, stateFee: 0, registeredAgent: 0, stripeFee: 4.65,
         owner: 'ANA PÉREZ',
       },
     ],
@@ -178,8 +186,10 @@ describe('reporte de ventas — fórmulas', () => {
     assert.equal(ws.getCell('F2').value, 659)
     assert.equal(f('I2'), '(F2-G2-H2-J2)*0.39')
     assert.equal(f('K2'), 'F2-G2-H2-J2-I2')
-    assert.equal(f('I3'), '(F3-G3-J3)*0.39')
-    assert.equal(f('K3'), 'F3-G3-J3-I3')
+    // Sin RA, H vale 0: la fórmula es la misma para todas las filas.
+    assert.equal(f('I3'), '(F3-G3-H3-J3)*0.39')
+    assert.equal(f('K3'), 'F3-G3-H3-J3-I3')
+    assert.equal(ws.getCell('H3').value, 0)
     assert.equal(ws.getCell('A3').value, 2)
     assert.equal(f('K4'), 'SUM(K2:K3)')
     assert.equal(ws.getCell('C2').isMerged, false)

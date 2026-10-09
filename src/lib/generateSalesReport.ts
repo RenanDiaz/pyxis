@@ -27,9 +27,8 @@ export interface ReportAccount {
   /** Total vendido, incluido lo que falta cobrar. */
   charge: number
   stateFee: number
+  /** Costo del Registered Agent; 0 si la cuenta no lo incluye. */
   registeredAgent: number
-  /** true = TAX y NET de esta cuenta restan el Registered Agent (H). */
-  hasRegisteredAgent: boolean
   stripeFee: number
   owner: string
 }
@@ -142,9 +141,9 @@ function writeHeader(ws: ExcelJS.Worksheet): void {
 function writeAccounts(ws: ExcelJS.Worksheet, input: ReportInput): number {
   input.accounts.forEach((account, i) => {
     const r = i + 2
-    // State fee, RA (si aplica) y Stripe fee restan antes del TAX, como el
+    // State fee, RA (0 si no aplica) y Stripe fee restan antes del TAX, como el
     // manual: el recargo de Stripe no paga impuesto (spec 04, #7).
-    const costs = account.hasRegisteredAgent ? `-G${r}-H${r}-J${r}` : `-G${r}-J${r}`
+    const costs = `-G${r}-H${r}-J${r}`
     setCell(ws, `A${r}`, i + 1, { font: FONT_DATA })
     setCell(ws, `B${r}`, normalizeDate(account.date), { font: FONT_DATA, numFmt: FMT_DATE })
     setCell(ws, `C${r}`, account.company, { font: FONT_DATA, align: LEFT })

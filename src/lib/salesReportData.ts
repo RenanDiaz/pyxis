@@ -18,9 +18,9 @@
  *  - `stateFee` se deriva del documento del estado del PROCESO (states.json).
  *    Sin `process.state` va en 0 y la UI lo advierte: no se usa `client.state`,
  *    que puede ser el de otra compañía del cliente.
- *  - El costo del Registered Agent no se registra en el CRM → columna H en 0;
- *    si el proceso incluye Registered Agent (`has_registered_agent`), las
- *    fórmulas de TAX y NET de esa cuenta restan H (se puede completar en Excel).
+ *  - Registered Agent (#9): Pyxis no guarda su costo; si el proceso lo incluye
+ *    (`has_registered_agent`), H = `registeredAgentCost` (45 por defecto, como
+ *    el Excel manual); si no, 0.
  *  - Stripe (P5): el cliente paga un RECARGO del 4 % sobre lo que paga con
  *    Stripe, y Pyxis guarda el pago SIN recargo (el recargo no es venta, spec 18).
  *    Como el Excel manual, el recargo se suma a CHARGE y se resta como STRIPE FEE
@@ -49,6 +49,9 @@ export type StripeFeeMode = 'surcharge' | 'none'
 /** Recargo que paga el cliente sobre lo cobrado con Stripe (Excel manual). */
 export const STRIPE_SURCHARGE_RATE = 0.04
 
+/** Costo del Registered Agent por cuenta que lo incluye (Excel manual). */
+export const DEFAULT_REGISTERED_AGENT_COST = 45
+
 export interface BuildReportParams {
   clients: Client[]
   states: StateInfo[]
@@ -59,6 +62,8 @@ export interface BuildReportParams {
   expenses: ExpenseConfig
   stripeFeeMode: StripeFeeMode
   taxRate: number
+  /** Costo del Registered Agent (columna H) de las cuentas que lo incluyen. */
+  registeredAgentCost: number
 }
 
 /** Convierte "$245", "245.0", "N/A" → número (0 si no es parseable). */
@@ -133,7 +138,9 @@ function projectsStripe(sale: MonthSale): boolean {
  * por fecha de venta y numeradas en ese orden por el generador.
  */
 export function buildReportInput(params: BuildReportParams): ReportInput {
-  const { clients, states, monthKey, monthLabel, expenses, stripeFeeMode, taxRate } = params
+  const {
+    clients, states, monthKey, monthLabel, expenses, stripeFeeMode, taxRate, registeredAgentCost,
+  } = params
 
   const stateFeeByAbbr = new Map<string, number>()
   for (const s of states) {
@@ -165,8 +172,7 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
       state: process.state ?? '',
       charge: sumMoney([sale.charge, surcharge]),
       stateFee: stateAbbr ? stateFeeByAbbr.get(stateAbbr) ?? 0 : 0,
-      registeredAgent: 0,
-      hasRegisteredAgent: hasRegisteredAgent(process),
+      registeredAgent: hasRegisteredAgent(process) ? registeredAgentCost : 0,
       stripeFee: surcharge,
       owner: getClientDisplayName(client),
     }

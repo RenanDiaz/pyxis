@@ -30,7 +30,7 @@ las referencias citan solo hoja + tipo + estado.
 | ✔ 6 | `TAX_RATE = 0.34` fijo | **0.39** (0.34 en Jun–Jul) | La tasa cambia; debe ser configurable en el diálogo. |
 | ✔ 7 ✅ | TAX = `(F-G[-H])*rate` | TAX = `(F-G-H-J)*rate` | El manual resta el Stripe fee **antes** del impuesto (desde Jul). |
 | ✔ 8 ✅ | Stripe fee estimado `2.9% + $0.30` | ≈ **4 % del precio base** (CHARGE = base × 1.04; J = CHARGE − base). Excepciones al 2 %. | Parece el *surcharge* que se cobra al cliente, no la comisión real de Stripe. Ver P5. |
-| ✔ 9 | REGISTERED AGENT siempre 0 | 45 cuando aplica | Llenar con un costo configurable (default 45) si `has_registered_agent`. |
+| ✔ 9 ✅ | REGISTERED AGENT siempre 0 | 45 cuando aplica | Llenar con un costo configurable (default 45) si `has_registered_agent`. |
 | ✔ 10 ✅ | Una fila **por pago**; CHARGE = monto del pago | Una fila **por cuenta**; CHARGE = total acordado; columna **OWES** = saldo pendiente | Diferencia de modelo. Ver P6. |
 | ✔ 11 | Columnas A–L, L = OWNER | L = comisión por fila (`K*0.15`), M = OWNER, N = OWES, O = FORMA DE PAGO | El generador replica un formato anterior. Ver P6. |
 | ✔ 12 ✅ | Comisión = `(K_total − basePay) × rate` | Comisión = `K_total × 0.15` (desde Jul; June sí restaba 500) | Resuelto (P7). |
@@ -182,9 +182,13 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
 - P5 / #7 / #8: recargo de Stripe del 4 % en CHARGE y STRIPE FEE (default del
   diálogo; lo guardado en el navegador con el modo viejo se descarta una vez);
   TAX = `(F-G[-H]-J)*rate`, NET = `F-G[-H]-J-I`.
+- #9: H = costo del Registered Agent (default 45, editable en el diálogo) cuando el
+  registro tiene `has_registered_agent`; si no, 0. TAX y NET restan H siempre, como el
+  manual. Verificado con septiembre: las 2 cuentas marcadas en Pyxis (NJ, TN) son las
+  que llevan 45 en el manual, y ninguna otra.
 - Tests: `tests/unit/sales-report.test.ts`.
 
-**Pendiente:** #9 (RA = 45), #2 (company), #3/P3, #4, costo por tipo de proceso (P8), catálogo
+**Pendiente:** #2 (company), #3/P3, #4, costo por tipo de proceso (P8), catálogo
 (req. 12) y editar pagos (req. 14).
 
 ## Criterios de aceptación

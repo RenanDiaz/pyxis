@@ -103,6 +103,7 @@ export default function Reports() {
         expenses: settings.expenses,
         stripeFeeMode: settings.stripeFeeMode,
         taxRate: settings.taxRate,
+        registeredAgentCost: settings.registeredAgentCost,
       })
       // Carga diferida: ExcelJS es pesado y solo se necesita al exportar.
       const { downloadSalesReport } = await import('@/lib/generateSalesReport')
