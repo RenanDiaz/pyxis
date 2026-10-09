@@ -3,19 +3,22 @@
     "abbreviation": "AL",
     "name": "Alabama",
     "sale_price": "$699",
-    "state_fee": "$245",
+    "state_fee": "236",
     "processing_days": "10",
     "annual_report": {
       "fee": "149",
-      "due_date": "Columna3"
+      "due_date": "Columna3",
+      "state_cost": ""
     },
     "dissolution": {
       "fee": "300",
-      "processing_days": "7"
+      "processing_days": "7",
+      "state_cost": "104"
     },
     "amendments": {
       "available": "YES",
-      "fee": "325"
+      "fee": "325",
+      "state_cost": "125"
     },
     "business_purpose": {
       "specific": "NO",
@@ -39,15 +42,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "249.0",
-      "due_date": "Biennial, January 2nd"
+      "due_date": "Biennial, January 2nd",
+      "state_cost": "100"
     },
     "dissolution": {
       "fee": "225.0",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "25"
     },
     "amendments": {
       "available": "NO",
-      "fee": "225.0"
+      "fee": "225.0",
+      "state_cost": "25"
     },
     "business_purpose": {
       "specific": "NO",
@@ -67,15 +73,18 @@
     "processing_days": "20.0",
     "annual_report": {
       "fee": "149.0",
-      "due_date": "No annual fee + no report due"
+      "due_date": "No annual fee + no report due",
+      "state_cost": ""
     },
     "dissolution": {
       "fee": "235.0",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "70"
     },
     "amendments": {
       "available": "YES",
-      "fee": "260.0"
+      "fee": "260.0",
+      "state_cost": "60"
     },
     "business_purpose": {
       "specific": "SI",
@@ -95,19 +104,22 @@
     "abbreviation": "AR",
     "name": "Arkansas",
     "sale_price": "499.0",
-    "state_fee": "50.0",
+    "state_fee": "45",
     "processing_days": "7.0",
     "annual_report": {
       "fee": "299.0",
-      "due_date": "Annual, May 1st"
+      "due_date": "Annual, May 1st",
+      "state_cost": "155"
     },
     "dissolution": {
       "fee": "245.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "45"
     },
     "amendments": {
       "available": "YES",
-      "fee": "225.0"
+      "fee": "225.0",
+      "state_cost": "25"
     },
     "business_purpose": {
       "specific": "NO",
@@ -125,19 +137,22 @@
     "abbreviation": "CA",
     "name": "California",
     "sale_price": "549.0",
-    "state_fee": "75.0",
+    "state_fee": "70",
     "processing_days": "15.0",
     "annual_report": {
       "fee": "969.0",
-      "due_date": "Various"
+      "due_date": "Various",
+      "state_cost": ""
     },
     "dissolution": {
       "fee": "205.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": ""
     },
     "amendments": {
       "available": "NO",
-      "fee": "230.0"
+      "fee": "230.0",
+      "state_cost": "30"
     },
     "business_purpose": {
       "specific": "NO",
@@ -188,15 +203,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "159.0",
-      "due_date": "Annual, End of Inc Month"
+      "due_date": "Annual, End of Inc Month",
+      "state_cost": "25"
     },
     "dissolution": {
       "fee": "210.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "10"
     },
     "amendments": {
       "available": "YES",
-      "fee": "225.0"
+      "fee": "225.0",
+      "state_cost": "25"
     },
     "business_purpose": {
       "specific": "NO",
@@ -219,15 +237,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "229.0",
-      "due_date": "Annual, March 31"
+      "due_date": "Annual, March 31",
+      "state_cost": "80"
     },
     "dissolution": {
       "fee": "200.0",
-      "processing_days": "60.0"
+      "processing_days": "60.0",
+      "state_cost": "0"
     },
     "amendments": {
       "available": "NO",
-      "fee": "320.0"
+      "fee": "320.0",
+      "state_cost": "120"
     },
     "business_purpose": {
       "specific": "SI",
@@ -246,19 +267,22 @@
     "abbreviation": "DE",
     "name": "Delaware",
     "sale_price": "589.0",
-    "state_fee": "140.0",
+    "state_fee": "260",
     "processing_days": "20.0",
     "annual_report": {
       "fee": "449.0",
-      "due_date": "Annual, June 1st"
+      "due_date": "Annual, June 1st",
+      "state_cost": "300"
     },
     "dissolution": {
       "fee": "NO",
-      "processing_days": "NO"
+      "processing_days": "NO",
+      "state_cost": ""
     },
     "amendments": {
       "available": "NO",
-      "fee": "500.0"
+      "fee": "500.0",
+      "state_cost": "320"
     },
     "business_purpose": {
       "specific": "NO",
@@ -278,15 +302,18 @@
     "processing_days": "10.0",
     "annual_report": {
       "fee": "449.0",
-      "due_date": "Annual, June 1st"
+      "due_date": "Annual, June 1st",
+      "state_cost": "300"
     },
     "dissolution": {
       "fee": "420.0",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "220"
     },
     "amendments": {
       "available": "YES",
-      "fee": "420.0"
+      "fee": "420.0",
+      "state_cost": "220"
     },
     "business_purpose": {
       "specific": "NO",
@@ -306,15 +333,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "287.75",
-      "due_date": "Annual, May 1st"
+      "due_date": "Annual, May 1st",
+      "state_cost": "138.75"
     },
     "dissolution": {
       "fee": "225.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "25"
     },
     "amendments": {
       "available": "YES",
-      "fee": "235.0"
+      "fee": "235.0",
+      "state_cost": "75"
     },
     "business_purpose": {
       "specific": "NO",
@@ -346,19 +376,22 @@
     "abbreviation": "GA",
     "name": "Georgia",
     "sale_price": "549.0",
-    "state_fee": "100.0",
+    "state_fee": "110",
     "processing_days": "15.0",
     "annual_report": {
       "fee": "199.0",
-      "due_date": "Annual, April 1st"
+      "due_date": "Annual, April 1st",
+      "state_cost": "60"
     },
     "dissolution": {
       "fee": "200.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "10"
     },
     "amendments": {
       "available": "NO",
-      "fee": "220.0"
+      "fee": "220.0",
+      "state_cost": "30"
     },
     "business_purpose": {
       "specific": "NO",
@@ -382,19 +415,22 @@
     "abbreviation": "ID",
     "name": "Idaho",
     "sale_price": "549.0",
-    "state_fee": "101.0",
+    "state_fee": "104",
     "processing_days": "10.0",
     "annual_report": {
       "fee": "149.0",
-      "due_date": "Annual, INC Date"
+      "due_date": "Annual, INC Date",
+      "state_cost": "0"
     },
     "dissolution": {
       "fee": "200.0",
-      "processing_days": "20.0"
+      "processing_days": "20.0",
+      "state_cost": "0"
     },
     "amendments": {
       "available": "YES",
-      "fee": "230.0"
+      "fee": "230.0",
+      "state_cost": "30"
     },
     "business_purpose": {
       "specific": "NO",
@@ -411,19 +447,22 @@
     "abbreviation": "IL",
     "name": "Illinois",
     "sale_price": "599.0",
-    "state_fee": "155.88",
+    "state_fee": "153.38",
     "processing_days": "15.0",
     "annual_report": {
       "fee": "224.0",
-      "due_date": "Prior to the first day of the registration anniversary month."
+      "due_date": "Prior to the first day of the registration anniversary month.",
+      "state_cost": "76.69"
     },
     "dissolution": {
       "fee": "205.0",
-      "processing_days": "45.0"
+      "processing_days": "45.0",
+      "state_cost": "5"
     },
     "amendments": {
       "available": "NO",
-      "fee": "250.0"
+      "fee": "250.0",
+      "state_cost": "50"
     },
     "business_purpose": {
       "specific": "NO",
@@ -455,15 +494,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "199.0",
-      "due_date": "Biennial, INC Date"
+      "due_date": "Biennial, INC Date",
+      "state_cost": "32"
     },
     "dissolution": {
       "fee": "221.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "21"
     },
     "amendments": {
       "available": "YES",
-      "fee": "225.0"
+      "fee": "225.0",
+      "state_cost": "25"
     },
     "business_purpose": {
       "specific": "NO",
@@ -490,15 +532,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "209.0",
-      "due_date": "Biennial, April 1st of odd years"
+      "due_date": "Biennial, April 1st of odd years",
+      "state_cost": "30"
     },
     "dissolution": {
       "fee": "205.0",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "5"
     },
     "amendments": {
       "available": "NO",
-      "fee": "250.0"
+      "fee": "250.0",
+      "state_cost": "50"
     },
     "business_purpose": {
       "specific": "NO",
@@ -518,19 +563,22 @@
     "abbreviation": "KS",
     "name": "Kansas",
     "sale_price": "649.0",
-    "state_fee": "166.0",
+    "state_fee": "85",
     "processing_days": "7.0",
     "annual_report": {
       "fee": "199.0",
-      "due_date": "Annual, April 15th"
+      "due_date": "Annual, April 15th",
+      "state_cost": "90"
     },
     "dissolution": {
       "fee": "235.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "35"
     },
     "amendments": {
       "available": "YES",
-      "fee": "235.0"
+      "fee": "235.0",
+      "state_cost": "35"
     },
     "business_purpose": {
       "specific": "NO",
@@ -553,15 +601,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "164.0",
-      "due_date": "Annual, June 30th"
+      "due_date": "Annual, June 30th",
+      "state_cost": "15"
     },
     "dissolution": {
       "fee": "240.0",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "40"
     },
     "amendments": {
       "available": "YES",
-      "fee": "240.0"
+      "fee": "240.0",
+      "state_cost": "40"
     },
     "business_purpose": {
       "specific": "NO",
@@ -585,15 +636,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "184.0",
-      "due_date": "Annual, INC Date"
+      "due_date": "Annual, INC Date",
+      "state_cost": "35"
     },
     "dissolution": {
       "fee": "305.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "105"
     },
     "amendments": {
       "available": "NO",
-      "fee": "300.0"
+      "fee": "300.0",
+      "state_cost": "100"
     },
     "business_purpose": {
       "specific": "NO",
@@ -613,19 +667,22 @@
     "abbreviation": "ME",
     "name": "Maine",
     "sale_price": "649.0",
-    "state_fee": "177.0",
+    "state_fee": "277",
     "processing_days": "20.0",
     "annual_report": {
       "fee": "234.0",
-      "due_date": "Annual, June 1st"
+      "due_date": "Annual, June 1st",
+      "state_cost": "85"
     },
     "dissolution": {
       "fee": "275.0",
-      "processing_days": "60.0"
+      "processing_days": "60.0",
+      "state_cost": "75"
     },
     "amendments": {
       "available": "YES",
-      "fee": "250.0"
+      "fee": "250.0",
+      "state_cost": "100"
     },
     "business_purpose": {
       "specific": "NO",
@@ -641,19 +698,22 @@
     "abbreviation": "MD",
     "name": "Maryland",
     "sale_price": "699.0",
-    "state_fee": "247.0",
+    "state_fee": "195.7",
     "processing_days": "20.0",
     "annual_report": {
       "fee": "449.0",
-      "due_date": "Annual, April 15th"
+      "due_date": "Annual, April 15th",
+      "state_cost": "300"
     },
     "dissolution": {
       "fee": "251.5",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "51.5"
     },
     "amendments": {
       "available": "NO",
-      "fee": "355.0"
+      "fee": "355.0",
+      "state_cost": "155"
     },
     "business_purpose": {
       "specific": "NO",
@@ -673,19 +733,22 @@
     "abbreviation": "MA",
     "name": "Massachusetts",
     "sale_price": "979.0",
-    "state_fee": "525.0",
+    "state_fee": "520",
     "processing_days": "7.0",
     "annual_report": {
       "fee": "649.0",
-      "due_date": "Annual, INC Date"
+      "due_date": "Annual, INC Date",
+      "state_cost": "520"
     },
     "dissolution": {
       "fee": "300.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "100"
     },
     "amendments": {
       "available": "YES",
-      "fee": "310.0"
+      "fee": "310.0",
+      "state_cost": "110"
     },
     "business_purpose": {
       "specific": "NO",
@@ -713,15 +776,18 @@
     "processing_days": "10.0",
     "annual_report": {
       "fee": "174.0",
-      "due_date": "Annual, February 15th"
+      "due_date": "Annual, February 15th",
+      "state_cost": "25"
     },
     "dissolution": {
       "fee": "210.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "10"
     },
     "amendments": {
       "available": "YES",
-      "fee": "225.0"
+      "fee": "225.0",
+      "state_cost": "25"
     },
     "business_purpose": {
       "specific": "SI",
@@ -748,19 +814,22 @@
     "abbreviation": "MN",
     "name": "Minnesota",
     "sale_price": "609.0",
-    "state_fee": "160.0",
+    "state_fee": "155",
     "processing_days": "7.0",
     "annual_report": {
       "fee": "149.0",
-      "due_date": "Annual, December 31st"
+      "due_date": "Annual, December 31st",
+      "state_cost": "0"
     },
     "dissolution": {
       "fee": "255.0",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "55"
     },
     "amendments": {
       "available": "YES",
-      "fee": "255.0"
+      "fee": "255.0",
+      "state_cost": "55"
     },
     "business_purpose": {
       "specific": "NO",
@@ -786,15 +855,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "149.0",
-      "due_date": "Annual, April 15th"
+      "due_date": "Annual, April 15th",
+      "state_cost": "0"
     },
     "dissolution": {
       "fee": "253.14",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "53.14"
     },
     "amendments": {
       "available": "YES",
-      "fee": "255.0"
+      "fee": "255.0",
+      "state_cost": "55"
     },
     "business_purpose": {
       "specific": "NO",
@@ -813,19 +885,22 @@
     "abbreviation": "MO",
     "name": "Missouri",
     "sale_price": "499.0",
-    "state_fee": "51.75",
+    "state_fee": "51.25",
     "processing_days": "7.0",
     "annual_report": {
       "fee": "149.0",
-      "due_date": "No annual fee + no report due"
+      "due_date": "No annual fee + no report due",
+      "state_cost": ""
     },
     "dissolution": {
       "fee": "226.25",
-      "processing_days": "4 Months"
+      "processing_days": "4 Months",
+      "state_cost": "26.25"
     },
     "amendments": {
       "available": "YES",
-      "fee": "230.0"
+      "fee": "230.0",
+      "state_cost": "30"
     },
     "business_purpose": {
       "specific": "SI",
@@ -846,19 +921,22 @@
     "abbreviation": "MT",
     "name": "Montana",
     "sale_price": "549.0",
-    "state_fee": "70.0",
+    "state_fee": "35",
     "processing_days": "10.0",
     "annual_report": {
       "fee": "169.0",
-      "due_date": "Annual, April 15th"
+      "due_date": "Annual, April 15th",
+      "state_cost": "0"
     },
     "dissolution": {
       "fee": "215.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "15"
     },
     "amendments": {
       "available": "YES",
-      "fee": "270.0"
+      "fee": "270.0",
+      "state_cost": "15"
     },
     "business_purpose": {
       "specific": "SI",
@@ -878,15 +956,18 @@
     "processing_days": "10.0",
     "annual_report": {
       "fee": "159.0",
-      "due_date": "Biennial, April 1st of odd years"
+      "due_date": "Biennial, April 1st of odd years",
+      "state_cost": "28"
     },
     "dissolution": {
       "fee": "222.0",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "22"
     },
     "amendments": {
       "available": "YES",
-      "fee": "210.0"
+      "fee": "210.0",
+      "state_cost": "27"
     },
     "business_purpose": {
       "specific": "NO",
@@ -908,15 +989,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "499.0",
-      "due_date": "Annual, INC Date"
+      "due_date": "Annual, INC Date",
+      "state_cost": "350"
     },
     "dissolution": {
       "fee": "300.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "100"
     },
     "amendments": {
       "available": "NO",
-      "fee": "375.0"
+      "fee": "375.0",
+      "state_cost": "175"
     },
     "business_purpose": {
       "specific": "NO",
@@ -934,19 +1018,22 @@
     "abbreviation": "NH",
     "name": "New Hampshire",
     "sale_price": "559.0",
-    "state_fee": "107.0",
+    "state_fee": "102",
     "processing_days": "15.0",
     "annual_report": {
       "fee": "249.0",
-      "due_date": "Annual, April 1st"
+      "due_date": "Annual, April 1st",
+      "state_cost": "102"
     },
     "dissolution": {
       "fee": "237.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "37"
     },
     "amendments": {
       "available": "YES",
-      "fee": "240.0"
+      "fee": "240.0",
+      "state_cost": "40"
     },
     "business_purpose": {
       "specific": "NO",
@@ -966,15 +1053,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "224.0",
-      "due_date": "Annual, anniversary month"
+      "due_date": "Annual, anniversary month",
+      "state_cost": "78"
     },
     "dissolution": {
       "fee": "328.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "128"
     },
     "amendments": {
       "available": "YES",
-      "fee": "305.0"
+      "fee": "305.0",
+      "state_cost": "105"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1002,15 +1092,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "149.0",
-      "due_date": "No annual fee + no report due"
+      "due_date": "No annual fee + no report due",
+      "state_cost": ""
     },
     "dissolution": {
       "fee": "225.0",
-      "processing_days": "60.0"
+      "processing_days": "60.0",
+      "state_cost": "26.95"
     },
     "amendments": {
       "available": "YES",
-      "fee": "250.0"
+      "fee": "250.0",
+      "state_cost": "51.95"
     },
     "business_purpose": {
       "specific": "SI",
@@ -1031,15 +1124,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "158.0",
-      "due_date": "Biennial, anniversary month"
+      "due_date": "Biennial, anniversary month",
+      "state_cost": "9"
     },
     "dissolution": {
       "fee": "290.0",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "90"
     },
     "amendments": {
       "available": "YES",
-      "fee": "290.0"
+      "fee": "290.0",
+      "state_cost": "90"
     },
     "business_purpose": {
       "specific": "SI",
@@ -1077,15 +1173,18 @@
     "processing_days": "10.0",
     "annual_report": {
       "fee": "349.0",
-      "due_date": "Annual, April 15th"
+      "due_date": "Annual, April 15th",
+      "state_cost": "203"
     },
     "dissolution": {
       "fee": "233.0",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "33"
     },
     "amendments": {
       "available": "YES",
-      "fee": "255.0"
+      "fee": "255.0",
+      "state_cost": "55"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1113,15 +1212,18 @@
     "processing_days": "10.0",
     "annual_report": {
       "fee": "199.0",
-      "due_date": "Annual, November 15th"
+      "due_date": "Annual, November 15th",
+      "state_cost": "50"
     },
     "dissolution": {
       "fee": "210.0",
-      "processing_days": "20.0"
+      "processing_days": "20.0",
+      "state_cost": "20"
     },
     "amendments": {
       "available": "YES",
-      "fee": "250.0"
+      "fee": "250.0",
+      "state_cost": "50"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1141,15 +1243,18 @@
     "processing_days": "10.0",
     "annual_report": {
       "fee": "149.0",
-      "due_date": "No annual fee + no report due"
+      "due_date": "No annual fee + no report due",
+      "state_cost": ""
     },
     "dissolution": {
       "fee": "250.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "50"
     },
     "amendments": {
       "available": "YES",
-      "fee": "250.0"
+      "fee": "250.0",
+      "state_cost": "50"
     },
     "business_purpose": {
       "specific": "SI",
@@ -1180,15 +1285,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "174.0",
-      "due_date": "Annual, INC Date"
+      "due_date": "Annual, INC Date",
+      "state_cost": "25"
     },
     "dissolution": {
       "fee": "250.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "52"
     },
     "amendments": {
       "available": "YES",
-      "fee": "250.0"
+      "fee": "250.0",
+      "state_cost": "50"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1211,15 +1319,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "249.0",
-      "due_date": "Annual, INC Date"
+      "due_date": "Annual, INC Date",
+      "state_cost": "100"
     },
     "dissolution": {
       "fee": "300.0",
-      "processing_days": "60.0"
+      "processing_days": "60.0",
+      "state_cost": "100"
     },
     "amendments": {
       "available": "NO",
-      "fee": "300.0"
+      "fee": "300.0",
+      "state_cost": "100"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1242,15 +1353,18 @@
     "processing_days": "20.0",
     "annual_report": {
       "fee": "156.0",
-      "due_date": "ANNUAL BY SEPT"
+      "due_date": "ANNUAL BY SEPT",
+      "state_cost": "7"
     },
     "dissolution": {
       "fee": "NO",
-      "processing_days": "NO"
+      "processing_days": "NO",
+      "state_cost": ""
     },
     "amendments": {
       "available": "YES",
-      "fee": "270.0"
+      "fee": "270.0",
+      "state_cost": "77"
     },
     "business_purpose": {
       "specific": "SI",
@@ -1280,15 +1394,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "199.0",
-      "due_date": "Annual, September 1st - November 1st"
+      "due_date": "Annual, September 1st - November 1st",
+      "state_cost": "52.5"
     },
     "dissolution": {
       "fee": "250.0",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "52.5"
     },
     "amendments": {
       "available": "YES",
-      "fee": "255.0"
+      "fee": "255.0",
+      "state_cost": "55"
     },
     "business_purpose": {
       "specific": "SI",
@@ -1304,19 +1421,22 @@
     "abbreviation": "SC",
     "name": "South Carolina",
     "sale_price": "579.0",
-    "state_fee": "131.5",
+    "state_fee": "125",
     "processing_days": "7.0",
     "annual_report": {
       "fee": "149.0",
-      "due_date": "No report due unless you file taxes as an S-Corp"
+      "due_date": "No report due unless you file taxes as an S-Corp",
+      "state_cost": ""
     },
     "dissolution": {
       "fee": "210.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "15"
     },
     "amendments": {
       "available": "YES",
-      "fee": "325.0"
+      "fee": "325.0",
+      "state_cost": "130.5"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1339,15 +1459,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "199.0",
-      "due_date": "Annual, INC Date"
+      "due_date": "Annual, INC Date",
+      "state_cost": "56.35"
     },
     "dissolution": {
       "fee": "210.0",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "10"
     },
     "amendments": {
       "available": "YES",
-      "fee": "260.0"
+      "fee": "260.0",
+      "state_cost": "60"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1363,19 +1486,22 @@
     "abbreviation": "TN",
     "name": "Tennessee",
     "sale_price": "759.0",
-    "state_fee": "308.25",
+    "state_fee": "307.05",
     "processing_days": "7.0",
     "annual_report": {
       "fee": "449.0",
-      "due_date": "Annual, April 1st"
+      "due_date": "Annual, April 1st",
+      "state_cost": "307.85"
     },
     "dissolution": {
       "fee": "NO",
-      "processing_days": "NO"
+      "processing_days": "NO",
+      "state_cost": ""
     },
     "amendments": {
       "available": "YES",
-      "fee": "220.0"
+      "fee": "220.0",
+      "state_cost": "21"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1401,15 +1527,18 @@
     "processing_days": "10.0",
     "annual_report": {
       "fee": "149.0",
-      "due_date": "Annual, May 15th"
+      "due_date": "Annual, May 15th",
+      "state_cost": ""
     },
     "dissolution": {
       "fee": "NO",
-      "processing_days": "NO"
+      "processing_days": "NO",
+      "state_cost": ""
     },
     "amendments": {
       "available": "YES",
-      "fee": "355.0"
+      "fee": "355.0",
+      "state_cost": "155"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1451,19 +1580,22 @@
     "abbreviation": "UT",
     "name": "Utah",
     "sale_price": "549.0",
-    "state_fee": "77.0",
+    "state_fee": "59",
     "processing_days": "10.0",
     "annual_report": {
       "fee": "169.0",
-      "due_date": "Annual, INC Date"
+      "due_date": "Annual, INC Date",
+      "state_cost": "18"
     },
     "dissolution": {
       "fee": "200.0",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "0"
     },
     "amendments": {
       "available": "YES",
-      "fee": "240.0"
+      "fee": "240.0",
+      "state_cost": "40"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1485,15 +1617,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "184.0",
-      "due_date": "Annual, March 15th"
+      "due_date": "Annual, March 15th",
+      "state_cost": "45"
     },
     "dissolution": {
       "fee": "220.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "20"
     },
     "amendments": {
       "available": "YES",
-      "fee": "325.0"
+      "fee": "325.0",
+      "state_cost": "125"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1509,19 +1644,22 @@
     "abbreviation": "VA",
     "name": "Virginia",
     "sale_price": "549.0",
-    "state_fee": "102.4",
+    "state_fee": "100",
     "processing_days": "7.0",
     "annual_report": {
       "fee": "199.0",
-      "due_date": "Annual, INC Date"
+      "due_date": "Annual, INC Date",
+      "state_cost": "50"
     },
     "dissolution": {
       "fee": "225.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "25"
     },
     "amendments": {
       "available": "NO",
-      "fee": "225.0"
+      "fee": "225.0",
+      "state_cost": "25"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1547,15 +1685,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "209.0",
-      "due_date": "Annual, INC Date"
+      "due_date": "Annual, INC Date",
+      "state_cost": "70"
     },
     "dissolution": {
       "fee": "220.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "20"
     },
     "amendments": {
       "available": "YES",
-      "fee": "250.0"
+      "fee": "250.0",
+      "state_cost": "50"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1580,15 +1721,18 @@
     "processing_days": "15.0",
     "annual_report": {
       "fee": "174.0",
-      "due_date": "Annual, July 1st"
+      "due_date": "Annual, July 1st",
+      "state_cost": "25"
     },
     "dissolution": {
       "fee": "225.0",
-      "processing_days": "30.0"
+      "processing_days": "30.0",
+      "state_cost": "25"
     },
     "amendments": {
       "available": "YES",
-      "fee": "225.0"
+      "fee": "225.0",
+      "state_cost": "25"
     },
     "business_purpose": {
       "specific": "NO",
@@ -1609,15 +1753,18 @@
     "processing_days": "7.0",
     "annual_report": {
       "fee": "174.0",
-      "due_date": "Annual, anniversary quarter"
+      "due_date": "Annual, anniversary quarter",
+      "state_cost": "26"
     },
     "dissolution": {
       "fee": "220.0",
-      "processing_days": "7.0"
+      "processing_days": "7.0",
+      "state_cost": "70"
     },
     "amendments": {
       "available": "NO",
-      "fee": "240.0"
+      "fee": "240.0",
+      "state_cost": "40"
     },
     "business_purpose": {
       "specific": "SI",
@@ -1638,19 +1785,22 @@
     "abbreviation": "WY",
     "name": "Wyoming",
     "sale_price": "559.0",
-    "state_fee": "109.2",
+    "state_fee": "102.4",
     "processing_days": "7.0",
     "annual_report": {
       "fee": "209.0",
-      "due_date": "Annual, INC Date"
+      "due_date": "Annual, INC Date",
+      "state_cost": "60"
     },
     "dissolution": {
       "fee": "250.0",
-      "processing_days": "60.0"
+      "processing_days": "60.0",
+      "state_cost": "50"
     },
     "amendments": {
       "available": "NO",
-      "fee": "250.0"
+      "fee": "250.0",
+      "state_cost": "60"
     },
     "business_purpose": {
       "specific": "NO",

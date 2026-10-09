@@ -148,7 +148,7 @@ type ProcessType =
   | 'registration' | 'annual_report' | 'dissolution' | 'amendment'
   | 'newspaper_research' | 'newspaper_publication'
   | 'sale_tax_license' | 'resale_certificate' | 'ein' | 'boi'
-  | 'statement_of_formation'
+  | 'statement_of_formation' | 'itin'
   | 'custom' // proceso extraordinario con nombre libre (custom_label)
 
 type ProcessStage = 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
@@ -169,6 +169,7 @@ interface ClientProcess {
   business_purpose?: string
   notes?: string
   sold_at?: string           // fecha de venta (yyyy-MM-dd): mes en que la cuenta el reporte
+  state_cost?: number        // costo estatal capturado (STATE FEE del reporte); manda sobre el catálogo
   created_at: Timestamp
 }
 ```
@@ -190,6 +191,16 @@ Además existe el tipo **`custom`** (no vive en `PROCESSES`): un proceso
 extraordinario con nombre libre (`custom_label`) que el agente captura en
 `AddProcessDialog` para un solo cliente, sin registrarlo en el catálogo.
 Precio manual y sin fields derivados del estado.
+
+Además, cada `ProcessDef` tiene un **modelo de costo** (`cost`, mismo esquema):
+el STATE FEE del reporte de ventas. Registro → `state_fee` del estado; annual
+report, dissolution y amendment → `<sección>.state_cost` del estado (en el doc
+del estado, `fee` es el PRECIO de venta y `state_cost` lo que cobra el estado);
+EIN, BOI, Sales Tax, Resale e investigación de periódicos → 0; **ITIN** precio
+fijo 700 y costo fijo 250; publicaciones, Statement of Formation y `custom` →
+manual (el agente lo captura en el proceso). `getProcessStateCost` resuelve el
+costo o el motivo por el que falta. Los costos de los estados se cargan a
+Firestore con `npx tsx scripts/update-state-costs.ts [--dry-run]`.
 
 Los `fields` (solo para procesos `state`) definen qué datos del estado se
 muestran en el card informativo. Helpers en `src/lib/processUtils.ts`:

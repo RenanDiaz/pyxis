@@ -15,9 +15,11 @@
  *    importa es que aparezcan todas las ventas). Sin total, lo cobrado. El saldo
  *    pendiente es un monto PROYECTADO: se advierte en el diálogo de exportación,
  *    no en el Excel.
- *  - `stateFee` se deriva del documento del estado del PROCESO (states.json).
- *    Sin `process.state` va en 0 y la UI lo advierte: no se usa `client.state`,
- *    que puede ser el de otra compañía del cliente.
+ *  - `stateFee` = costo estatal del proceso (`getProcessStateCost`, P8): el
+ *    capturado en el proceso, o el del catálogo (fijo, o del estado del PROCESO:
+ *    registro, annual report, dissolution, amendment). Si no se conoce va en 0 y
+ *    la UI lo advierte. Nunca se usa `client.state`, que puede ser el de otra
+ *    compañía del cliente.
  *  - Registered Agent (#9): Pyxis no guarda su costo; si el proceso lo incluye
  *    (`has_registered_agent`), H = `registeredAgentCost` (45 por defecto, como
  *    el Excel manual); si no, 0.
@@ -33,6 +35,8 @@
 import type { Client, ClientProcess, Payment, StateInfo } from '@/types'
 import {
   getProcessLabel,
+  getProcessStateCost,
+  type MissingCostReason,
   getProcessSaleDate,
   hasRegisteredAgent,
   localMonthKey,
@@ -66,11 +70,10 @@ export interface BuildReportParams {
   registeredAgentCost: number
 }
 
-/** Convierte "$245", "245.0", "N/A" → número (0 si no es parseable). */
-function parseMoney(raw: string | undefined): number {
-  if (!raw) return 0
-  const num = parseFloat(raw.replace(/[$,]/g, ''))
-  return Number.isNaN(num) ? 0 : num
+/** Documento del estado del proceso, si tiene estado y existe. */
+function stateOf(process: ClientProcess, states: StateInfo[]): StateInfo | undefined {
+  const abbr = (process.state ?? '').toUpperCase()
+  return abbr ? states.find((s) => s.abbreviation.toUpperCase() === abbr) : undefined
 }
 
 function stripeSurcharge(amount: number, mode: StripeFeeMode): number {
@@ -142,14 +145,9 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
     clients, states, monthKey, monthLabel, expenses, stripeFeeMode, taxRate, registeredAgentCost,
   } = params
 
-  const stateFeeByAbbr = new Map<string, number>()
-  for (const s of states) {
-    stateFeeByAbbr.set(s.abbreviation.toUpperCase(), parseMoney(s.state_fee))
-  }
 
   const accounts = monthSalesOf(clients, monthKey).map((sale): ReportAccount => {
     const { client, process } = sale
-    const stateAbbr = (process.state ?? '').toUpperCase()
     // El recargo aplica a lo pagado con Stripe, y al saldo si el primer pago
     // fue con Stripe. Se suma a CHARGE y se resta como STRIPE FEE.
     const stripeBase = sumMoney([
@@ -171,7 +169,7 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
       purchase: getProcessLabel(process),
       state: process.state ?? '',
       charge: sumMoney([sale.charge, surcharge]),
-      stateFee: stateAbbr ? stateFeeByAbbr.get(stateAbbr) ?? 0 : 0,
+      stateFee: getProcessStateCost(process, stateOf(process, states)).cost ?? 0,
       registeredAgent: hasRegisteredAgent(process) ? registeredAgentCost : 0,
       stripeFee: surcharge,
       owner: getClientDisplayName(client),
@@ -179,6 +177,12 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
   })
 
   return { monthLabel, accounts, expenses, taxRate }
+}
+
+/** Venta sin costo estatal conocido, con el motivo. */
+export interface MissingCost {
+  label: string
+  reason: MissingCostReason
 }
 
 /** Venta con saldo pendiente: su CHARGE incluye un monto proyectado. */
@@ -199,18 +203,27 @@ export interface ReportPreview {
   totalCharge: number
   /** Parte de `totalCharge` que falta cobrar (proyectada). */
   totalPending: number
-  /** Ventas del mes sin estado en el proceso: su state fee sale en 0. */
-  missingState: string[]
+  /** Ventas del mes sin costo estatal conocido: su STATE FEE sale en 0. */
+  missingCost: MissingCost[]
   projected: ProjectedSale[]
 }
 
-export function previewReport(clients: Client[], monthKey: string): ReportPreview {
+export function previewReport(
+  clients: Client[],
+  monthKey: string,
+  states: StateInfo[] = [],
+): ReportPreview {
   const sales = monthSalesOf(clients, monthKey)
+  const missingCost: ReportPreview['missingCost'] = []
+  for (const sale of sales) {
+    const { reason } = getProcessStateCost(sale.process, stateOf(sale.process, states))
+    if (reason) missingCost.push({ label: saleLabel(sale), reason })
+  }
   return {
     accountCount: sales.length,
     totalCharge: sumMoney(sales.map((s) => s.charge)),
     totalPending: sumMoney(sales.map((s) => s.pending)),
-    missingState: sales.filter((s) => !s.process.state).map(saleLabel),
+    missingCost,
     projected: sales
       .filter((s) => s.pending > 0)
       .map((s) => ({ label: saleLabel(s), pending: s.pending, stripe: projectsStripe(s) })),

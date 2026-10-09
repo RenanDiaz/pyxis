@@ -1,6 +1,6 @@
 # 04 — Correcciones del reporte de ventas (Excel)
 
-**Prioridad:** 🔴 Alta · **Estado:** 🟡 parcial — fixes sin dependencias de negocio implementados (ver «Implementado»); el resto bloqueado por P3 y P8 · **Tamaño:** M (antes S)
+**Prioridad:** 🔴 Alta · **Estado:** 🟡 parcial — fixes sin dependencias de negocio implementados (ver «Implementado»); el resto bloqueado por P3 · **Tamaño:** M (antes S)
 
 ## Fuente de verdad
 - Excel manual `2026_ISABEL_PAY_SEPT` (hojas June, JULY, AUG, SEPT de 2026).
@@ -97,6 +97,9 @@ monday) es un spec aparte, fuera del 04.
   (como el manual desde julio). La fila «profit minus base pay» desaparece y la sección
   de gastos sigue el orden del manual: base pay, bonus, comisión, gastos fijos, TOTAL
   PAY, WHAT I TOOK HOME.
+- **P8 / P4 (resueltas, 2026-10-09):** costos de la tabla del proveedor
+  (`2026_NEW_UPDATED_EXCEL_FOR_LLC`). ITIN: precio 700, costo 250. Certificado de
+  Autoridad y demás extraordinarios: `custom` con costo capturado en el proceso.
 - **P2 (resuelta en parte):** los manuales del catálogo (Sales Tax, Resale, EIN, BOI) van en 0;
   **sí hay servicios con costo** (ITIN 250, Certificado de Autoridad 175), así que hace
   falta capturar un costo por proceso.
@@ -145,7 +148,7 @@ Estados). Ya no hay diferencias de fórmula, de mes ni de formato.
 Que el reporte generado coincida con el Excel manual vigente (Ago–Sept 2026) en
 columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
 
-## Requisitos (propuesta, sujeta a P3–P8)
+## Requisitos
 1. **Costo por proceso.** Nuevo campo opcional `ClientProcess.state_cost?: number`
    (costo que se paga al estado/proveedor). Se prellena al crear el proceso y el
    agente lo puede editar. El reporte usa `state_cost` y, si falta, el default del catálogo.
@@ -206,14 +209,38 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
   que llevan 45 en el manual, y ninguna otra.
 - Tests: `tests/unit/sales-report.test.ts`.
 
-**Pendiente:** #2 (company), #3/P3, #4, costo por tipo de proceso (P8), catálogo
-(req. 12) y editar pagos (req. 14).
+- P8 / P4 / req. 1, 2, 12: **costo estatal por proceso**.
+  - `ProcessDef.cost` (como `pricing`): registro → `state_fee`; annual report,
+    dissolution y amendment → `<sección>.state_cost` del estado (campos nuevos, editables
+    en `StateEditDialog`, donde «Fee» pasa a «Precio de venta»); EIN, BOI, Sales Tax,
+    Resale, investigación de periódicos → 0; publicaciones, Statement of Formation y
+    `custom` → manual.
+  - `ClientProcess.state_cost` (captura del agente en `ProcessCard`, «Costo estatal»)
+    manda sobre el catálogo. `getProcessStateCost` devuelve el costo o el motivo por el
+    que falta (`no_state`, `no_state_value`, `manual`); el diálogo de exportación lista
+    esas ventas y su STATE FEE sale en 0.
+  - **ITIN** en el catálogo: precio fijo 700, costo fijo 250, sin estado.
+  - Datos: tabla del proveedor `2026_NEW_UPDATED_EXCEL_FOR_LLC` (hojas NUEVO LLC,
+    REPORTE ANNUAL, DISSOLUTION, AMENDMENTS) → `states.json`. Cuadra con el manual (NY
+    dissolution 90, NY y TX amendment 90 / 155, registros de AL, GA, MN, TN, DE, MD…).
+    También corrige el `state_fee` de registro de 20 estados (P4). A Firestore con
+    `npx tsx scripts/update-state-costs.ts [--dry-run]` (solo toca los campos de costo).
+
+**Pendiente:** #2 (company), #3/P3, #4 y editar pagos (req. 14). Costos por confirmar,
+que hoy quedan vacíos (STATE FEE 0 + advertencia) o con un valor base tomado del texto
+de la tabla:
+- Annual report vacío: **CA** (la tabla solo trae el SOI de $20, y el annual report de
+  Pyxis se vende a 969: ¿incluye los $800 de franchise tax?), **AL** (mín. 100, máx.
+  15,000), **SC** (0.1 % del capital + 15). AZ, MO, NM, OH y TX no tienen reporte.
+- Annual report con valor base del texto: AR 155, DE 300, ID 0, KY 15, MT 0, OK 25,
+  WI 26, WY 60.
+- Dissolution vacío: CA, DE, PA, TN, TX (la tabla dice «can't file»).
 
 ## Criterios de aceptación
 - [x] Una venta con fecha de venta en agosto y pagos en septiembre sale en el reporte de agosto, no en el de septiembre.
-- [ ] Una dissolution de NY resta 90 de state fee, no 290 (precio).
-- [ ] Un EIN resta 0 de state fee.
-- [ ] Un proceso con `state_cost` editado usa ese valor, no el del catálogo.
+- [x] Una dissolution de NY resta 90 de state fee, no 290 (precio).
+- [x] Un EIN resta 0 de state fee.
+- [x] Un proceso con `state_cost` editado usa ese valor, no el del catálogo.
 - [x] Un proceso sin estado resta 0 y aparece en las advertencias.
 - [x] Una cuenta con 2 pagos en el mes resta el state fee **una sola vez** en el NET total.
 - [x] Se puede exportar septiembre 2026 (clientes archivados) sin error.
@@ -221,12 +248,10 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
 - [x] Un proceso sin pagos no aparece en el reporte.
 - [ ] TAX de una fila con Stripe resta J antes de aplicar la tasa configurada.
 - [x] WHAT I TOOK HOME = K_total − gastos fijos − TOTAL PAY (la base se resta una sola vez).
-- [ ] Test unitario de `buildReportInput` con un cliente que tiene registro + amendment + EIN en el mismo mes.
+- [x] Test unitario de `buildReportInput` con un cliente que tiene registro + amendment + EIN en el mismo mes.
 - [x] Test de fórmulas del generador (TAX, NET, comisión, TOTAL PAY, take-home) con un input fijo.
 - [x] Reporte de **septiembre 2026** generado por la app comparado contra la hoja SEPT
       del Excel manual: cada diferencia queda explicada (nombres, montos, filas agrupadas).
 
 ## Preguntas abiertas (bloquean)
 - **P3:** Un proceso cancelado con pagos, ¿se reembolsó? ¿Se reporta como venta, como negativo o se excluye? *(El Excel no trae casos.)*
-- **P4:** El state fee de registro en el Excel varía respecto del doc del estado (1c). ¿Cuál es el correcto: el del doc (hay que actualizarlo) o el del Excel (costo real del caso, p. ej. expedite)? CA aparece con 30, 70 y 110 en meses distintos: ¿de qué depende?
-- **P8:** ¿Cuál es el costo estatal de annual report, dissolution y amendment por estado? (Para llenar los campos nuevos; hoy solo conocemos NY y TX.) ¿ITIN y Certificado de Autoridad entran al catálogo con costos fijos de 250 y 175?

@@ -26,6 +26,7 @@ import {
   formatFieldValue,
   getSuggestedPrice,
   getProcessSaleDate,
+  getProcessStateCost,
   hasRegisteredAgent,
   localDateKey,
   PROCESS_STAGE_LABELS,
@@ -91,6 +92,34 @@ export default function ProcessCard({
       return
     }
     if (await updateProcess({ sold_at: soldAt }, 'Fecha de venta actualizada')) setSoldAt(null)
+  }
+
+  // Costo estatal (STATE FEE del reporte): el capturado en el proceso o, si no,
+  // el del catálogo / estado. Borrador local; se guarda al salir del campo.
+  const [stateCost, setStateCost] = useState<string | null>(null)
+  const defaultCost = getProcessStateCost({ ...process, state_cost: undefined }, state)
+  const hasOwnCost = typeof process.state_cost === 'number'
+  const savedCost = hasOwnCost ? process.state_cost : defaultCost.cost
+  const currentCost = stateCost ?? (savedCost == null ? '' : String(savedCost))
+
+  const saveStateCost = async () => {
+    if (stateCost === null) return
+    const trimmed = stateCost.trim()
+    // Vacío vuelve al costo del catálogo / estado.
+    if (trimmed === '') {
+      if (hasOwnCost && (await updateProcess({ state_cost: undefined }, 'Costo estatal restablecido'))) {
+        setStateCost(null)
+      } else if (!hasOwnCost) setStateCost(null)
+      return
+    }
+    const num = parseFloat(trimmed)
+    // Inválido o sin cambios: se descarta. Igual al default sin captura previa:
+    // no se fija, para que siga al estado si este cambia.
+    if (isNaN(num) || num < 0 || num === savedCost) {
+      setStateCost(null)
+      return
+    }
+    if (await updateProcess({ state_cost: num }, 'Costo estatal actualizado')) setStateCost(null)
   }
 
   const [notes, setNotes] = useState<string | null>(null)
@@ -202,6 +231,34 @@ export default function ProcessCard({
               {saleDate ? 'según el primer pago' : 'sin pagos aún'}
             </span>
           )}
+        </div>
+        <div className="flex items-center gap-2 pt-1">
+          <Label htmlFor={`state-cost-${process.id}`} className="text-xs font-normal text-muted-foreground">
+            Costo estatal ($)
+          </Label>
+          <Input
+            id={`state-cost-${process.id}`}
+            type="number"
+            min={0}
+            step="0.01"
+            className="h-8 w-[110px]"
+            value={currentCost}
+            placeholder="—"
+            onChange={(e) => setStateCost(e.target.value)}
+            onBlur={saveStateCost}
+            title="STATE FEE del reporte de ventas: lo que cobra el estado o el proveedor"
+          />
+          <span className="text-xs text-muted-foreground">
+            {hasOwnCost
+              ? 'capturado'
+              : defaultCost.reason === 'manual'
+                ? 'sin capturar'
+                : defaultCost.reason === 'no_state'
+                  ? 'falta el estado'
+                  : defaultCost.reason === 'no_state_value'
+                    ? 'el estado no lo tiene'
+                    : 'del catálogo'}
+          </span>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">

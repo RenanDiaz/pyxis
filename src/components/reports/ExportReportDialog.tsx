@@ -21,6 +21,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { DEFAULT_TAX_RATE, type ExpenseConfig } from '@/lib/generateSalesReport'
 import {
   DEFAULT_REGISTERED_AGENT_COST,
+  type MissingCost,
   type ProjectedSale,
   type StripeFeeMode,
 } from '@/lib/salesReportData'
@@ -81,6 +82,12 @@ function loadSettings(employeeName: string): ExportSettings {
   return defaultSettings(employeeName)
 }
 
+const MISSING_COST_TEXT: Record<MissingCost['reason'], string> = {
+  no_state: 'sin estado',
+  no_state_value: 'el estado no tiene este costo',
+  manual: 'costo sin capturar',
+}
+
 interface ExportReportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -89,7 +96,8 @@ interface ExportReportDialogProps {
   /** Nº de cuentas y pagos que entran en el mes (para avisar si es 0). */
   accountCount: number
   /** Cuentas sin estado en el proceso (su state fee sale en 0). */
-  missingState: string[]
+  /** Ventas sin costo estatal conocido (su STATE FEE sale en 0). */
+  missingCost: MissingCost[]
   /** Ventas con saldo pendiente: su CHARGE incluye un monto proyectado. */
   projected: ProjectedSale[]
   isExporting: boolean
@@ -101,7 +109,7 @@ export default function ExportReportDialog({
   onOpenChange,
   defaultEmployeeName,
   accountCount,
-  missingState,
+  missingCost,
   projected,
   isExporting,
   onExport,
@@ -175,18 +183,21 @@ export default function ExportReportDialog({
           </div>
         )}
 
-        {missingState.length > 0 && (
+        {missingCost.length > 0 && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
             <p className="font-medium">
-              {missingState.length === 1
-                ? '1 proceso no tiene estado: su state fee saldrá en 0.'
-                : `${missingState.length} procesos no tienen estado: su state fee saldrá en 0.`}
+              {missingCost.length === 1
+                ? '1 venta no tiene costo estatal: su STATE FEE saldrá en 0.'
+                : `${missingCost.length} ventas no tienen costo estatal: su STATE FEE saldrá en 0.`}
             </p>
             <ul className="mt-1 list-disc pl-5">
-              {missingState.map((item, i) => (
-                <li key={i}>{item}</li>
+              {missingCost.map((item, i) => (
+                <li key={i}>
+                  {item.label}: {MISSING_COST_TEXT[item.reason]}
+                </li>
               ))}
             </ul>
+            <p className="mt-1 text-xs">Se corrige en el proceso del cliente («Costo estatal»).</p>
           </div>
         )}
 

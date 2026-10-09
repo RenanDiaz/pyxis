@@ -63,17 +63,22 @@ export interface StateInfo {
   sale_price: string
   state_fee: string
   processing_days: string
+  // `fee` es el PRECIO de venta del servicio; `state_cost`, lo que cobra el
+  // estado (costo del reporte de ventas, spec 04 P8). Vacío = sin dato.
   annual_report: {
     fee: string
     due_date: string
+    state_cost?: string
   }
   dissolution: {
     fee: string
     processing_days: string
+    state_cost?: string
   }
   amendments: {
     available: string
     fee: string
+    state_cost?: string
   }
   business_purpose: {
     specific: string
@@ -107,6 +112,7 @@ export type ProcessType =
   | 'ein'
   | 'boi'
   | 'statement_of_formation'
+  | 'itin'
   | 'custom'
 
 export type ProcessStage = 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
@@ -166,6 +172,12 @@ export interface ClientProcess {
    * fecha del primer pago (ver `getProcessSaleDate`).
    */
   sold_at?: string
+  /**
+   * Costo estatal / del proveedor de ESTE proceso (STATE FEE del reporte). Sin
+   * él se usa el del catálogo o el del estado (ver `getProcessStateCost`); se
+   * captura para procesos de costo manual (custom) o para corregir un caso.
+   */
+  state_cost?: number
   created_at: Timestamp
 }
 

@@ -40,6 +40,38 @@ export function getSuggestedPrice(type: string, state?: StateInfo | null): numbe
   }
 }
 
+/** Por qué no se conoce el costo estatal de un proceso (ver `getProcessStateCost`). */
+export type MissingCostReason = 'no_state' | 'no_state_value' | 'manual'
+
+/**
+ * Costo estatal / del proveedor de un proceso: el STATE FEE del reporte de
+ * ventas (spec 04, P8). Prioridad: el capturado en el proceso (`state_cost`),
+ * luego el del catálogo (`ProcessDef.cost`): fijo, o leído del documento del
+ * estado. Si no se puede saber, `cost: null` con el motivo.
+ */
+export function getProcessStateCost(
+  process: Pick<ClientProcess, 'type' | 'state' | 'state_cost'>,
+  state?: StateInfo | null,
+): { cost: number; reason?: undefined } | { cost: null; reason: MissingCostReason } {
+  if (typeof process.state_cost === 'number' && process.state_cost >= 0) {
+    return { cost: process.state_cost }
+  }
+  const def = getProcessDef(process.type)
+  // `custom` no vive en el catálogo: su costo siempre es manual.
+  const cost = def?.cost ?? { mode: 'manual' as const }
+  switch (cost.mode) {
+    case 'fixed':
+      return { cost: cost.amount }
+    case 'manual':
+      return { cost: null, reason: 'manual' }
+    case 'state': {
+      if (!process.state || !state) return { cost: null, reason: 'no_state' }
+      const num = parseFloat(getFieldValue(state, cost.key).replace(/[$,]/g, ''))
+      return isNaN(num) ? { cost: null, reason: 'no_state_value' } : { cost: num }
+    }
+  }
+}
+
 export function getFieldValue(state: StateInfo, key: string): string {
   const parts = key.split('.')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

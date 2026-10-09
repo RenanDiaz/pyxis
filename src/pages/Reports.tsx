@@ -76,8 +76,8 @@ export default function Reports() {
   }, [allClients, agentUid])
 
   const preview = useMemo(
-    () => previewReport(filteredClients, month),
-    [filteredClients, month]
+    () => previewReport(filteredClients, month, states ?? []),
+    [filteredClients, month, states]
   )
 
   const monthDate = useMemo(() => new Date(`${month}-01T00:00:00`), [month])
@@ -205,7 +205,7 @@ export default function Reports() {
         onOpenChange={setDialogOpen}
         defaultEmployeeName={defaultEmployeeName}
         accountCount={preview.accountCount}
-        missingState={preview.missingState}
+        missingCost={preview.missingCost}
         projected={preview.projected}
         isExporting={isExporting}
         onExport={handleExport}
