@@ -4,7 +4,8 @@
 
 ## Fuente de verdad
 - Excel manual `2026_ISABEL_PAY_SEPT` (hojas June, JULY, AUG, SEPT de 2026).
-- Reporte generado por la app: `October 2026 Sales Report.xlsx` (parcial, al 2026-10-09).
+- Reportes generados por la app: `October 2026 Sales Report.xlsx` (parcial, al 2026-10-09)
+  y `September 2026 Sales Report.xlsx` (con los fixes de esta rama).
 
 Ambos analizados el 2026-10-09. **No se versionan** (datos reales de clientes);
 las referencias citan solo hoja + tipo + estado.
@@ -69,6 +70,29 @@ Aparecen en el Excel y no existen en el catálogo (hoy serían `custom`):
   **sí hay servicios con costo** (ITIN 250, Certificado de Autoridad 175), así que hace
   falta capturar un costo por proceso.
 
+## Comparación septiembre 2026: app vs. manual
+NET total: **manual 3,429.53**, app **2,673.59** → la app queda **755.94** por debajo:
+
+| Causa | En NET | Ref. |
+|-------|-------:|------|
+| 4 servicios del manual **no están en el reporte de Pyxis**: ITIN CT (649/250), ITIN CA (700/250), Certificado de Autoridad NJ/SC (270/175), Amendment TX (300/155) | +664.29 | P9 |
+| El manual cuenta la venta completa con OWES; la app, solo lo cobrado (2 registros a medio pagar: MN y MI, 603.50 sin cobrar) | +368.14 | P6 |
+| Registro NJ con primer pago en Pyxis el 3-sep; el manual lo puso en **agosto** (28-ago) | −302.26 | P10 |
+| Stripe (la app resta 2.9 % + 0.30 sobre el monto base y no lo descuenta antes del TAX; el manual suma el 4 % a CHARGE y lo resta como J, con efecto neutro) y precios distintos (CA 549 vs 579; GA 579 vs 549 + 4 %) | +76.86 | P5 |
+| RA de TN: la app marca RA pero pone H = 0; el manual resta 45 | −27.45 | #9 |
+| State fee del doc vs. manual (CA 75/110, GA 100/110, MN 160/155, TN 308.25/307) | −23.64 | P4 |
+| **Total** | **+755.94** | |
+
+Otras observaciones:
+- **El reporte de un mes cerrado cambia después del cierre.** Un registro de GA trae un
+  2º pago del **9-oct** dentro de septiembre (la venta cuenta en el mes del primer pago
+  y arrastra todos sus pagos). Si se reexporta, septiembre cambia. Refuerza P6.
+- **RA:** los dos registros con RA en Pyxis (TN y el NJ de agosto) llevan 45 en el
+  manual. Evidencia suficiente para #9: H = 45 cuando `has_registered_agent`.
+- **Stripe:** con *Stripe fee = ninguno*, TAX y NET de la app equivalen a los del manual,
+  porque `F_app = F_manual − J_manual`. Solo cambia la columna CHARGE (sin el 4 %).
+- Coinciden exacto: NV y FL (CHARGE, fee y NET).
+
 ## Objetivo
 Que el reporte generado coincida con el Excel manual vigente (Ago–Sept 2026) en
 columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
@@ -123,13 +147,15 @@ tipo de proceso (P8) y catálogo.
 - [x] WHAT I TOOK HOME = K_total − gastos fijos − TOTAL PAY (la base se resta una sola vez).
 - [ ] Test unitario de `buildReportInput` con un cliente que tiene registro + amendment + EIN en el mismo mes.
 - [x] Test de fórmulas del generador (TAX, NET, comisión, TOTAL PAY, take-home) con un input fijo.
-- [ ] Reporte de **septiembre 2026** generado por la app comparado contra la hoja SEPT
+- [x] Reporte de **septiembre 2026** generado por la app comparado contra la hoja SEPT
       del Excel manual: cada diferencia queda explicada (nombres, montos, filas agrupadas).
 
 ## Preguntas abiertas (bloquean)
 - **P3:** Un proceso cancelado con pagos, ¿se reembolsó? ¿Se reporta como venta, como negativo o se excluye? *(El Excel no trae casos.)*
 - **P4:** El state fee de registro en el Excel varía respecto del doc del estado (1c). ¿Cuál es el correcto: el del doc (hay que actualizarlo) o el del Excel (costo real del caso, p. ej. expedite)? CA aparece con 30, 70 y 110 en meses distintos: ¿de qué depende?
-- **P5:** La columna STRIPE FEE, ¿es la comisión real de Stripe o el recargo del 4 % que se le cobra al cliente? ¿El monto del pago que se registra en Pyxis **incluye** ese 4 %? ¿Por qué algunos casos son 2 %?
+- **P5:** *(ver comparación: con «Stripe fee = ninguno» la app reproduce el NET del manual)* La columna STRIPE FEE, ¿es la comisión real de Stripe o el recargo del 4 % que se le cobra al cliente? ¿El monto del pago que se registra en Pyxis **incluye** ese 4 %? ¿Por qué algunos casos son 2 %?
+- **P9:** Los 2 ITIN, el Certificado de Autoridad NJ/SC y el Amendment de TX de septiembre, ¿se registraron en Pyxis? Si no: ¿porque ITIN y Certificado de Autoridad no están en el catálogo? Si sí: ¿con pagos y fecha?
+- **P10:** El registro NJ: el manual lo cobra el 28-ago y Pyxis tiene el primer pago el 3-sep. ¿Cuál es la fecha correcta? ¿La venta cuenta al cerrar o al primer pago?
 - **P6:** ¿El reporte debe pasar a una fila por cuenta con CHARGE = total y OWES = saldo (como el Excel actual), o se mantiene una fila por pago? ¿Se agregan las columnas comisión por fila y FORMA DE PAGO? **Recomendación: una fila por cuenta**: elimina #16 de raíz y es el formato que el negocio usa hoy. Con una fila por pago, #16 se arregla restando G/H solo en la primera fila del bloque.
 - **P7:** La comisión, ¿es `NET total × 15 %` (Jul–Sept) o `(NET total − base) × 15 %` (June, y lo que hace hoy la app)?
 - **P8:** ¿Cuál es el costo estatal de annual report, dissolution y amendment por estado? (Para llenar los campos nuevos; hoy solo conocemos NY y TX.) ¿ITIN y Certificado de Autoridad entran al catálogo con costos fijos de 250 y 175?
