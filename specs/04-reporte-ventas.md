@@ -236,7 +236,12 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
   Stripe solo aplica a lo no reembolsado. El diálogo lista las ventas canceladas y
   marca las que no tienen el reembolso capturado (se toma como 0).
 
-**Pendiente:** #2 (company), #4 y editar pagos (req. 14). Fuera del reporte, un
+- Req. 14: **editar un pago** (monto, fecha, hora, método, nota) desde el historial de
+  pagos. Conserva `id` y número de recibo (un legacy fija el que tenía y recibe `id`);
+  recalcula el status del cliente como registrar o borrar. El diálogo avisa que hay que
+  regenerar el recibo si ya se entregó.
+
+**Pendiente:** #2 (company) y #4 (legacy). Fuera del reporte, un
 proceso cancelado sigue sumando su saldo en el estado de cuenta, la cotización y el
 status del cliente (spec aparte). Costos por confirmar,
 que hoy quedan vacíos (STATE FEE 0 + advertencia) o con un valor base tomado del texto

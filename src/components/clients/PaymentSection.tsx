@@ -95,6 +95,8 @@ export default function PaymentSection({
   const [paymentDate, setPaymentDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [paymentTime, setPaymentTime] = useState(() => format(new Date(), 'HH:mm'))
   const [totalInput, setTotalInput] = useState('')
+  // Pago que se está editando (su `paymentKey`); `null` = registrar uno nuevo.
+  const [editing, setEditing] = useState<Payment | null>(null)
 
   const today = format(new Date(), 'yyyy-MM-dd')
 
@@ -117,7 +119,47 @@ export default function PaymentSection({
     setPaymentAmount('')
     setPaymentNote('')
     setPaymentDate(today)
+    setEditing(null)
     setShowDialog(false)
+  }
+
+  const openEditPayment = (payment: Payment) => {
+    const parts = parsePaymentDateParts(payment.date)
+    setEditing(payment)
+    setPaymentAmount(String(payment.amount))
+    setPaymentMethod(payment.method)
+    setPaymentNote(payment.note ?? '')
+    setPaymentDate(parts ? format(parts.date, 'yyyy-MM-dd') : today)
+    // Los pagos legacy solo tienen fecha: sin hora, se guarda a mediodía.
+    setPaymentTime(parts && !parts.dateOnly ? format(parts.date, 'HH:mm') : '')
+    setShowDialog(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editing) return
+    const amount = roundMoney(parseFloat(paymentAmount))
+    if (isNaN(amount) || amount <= 0) return
+    // Saldo sin contar este pago: el nuevo monto no debería pasarse de ahí.
+    const available = roundMoney(balance + editing.amount)
+    if (
+      total > 0 &&
+      toCents(amount) > toCents(available) &&
+      !confirm(
+        `El monto ($${formatMoney(amount)}) supera el saldo pendiente ($${formatMoney(available)}). ¿Guardarlo de todos modos?`,
+      )
+    ) {
+      return
+    }
+    const ok = await onMutate(
+      clientMutations.updatePayment(process.id, paymentKey(editing), {
+        amount,
+        method: paymentMethod,
+        date: paymentInputToISO(paymentDate || today, paymentTime),
+        note: paymentNote.trim(),
+      }),
+      'Pago actualizado',
+    )
+    if (ok) resetPaymentForm()
   }
 
   const registerPayment = async (amount: number) => {
@@ -213,6 +255,9 @@ export default function PaymentSection({
           <Button
             size="sm"
             onClick={() => {
+              setEditing(null)
+              setPaymentAmount('')
+              setPaymentNote('')
               setPaymentDate(today)
               setPaymentTime(format(new Date(), 'HH:mm'))
               setShowDialog(true)
@@ -253,6 +298,15 @@ export default function PaymentSection({
                 >
                   <FileDown className="mr-1 h-3 w-3" />
                   {generatingKey === paymentKey(p) ? 'Generando...' : 'Recibo'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => openEditPayment(p)}
+                  disabled={isPending}
+                >
+                  Editar
                 </Button>
                 <Button
                   variant="ghost"
@@ -304,14 +358,21 @@ export default function PaymentSection({
       </Dialog>
 
       {/* Register payment dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <Dialog open={showDialog} onOpenChange={(open) => (open ? setShowDialog(true) : resetPaymentForm())}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Registrar pago</DialogTitle>
+            <DialogTitle>
+              {editing ? `Editar pago — Recibo N° ${getReceiptNumber(process, editing)}` : 'Registrar pago'}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="text-sm text-muted-foreground">
-              {total > 0 ? (
+              {editing ? (
+                <>
+                  El pago conserva su número de recibo. Si ya entregaste el recibo, genera uno
+                  nuevo con los datos corregidos y reemplázalo.
+                </>
+              ) : total > 0 ? (
                 <>
                   Saldo pendiente: <span className="font-semibold text-foreground">${formatMoney(balance)}</span>
                 </>
@@ -383,15 +444,23 @@ export default function PaymentSection({
             </div>
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button variant="outline" onClick={() => setShowDialog(false)}>Cancelar</Button>
-            {total > 0 && balance > 0 && (
-              <Button variant="secondary" onClick={handlePayFull} disabled={isPending}>
-                Pago completo (${formatMoney(balance)})
+            <Button variant="outline" onClick={resetPaymentForm}>Cancelar</Button>
+            {editing ? (
+              <Button onClick={handleSaveEdit} disabled={isPending || !paymentAmount}>
+                Guardar cambios
               </Button>
+            ) : (
+              <>
+                {total > 0 && balance > 0 && (
+                  <Button variant="secondary" onClick={handlePayFull} disabled={isPending}>
+                    Pago completo (${formatMoney(balance)})
+                  </Button>
+                )}
+                <Button onClick={handleRegisterPayment} disabled={isPending || !paymentAmount}>
+                  {total > 0 ? 'Registrar parcial' : 'Registrar anticipo'}
+                </Button>
+              </>
             )}
-            <Button onClick={handleRegisterPayment} disabled={isPending || !paymentAmount}>
-              {total > 0 ? 'Registrar parcial' : 'Registrar anticipo'}
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
