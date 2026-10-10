@@ -1,6 +1,6 @@
 # 22 — Cerrar la creación de workspaces
 
-**Prioridad:** 🟠 Alta · **Estado:** propuesto · **Tamaño:** S · **Relacionado:** 18 (R0 cubre Stripe; este spec cierra la puerta de entrada)
+**Prioridad:** 🟠 Alta · **Estado:** código implementado · pasos manuales (R4, R5) pendientes · **Tamaño:** S · **Relacionado:** 18 (R0 cubre Stripe; este spec cierra la puerta de entrada)
 
 ## Problema
 - **Cualquiera puede crear un workspace.** Basta una cuenta de Google:

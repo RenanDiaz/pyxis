@@ -123,6 +123,22 @@ está en el runbook de [`specs/17-migracion-cloudflare.md`](specs/17-migracion-c
 
 ---
 
+## Alta de una empresa nueva
+
+Desde la app nadie puede crear un workspace (spec 22). Para dar de alta una empresa:
+
+1. El futuro owner inicia sesión una vez en https://mipyxis.com (verá "Tu cuenta aún no pertenece a ningún equipo").
+2. Con `scripts/serviceAccountKey.json` en su lugar:
+   ```bash
+   npx tsx scripts/create-workspace.ts --name "Mi Empresa" --owner owner@empresa.com --dry-run
+   npx tsx scripts/create-workspace.ts --name "Mi Empresa" --owner owner@empresa.com
+   ```
+3. El owner recarga la app, entra como owner e invita a su equipo desde **Workspace → Miembros**.
+
+`npx tsx scripts/create-workspace.ts --list` lista todos los workspaces con su owner.
+
+---
+
 ## Estructura del proyecto
 
 ```

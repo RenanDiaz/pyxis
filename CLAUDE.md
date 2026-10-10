@@ -87,7 +87,7 @@ Ver los esquemas completos en los archivos `src/data/*.json` y los types en el c
 | `/workspace` | Workspace | Configuración del workspace (owner only) |
 | `/workspace/miembros` | Miembros | Gestión de miembros e invitaciones (owner only) |
 | `/workspace/subteams` | Subequipos | Gestión de subequipos (owner only) |
-| `/onboarding` | Onboarding | Crear workspace o unirse con invitación |
+| `/onboarding` | Onboarding | Usuario sin workspace: pedir invitación (no se crean workspaces desde la app, spec 22) |
 | `/join` | Unirse | Acepta invitación por token desde URL |
 
 ### Autenticación
@@ -135,8 +135,15 @@ Cada usuario pertenece a un solo workspace (`users/{uid}.workspace_id`).
 
 ### Onboarding
 Al hacer login por primera vez se crea `users/{uid}` con `workspace_id: null`.
-Si no tiene workspace, se redirige a `/onboarding` donde puede crear uno o
-unirse via link de invitación (`/join?token=...&workspace=...`).
+Si no tiene workspace, se redirige a `/onboarding`, que solo explica cómo pedir
+una invitación: se entra a un workspace únicamente con el link
+(`/join?token=...&workspace=...`).
+
+**Los workspaces no se crean desde la app (spec 22).** Las reglas tienen
+`allow create: if false` en `workspaces`, y `members` solo acepta altas por
+invitación. Un admin crea cada workspace con el Admin SDK:
+`npx tsx scripts/create-workspace.ts --name "<empresa>" --owner <email>` (el owner
+debe haber iniciado sesión una vez). `--list` muestra todos los workspaces.
 
 ### Rutas de workspace (owner only)
 - `/workspace` — Configuración general

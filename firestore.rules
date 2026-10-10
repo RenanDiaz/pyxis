@@ -112,7 +112,9 @@ service cloud.firestore {
 
     match /workspaces/{workspaceId} {
       allow read: if isWorkspaceMember(workspaceId);
-      allow create: if signedIn() && request.resource.data.owner_uid == request.auth.uid;
+      // Los workspaces los crea un admin global con scripts/create-workspace.ts
+      // (Admin SDK); desde la app nadie los crea (spec 22).
+      allow create: if false;
       // Cambiar owner_uid solo como parte de un traspaso: el nuevo owner queda
       // con rol owner en el mismo batch (spec 06).
       allow update: if isOwner(workspaceId)
@@ -125,11 +127,10 @@ service cloud.firestore {
       allow read: if isWorkspaceMember(workspaceId)
                   || (signedIn() && request.auth.uid == uid);
 
-      // Nadie se crea a sí mismo como miembro salvo dos casos:
-      // 1) fundar un workspace nuevo en el mismo batch (queda como owner);
-      // 2) aceptar una invitación válida en el mismo batch.
+      // Nadie se crea a sí mismo como miembro salvo al aceptar una invitación
+      // válida en el mismo batch. El owner lo crea el script de alta (spec 22).
       allow create: if signedIn() && request.auth.uid == uid
-                    && (foundsWorkspace(workspaceId) || joinsViaInvitation(workspaceId));
+                    && joinsViaInvitation(workspaceId);
 
       // Rol y subequipo solo los cambia el owner (nadie se los cambia a sí
       // mismo), salvo el owner que entrega la propiedad (spec 06).
@@ -147,12 +148,6 @@ service cloud.firestore {
       return request.resource.data.role == "supervisor"
              && wsAfter.owner_uid != request.auth.uid
              && getAfter(memberPath(workspaceId, wsAfter.owner_uid)).data.role == "owner";
-    }
-
-    function foundsWorkspace(workspaceId) {
-      return request.resource.data.role == "owner"
-             && !exists(/databases/$(database)/documents/workspaces/$(workspaceId))
-             && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)).data.owner_uid == request.auth.uid;
     }
 
     function joinsViaInvitation(workspaceId) {

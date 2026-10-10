@@ -63,13 +63,21 @@ describe('members', () => {
     await assertSucceeds(updateDoc(doc(db('own'), `workspaces/${WS}/members/ag`), { role: 'supervisor' }))
   })
 
-  it('fundar un workspace nuevo funciona (workspace + member owner + user en un batch)', async () => {
-    const fs = db('out')
-    const batch = writeBatch(fs)
-    batch.set(doc(fs, 'workspaces/nuevo'), { name: 'Nuevo', owner_uid: 'out' })
-    batch.set(doc(fs, 'workspaces/nuevo/members/out'), { uid: 'out', role: 'owner', subteam_id: null })
-    batch.update(doc(fs, 'users/out'), { workspace_id: 'nuevo' })
-    await assertSucceeds(batch.commit())
+  // Spec 22: los workspaces solo los crea el script de alta (Admin SDK).
+  it('nadie funda un workspace desde la app (workspace + member owner + user en un batch)', async () => {
+    for (const user of ['out', 'adm', 'own'] as const) {
+      const fs = db(user)
+      const batch = writeBatch(fs)
+      batch.set(doc(fs, 'workspaces/nuevo'), { name: 'Nuevo', owner_uid: user })
+      batch.set(doc(fs, 'workspaces/nuevo/members/' + user), { uid: user, role: 'owner', subteam_id: null })
+      batch.update(doc(fs, 'users/' + user), { workspace_id: 'nuevo' })
+      await assertFails(batch.commit())
+    }
+  })
+
+  it('ni siquiera el workspace solo, sin member', async () => {
+    await assertFails(setDoc(doc(db('out'), 'workspaces/nuevo'), { name: 'Nuevo', owner_uid: 'out' }))
+    await assertFails(setDoc(doc(db('adm'), 'workspaces/nuevo'), { name: 'Nuevo', owner_uid: 'adm' }))
   })
 
   it('un usuario puede leer su propio member aunque no sea miembro (no existe)', async () => {

@@ -97,39 +97,6 @@ export async function getWorkspace(id: string): Promise<Workspace | null> {
   return { id: snap.id, ...snap.data() } as Workspace
 }
 
-export async function createWorkspace(data: {
-  name: string
-  owner_uid: string
-  owner_display_name: string
-  owner_email: string
-}): Promise<string> {
-  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  const batch = writeBatch(db)
-
-  const wsRef = doc(collection(db, 'workspaces'))
-  batch.set(wsRef, {
-    name: data.name,
-    owner_uid: data.owner_uid,
-    created_at: serverTimestamp(),
-  })
-
-  const memberRef = doc(db, 'workspaces', wsRef.id, 'members', data.owner_uid)
-  batch.set(memberRef, {
-    uid: data.owner_uid,
-    display_name: data.owner_display_name,
-    email: data.owner_email,
-    role: 'owner' as WorkspaceRole,
-    subteam_id: null,
-    joined_at: serverTimestamp(),
-  })
-
-  const userRef = doc(db, 'users', data.owner_uid)
-  batch.update(userRef, { workspace_id: wsRef.id })
-
-  await batch.commit()
-  return wsRef.id
-}
-
 export async function updateWorkspace(
   id: string,
   data: Partial<Pick<Workspace, 'name' | 'owner_uid' | 'receipt_company_name' | 'receipt_logo_url' | 'receipt_logo_path' | 'payment_instructions'>>
