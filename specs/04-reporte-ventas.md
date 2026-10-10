@@ -1,6 +1,6 @@
 # 04 — Correcciones del reporte de ventas (Excel)
 
-**Prioridad:** 🔴 Alta · **Estado:** 🟡 casi completo — preguntas de negocio resueltas; queda lo de «Pendiente» · **Tamaño:** M (antes S)
+**Prioridad:** 🔴 Alta · **Estado:** ✅ completo (2026-10-10) · **Tamaño:** M (antes S)
 
 ## Fuente de verdad
 - Excel manual `2026_ISABEL_PAY_SEPT` (hojas June, JULY, AUG, SEPT de 2026).
@@ -20,7 +20,7 @@ las referencias citan solo hoja + tipo + estado.
 | ✔ 1c | El `state_fee` de registro del doc no coincide con el que se resta en el Excel en varios estados (Sept/Ago/Jul): DE 260 vs 140, MD 195.70 vs 247, CA 30/70/110 vs 75, GA 110 vs 100, IL 153.38 vs 155.88, MN 155 vs 160, VA 100 vs 102.40, MA 520 vs 525, AL 236 vs 245, ID 104 vs 101, TN 307 vs 308.25. Coinciden: FL, NY, NJ, IN, CT, CO, OH, WA, NV, TX, MI, OR, AZ. | NET de registro difiere del manual. Ver P4. |
 | ✔ 2 ✅ | `company` cae a `client.llc_name` | 2º registro sin nombre se reporta como la 1ª compañía (ver 03-R7). |
 | 3 ✅ | Procesos `cancelado` con pagos se cuentan igual | Ventas infladas si hubo reembolso (P3). El Excel no trae casos. |
-| 4 | Clientes legacy sin `processes` (si no se migró) no aparecen | Ventas faltantes. Confirmar si queda alguno en producción. |
+| 4 ✅ | Clientes legacy sin `processes` (si no se migró) no aparecen | Verificado el 2026-10-10 con `migrate-to-multi-process.ts --dry-run`: 91 clientes en 2 workspaces, 88 ya migrados, 3 sin datos, **0 por migrar**. |
 | 5 | Comentario en `generateSalesReport.ts` dice "en blanco" pero escribe 0 | Confusión al mantener. |
 
 ### B. Fórmulas y formato (`src/lib/generateSalesReport.ts`) vs. Excel actual
@@ -249,7 +249,7 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
   «Compañía» en `ProcessCard`; con varias compañías sin elegir, el reporte pone el nombre
   del cliente y el diálogo lo advierte.
 
-**Pendiente:** #4 (legacy). Fuera del reporte, un
+**Pendiente:** nada del reporte. Fuera del reporte, un
 proceso cancelado sigue sumando su saldo en el estado de cuenta, la cotización y el
 status del cliente (spec aparte). Costos por confirmar,
 que hoy quedan vacíos (STATE FEE 0 + advertencia) o con un valor base tomado del texto
