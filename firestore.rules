@@ -206,6 +206,46 @@ service cloud.firestore {
       }
     }
 
+    // ── Índice de teléfonos (spec 07) ──
+    // Doc ID = 10 dígitos; `client_ids` = clientes que usan ese número. Un
+    // miembro lee un número por su ID para saber si ya es cliente (también de
+    // otro agente), pero no puede listar los teléfonos del workspace. Cada
+    // escritura cambia un solo cliente (`last_client_id`) y debe coincidir con
+    // el `phone_digits` de ese cliente al terminar el batch.
+
+    match /workspaces/{workspaceId}/phone_index/{digits} {
+      function touched() {
+        return /databases/$(database)/documents/workspaces/$(workspaceId)/clients/$(request.resource.data.last_client_id);
+      }
+      function idsBefore() {
+        return resource == null ? {} : resource.data.get("client_ids", {});
+      }
+      function addsClient() {
+        return existsAfter(touched())
+               && canSee(workspaceId, getAfter(touched()).data)
+               && getAfter(touched()).data.get("phone_digits", []).hasAny([digits]);
+      }
+      // Sin el cliente al terminar el batch, solo el owner (borrar es suyo).
+      function removesClient() {
+        return existsAfter(touched())
+               ? canSee(workspaceId, getAfter(touched()).data)
+                 && !getAfter(touched()).data.get("phone_digits", []).hasAny([digits])
+               : isOwner(workspaceId);
+      }
+
+      allow get: if isWorkspaceMember(workspaceId);
+      allow list, delete: if isOwner(workspaceId);
+      allow create, update: if isWorkspaceMember(workspaceId)
+                            && request.resource.data.keys().hasOnly(["client_ids", "last_client_id"])
+                            && request.resource.data.client_ids is map
+                            && request.resource.data.last_client_id is string
+                            && request.resource.data.client_ids.diff(idsBefore()).affectedKeys()
+                                 .hasOnly([request.resource.data.last_client_id])
+                            && (request.resource.data.last_client_id in request.resource.data.client_ids
+                                ? addsClient()
+                                : removesClient());
+    }
+
     // ── Llamadas (mismo modelo que clientes) ──
 
     // Una llamada es a un cliente (client_id) o a un lead sin registrar

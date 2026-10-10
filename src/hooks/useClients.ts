@@ -5,7 +5,6 @@ import {
   getClientById,
   createClient,
   updateClient,
-  findClientsByPhone,
   mutateClient,
 } from '@/lib/firestore'
 import type { ClientMutation } from '@/lib/processMutations'
@@ -14,6 +13,7 @@ import { useUserProfile } from '@/hooks/useUserProfile'
 import { db } from '@/lib/firebase'
 import { deleteClientCascade } from '@/lib/workspaceAdmin'
 import { deleteFileFromStorage } from '@/lib/adminStorage'
+import { findPhoneMatches, type PhoneMatches } from '@/lib/phoneIndex'
 
 interface ClientFilters {
   status?: ClientStatus
@@ -97,11 +97,23 @@ export function useDeleteClient() {
   })
 }
 
-export function useFindClientsByPhone(phone: string) {
+/**
+ * Clientes que ya usan alguno de estos números (spec 07), incluidos los de
+ * otros agentes, que solo se cuentan. Un error no rompe el formulario.
+ */
+export function usePhoneMatches(digits: string[], excludeId?: string) {
   const { workspaceId } = useUserProfile()
-  return useQuery<Client[]>({
-    queryKey: ['clients', 'phone-lookup', workspaceId, phone],
-    queryFn: () => findClientsByPhone(workspaceId!, phone),
-    enabled: phone.trim().length >= 7 && !!workspaceId,
+  const key = [...new Set(digits.filter(Boolean))].sort()
+  return useQuery<PhoneMatches>({
+    queryKey: ['clients', 'phone-matches', workspaceId, key, excludeId ?? null],
+    queryFn: async () => {
+      try {
+        return await findPhoneMatches(db!, workspaceId!, key, excludeId)
+      } catch (err) {
+        console.error('No se pudo revisar si el teléfono ya es cliente', err)
+        return { visible: [], hiddenCount: 0 }
+      }
+    },
+    enabled: key.length > 0 && !!workspaceId && !!db,
   })
 }

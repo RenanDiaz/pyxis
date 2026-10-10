@@ -21,7 +21,7 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 | 04 | [Correcciones del reporte de ventas](04-reporte-ventas.md) | 🔴 Alta | Respuestas de negocio (P3–P8) | M |
 | 05 | [Historial de status y métricas confiables](05-historial-status-metricas.md) | 🟠 Alta · ✅ | — | M |
 | 06 | [Administración del workspace](06-administracion-workspace.md) | 🟠 Alta · ✅ | 01 | M |
-| 07 | [Detección de teléfonos duplicados](07-duplicados-telefono.md) | 🟡 Media | 01 | S |
+| 07 | [Detección de teléfonos duplicados](07-duplicados-telefono.md) | 🟡 Media · ✅ | 01 | S |
 | 08 | [Agenda](08-agenda.md) | 🟡 Media · ✅ | 05 (intentos de contacto) | M |
 | 09 | [Manejo de errores y sesión](09-errores-sesion.md) | 🟡 Media · ✅ | — | M |
 | 10 | [Rendimiento](10-rendimiento.md) | 🟡 Media · ✅ | — | M |
