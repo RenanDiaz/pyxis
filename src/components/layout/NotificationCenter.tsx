@@ -10,7 +10,7 @@ import { getCallDisplayName, isLeadCall } from '@/lib/leads'
 import { BELL_WINDOW_DAYS, selectBellCalls } from '@/lib/bellCalls'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { useReminderPrefs } from '@/hooks/useCallReminders'
+import { usePushReminders, useReminderPrefs } from '@/hooks/useCallReminders'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { Call, CallOutcome, Client } from '@/types'
 
@@ -108,9 +108,14 @@ export default function NotificationCenter() {
     'Notification' in window ? Notification.permission : 'unsupported'
   )
 
+  const push = usePushReminders()
+  const showPush = push.status !== 'unsupported' && push.status !== 'unconfigured'
+
   // Activar los avisos pide el permiso del navegador en ese momento (spec 21).
   const handleRemindersChange = async (enabled: boolean) => {
     setReminderPrefs({ ...reminderPrefs, enabled })
+    // Apagar los avisos también los apaga con Pyxis cerrado (fase 2).
+    if (!enabled && push.status === 'on') push.setEnabled(false)
     if (enabled && permission === 'default') {
       setPermission(await Notification.requestPermission())
     }
@@ -229,6 +234,24 @@ export default function NotificationCenter() {
               onCheckedChange={(sound) => setReminderPrefs({ ...reminderPrefs, sound })}
             />
           </div>
+          {showPush && (
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="reminders-push" className="text-xs">
+                También con Pyxis cerrado
+                <span className="block text-[11px] text-muted-foreground">
+                  En este navegador, mientras siga abierto en segundo plano.
+                </span>
+              </label>
+              <Switch
+                id="reminders-push"
+                checked={push.status === 'on'}
+                disabled={!reminderPrefs.enabled || push.status === 'denied' || push.isPending}
+                onCheckedChange={(on) =>
+                  push.setEnabled(on, { onSettled: () => setPermission(Notification.permission) })
+                }
+              />
+            </div>
+          )}
           {reminderPrefs.enabled && permission === 'default' && (
             <Button variant="outline" size="sm" className="h-7 w-full text-xs" onClick={() => handleRemindersChange(true)}>
               Permitir avisos con Pyxis en segundo plano

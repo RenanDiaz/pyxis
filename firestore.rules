@@ -88,6 +88,20 @@ service cloud.firestore {
                     && !existsAfter(memberPath(resource.data.workspace_id, uid));
     }
 
+    // Navegadores suscritos a los avisos de llamadas con Pyxis cerrado (spec 21
+    // fase 2). Cada usuario gestiona solo los suyos; el Worker los lee y borra
+    // los vencidos con su service account (sin pasar por estas reglas).
+    match /users/{uid}/push_subscriptions/{subId} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+                            && request.resource.data.keys().hasOnly(
+                                 ["endpoint", "p256dh", "auth", "timezone", "user_agent", "updated_at"])
+                            && request.resource.data.endpoint is string
+                            && request.resource.data.endpoint.matches("https://.+")
+                            && request.resource.data.p256dh is string
+                            && request.resource.data.auth is string;
+    }
+
     // Admins globales (editan la referencia de estados). Solo se gestionan con
     // el Admin SDK: `npx tsx scripts/set-admin.ts`.
     match /admins/{uid} {

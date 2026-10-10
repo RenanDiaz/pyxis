@@ -32,6 +32,10 @@ para gestionar prospectos.
 - Secretos del Worker: Cloudflare → Variables & Secrets; en local `.dev.vars`
   (ver `.dev.vars.example`). Las `VITE_*` son variables **de build**.
 - Runbook de infraestructura y corte desde Vercel: `specs/17-migracion-cloudflare.md`.
+- Cron cada minuto (solo producción; staging lo apaga): avisos de llamadas por Web
+  Push (spec 21 fase 2, runbook en el spec). Piezas reutilizables del Worker:
+  `worker/firestore.ts` (REST), `worker/googleAuth.ts` (service account) y
+  `worker/webPush.ts`. Secretos tipados en `worker/secrets.ts`.
 
 ---
 
@@ -110,6 +114,7 @@ Cada usuario pertenece a un solo workspace (`users/{uid}.workspace_id`).
 
 ### Colecciones
 - **`users/{uid}`** — Perfil global: `display_name`, `email`, `workspace_id`, `created_at`.
+- **`users/{uid}/push_subscriptions/{id}`** — Navegadores suscritos a los avisos con Pyxis cerrado (spec 21 fase 2).
 - **`workspaces/{workspaceId}`** — Workspace: `name`, `owner_uid`, `created_at`.
 - **`workspaces/{wId}/members/{uid}`** — Miembros: `role` (`owner` | `supervisor` | `agent`), `subteam_id`.
 - **`workspaces/{wId}/subteams/{id}`** — Subequipos.

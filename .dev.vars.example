@@ -1,3 +1,12 @@
 # Secretos del Worker para `npm run dev:api` (copiar a .dev.vars, que no se versiona).
 # En producción/staging van en Cloudflare → Worker → Settings → Variables & Secrets.
 # El spec 18 (links de pago) agrega los de Stripe y la service account.
+
+# Avisos de llamadas con Pyxis cerrado (spec 21 fase 2). Sin estos, el cron no
+# hace nada y la app no ofrece la opción.
+FIREBASE_PROJECT_ID=
+FIREBASE_SA_CLIENT_EMAIL=
+FIREBASE_SA_PRIVATE_KEY=
+# npx tsx scripts/generate-vapid-keys.ts
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=

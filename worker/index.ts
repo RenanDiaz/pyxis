@@ -1,5 +1,12 @@
 // Worker de Pyxis (spec 17). Los archivos estáticos los sirve Cloudflare sin
-// pasar por aquí; este código solo recibe /api/* y /assets/* (`run_worker_first`).
+// pasar por aquí; este código solo recibe /api/* y /assets/* (`run_worker_first`)
+// y el cron de los avisos de llamadas (spec 21 fase 2).
+
+import { FirestoreRest } from './firestore'
+import { getAccessToken } from './googleAuth'
+import { runPushReminders } from './pushReminders'
+import { VAPID_SUBJECT, type WorkerEnv } from './secrets'
+import { sendWebPush } from './webPush'
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
 
@@ -15,9 +22,14 @@ async function deployedVersion(env: Env, request: Request): Promise<string | nul
   return typeof data.version === 'string' ? data.version : null
 }
 
-async function handleApi(request: Request, env: Env, url: URL): Promise<Response> {
+async function handleApi(request: Request, env: WorkerEnv, url: URL): Promise<Response> {
   if (url.pathname === '/api/health' && request.method === 'GET') {
     return json({ ok: true, version: await deployedVersion(env, request) })
+  }
+  // Clave pública VAPID para `pushManager.subscribe` (spec 21 fase 2). Sin
+  // los secretos de push configurados, la app no ofrece la opción.
+  if (url.pathname === '/api/push/config' && request.method === 'GET') {
+    return json({ publicKey: pushConfigured(env) ? env.VAPID_PUBLIC_KEY : null })
   }
   return json({ error: { code: 'not_found', message_es: 'Ruta no encontrada.' } }, 404)
 }
@@ -35,7 +47,35 @@ async function handleAsset(request: Request, env: Env): Promise<Response> {
   return res
 }
 
+function pushConfigured(env: WorkerEnv): boolean {
+  return Boolean(
+    env.FIREBASE_PROJECT_ID &&
+      env.FIREBASE_SA_CLIENT_EMAIL &&
+      env.FIREBASE_SA_PRIVATE_KEY &&
+      env.VAPID_PUBLIC_KEY &&
+      env.VAPID_PRIVATE_KEY,
+  )
+}
+
+/** Cron cada minuto (wrangler.jsonc, solo producción): avisos con Pyxis cerrado. */
+async function sendCallReminders(env: WorkerEnv): Promise<void> {
+  if (!pushConfigured(env)) return
+  const sa = { clientEmail: env.FIREBASE_SA_CLIENT_EMAIL!, privateKey: env.FIREBASE_SA_PRIVATE_KEY! }
+  const fs = new FirestoreRest({ projectId: env.FIREBASE_PROJECT_ID!, getToken: () => getAccessToken(sa) })
+  const vapid = { publicKey: env.VAPID_PUBLIC_KEY!, privateKey: env.VAPID_PRIVATE_KEY!, subject: VAPID_SUBJECT }
+  const summary = await runPushReminders({
+    fs,
+    send: (sub, payload, opts) => sendWebPush(sub, payload, vapid, opts),
+    now: Date.now(),
+  })
+  if (summary.due > 0) console.log('avisos de llamadas', JSON.stringify(summary))
+}
+
 export default {
+  async scheduled(_controller, env, ctx): Promise<void> {
+    ctx.waitUntil(sendCallReminders(env))
+  },
+
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url)
     if (url.pathname.startsWith('/api/')) return handleApi(request, env, url)
@@ -43,4 +83,4 @@ export default {
     // Nunca un 404 propio fuera de /api: rompería los deep links de la SPA.
     return env.ASSETS.fetch(request)
   },
-} satisfies ExportedHandler<Env>
+} satisfies ExportedHandler<WorkerEnv>

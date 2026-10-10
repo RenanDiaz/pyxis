@@ -192,6 +192,14 @@
       ]
     },
     {
+      "collectionGroup": "calls",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "outcome", "order": "ASCENDING" },
+        { "fieldPath": "scheduled_at", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "goals",
       "queryScope": "COLLECTION",
       "fields": [

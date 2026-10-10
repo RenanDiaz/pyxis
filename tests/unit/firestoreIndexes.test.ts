@@ -7,8 +7,10 @@ import { readFileSync } from 'node:fs'
 // lista: el emulador no exige índices, así que un faltante solo se ve en prod.
 
 type Dir = 'ASCENDING' | 'DESCENDING'
+type Scope = 'COLLECTION' | 'COLLECTION_GROUP'
 interface Index {
   collectionGroup: string
+  queryScope: Scope
   fields: { fieldPath: string; order: Dir }[]
 }
 
@@ -26,6 +28,8 @@ interface Shape {
   collection: string
   equals: string[]
   orderBy: [string, Dir]
+  /** Por defecto COLLECTION; el cron del Worker consulta `calls` como collection group. */
+  scope?: Scope
 }
 
 const shapes: Shape[] = [
@@ -59,6 +63,14 @@ const shapes: Shape[] = [
   { name: 'getGoalsForAgent', collection: 'goals', equals: ['target_uid', 'type', 'period'], orderBy: ['created_at', 'DESCENDING'] },
   { name: 'getWorkspaceGoals', collection: 'goals', equals: ['type', 'period'], orderBy: ['created_at', 'DESCENDING'] },
   { name: 'getInvitations', collection: 'invitations', equals: ['status'], orderBy: ['created_at', 'DESCENDING'] },
+  // worker/pushReminders.ts (spec 21 fase 2): pendientes de todos los workspaces en una ventana
+  {
+    name: 'reminderQuery (Worker)',
+    collection: 'calls',
+    equals: ['outcome'],
+    orderBy: ['scheduled_at', 'ASCENDING'],
+    scope: 'COLLECTION_GROUP',
+  },
 ]
 
 /** Sin igualdades basta el índice automático de un campo. */
@@ -69,6 +81,7 @@ function needsComposite(shape: Shape) {
 /** Igualdades en cualquier orden, seguidas del campo de orden con su dirección. */
 function covers(index: Index, shape: Shape): boolean {
   if (index.collectionGroup !== shape.collection) return false
+  if (index.queryScope !== (shape.scope ?? 'COLLECTION')) return false
   if (index.fields.length !== shape.equals.length + 1) return false
   const eq = index.fields.slice(0, -1).map((f) => f.fieldPath).sort()
   const last = index.fields[index.fields.length - 1]
