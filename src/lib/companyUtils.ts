@@ -65,8 +65,55 @@ export function getProcessCompany(client: CompanyClient, process: ClientProcess)
  * Para procesos que no son registros devuelve cadena vacía: no representan una
  * compañía.
  */
+/** Una compañía del cliente: un registro (`id` = proceso) o la legacy del cliente (`id: null`). */
+export interface ClientCompany {
+  id: string | null
+  name: string
+}
+
+/**
+ * Las compañías del cliente: una por registro (con su nombre resuelto, puede
+ * ser '' si el registro aún no lo tiene). Sin registros, la del cliente legacy
+ * (`client.llc_name`) si existe: una LLC registrada en otro lado.
+ */
+export function getClientCompanies(client: CompanyClient): ClientCompany[] {
+  const registrations = getRegistrationProcesses(client)
+  if (registrations.length > 0) {
+    return registrations.map((p) => ({ id: p.id, name: getProcessCompany(client, p).llc_name ?? '' }))
+  }
+  const legacy = (client.llc_name || '').trim()
+  return legacy ? [{ id: null, name: legacy }] : []
+}
+
+/**
+ * Nombre de la compañía de un proceso.
+ * - Registro: la suya (ver `getProcessCompany`; solo el primero hereda la del cliente).
+ * - Otro servicio (EIN, amendment…): la del registro vinculado (`company_id`); si
+ *   no, la escrita a mano (`llc_name`); si no, la única compañía del cliente.
+ *   Con varias compañías y nada elegido devuelve '' (ver `hasUnassignedCompany`).
+ */
 export function getProcessCompanyName(client: CompanyClient, process: ClientProcess): string {
-  return getProcessCompany(client, process).llc_name ?? ''
+  if (process.type === 'registration') return getProcessCompany(client, process).llc_name ?? ''
+  if (process.company_id) {
+    const linked = getRegistrationProcesses(client).find((p) => p.id === process.company_id)
+    if (linked) return getProcessCompany(client, linked).llc_name ?? ''
+  }
+  const own = (process.llc_name || '').trim()
+  if (own) return own
+  const companies = getClientCompanies(client)
+  return companies.length === 1 ? companies[0].name : ''
+}
+
+/**
+ * Servicio (no registro) de un cliente con varias compañías al que no se le
+ * eligió ninguna: no se sabe de qué LLC es.
+ */
+export function hasUnassignedCompany(client: CompanyClient, process: ClientProcess): boolean {
+  if (process.type === 'registration') return false
+  const linked =
+    !!process.company_id && getRegistrationProcesses(client).some((p) => p.id === process.company_id)
+  if (linked || (process.llc_name || '').trim()) return false
+  return getClientCompanies(client).length > 1
 }
 
 /**

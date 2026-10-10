@@ -184,6 +184,13 @@ export interface ClientProcess {
    * se toma como 0 y el diálogo de exportación lo advierte.
    */
   refunded_amount?: number
+  /**
+   * Solo procesos que NO son registro: `id` del registro (compañía) del cliente
+   * al que pertenece este servicio. Sin él, la compañía sale de `llc_name`
+   * (otra compañía, escrita a mano) o, si el cliente tiene una sola, de esa.
+   * Ver `getProcessCompanyName`.
+   */
+  company_id?: string
   created_at: Timestamp
 }
 

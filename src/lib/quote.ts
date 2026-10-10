@@ -41,7 +41,7 @@ export function isQuotableByDefault(process: ClientProcess): boolean {
 
 /** Línea de cotización para un proceso del cliente. */
 export function processQuoteLine(client: Client, process: ClientProcess, price: number): QuoteLine {
-  const company = process.type === 'registration' ? getProcessCompanyName(client, process) : ''
+  const company = getProcessCompanyName(client, process)
   return {
     label: getProcessLabel(process) + (process.state ? ` — ${process.state}` : ''),
     ...(company && { detail: company }),

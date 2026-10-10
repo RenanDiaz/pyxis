@@ -208,6 +208,7 @@ export default function Reports() {
         missingCost={preview.missingCost}
         projected={preview.projected}
         cancelled={preview.cancelled}
+        unassignedCompany={preview.unassignedCompany}
         isExporting={isExporting}
         onExport={handleExport}
       />

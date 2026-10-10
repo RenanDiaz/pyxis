@@ -109,7 +109,7 @@ export default function QuoteDialog({ client, workspace, states, onOpenChange, o
             <div className="space-y-2">
               {processes.map((p) => {
                 const row = rows[p.id]
-                const company = p.type === 'registration' ? getProcessCompanyName(client, p) : ''
+                const company = getProcessCompanyName(client, p)
                 const invalid = row.selected && !(parseFloat(row.price) > 0)
                 return (
                   <div key={p.id} className="flex items-center gap-3 rounded-md border p-3">
