@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { useClient, useCreateClient, useUpdateClient, useFindClientsByPhone } from '@/hooks/useClients'
+import { useClient, useCreateClient, useUpdateClient, usePhoneMatches } from '@/hooks/useClients'
 import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useAssignableMembers } from '@/hooks/useWorkspace'
@@ -26,7 +26,7 @@ import AddProcessDialog from '@/components/clients/AddProcessDialog'
 import DraftBanner from '@/components/shared/DraftBanner'
 import { getStateByAreaCode } from '@/lib/areaCodeMap'
 import { formatPhoneForDisplay, isValidPhone } from '@/lib/phoneUtils'
-import { CLIENT_UPPERCASE_FIELD_IDS, UPPERCASE_INPUT_CLASS } from '@/lib/clientUtils'
+import { CLIENT_UPPERCASE_FIELD_IDS, getClientDisplayName, UPPERCASE_INPUT_CLASS } from '@/lib/clientUtils'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -49,7 +49,7 @@ import type { Call, CallLead, Client, ClientStatus, ClientPhone, PhoneLabel, Par
 import { db } from '@/lib/firebase'
 import { getCall } from '@/lib/firestore'
 import { convertLeadCalls, convertedClientStatus, getLeadCalls } from '@/lib/leadConversion'
-import { isLeadCall, splitLeadName } from '@/lib/leads'
+import { isLeadCall, phoneDigits, splitLeadName } from '@/lib/leads'
 import { isValidEmail, ownershipWarning, taxIdError } from '@/lib/clientValidation'
 import { toast } from 'sonner'
 import { deleteField } from 'firebase/firestore'
@@ -330,21 +330,17 @@ function ClientForm({
     }
   }
 
-  // Duplicate phone detection (debounced)
-  const [debouncedPhone, setDebouncedPhone] = useState('')
+  // Teléfonos duplicados (spec 07): todos los números del formulario, también
+  // al editar (sin contar a este cliente) y los de otros agentes.
+  const [debouncedDigits, setDebouncedDigits] = useState<string[]>([])
   useEffect(() => {
-    if (isEditing) return
-    const primary = phones.find((p) => p.is_primary) ?? phones[0]
-    const num = primary?.number?.trim() || ''
-    const timer = setTimeout(() => setDebouncedPhone(num), 500)
+    const digits = phones.map((p) => phoneDigits(p.number)).filter(Boolean)
+    const timer = setTimeout(() => setDebouncedDigits(digits), 500)
     return () => clearTimeout(timer)
-  }, [phones, isEditing])
-
-  const { data: duplicateClients } = useFindClientsByPhone(isEditing ? '' : debouncedPhone)
-  const duplicateClient = useMemo(
-    () => duplicateClients?.find((c) => c.id !== id),
-    [duplicateClients, id]
-  )
+  }, [phones])
+  const { data: phoneMatches } = usePhoneMatches(debouncedDigits, id)
+  const duplicateClient = phoneMatches?.visible[0]
+  const hiddenDuplicates = phoneMatches?.hiddenCount ?? 0
 
   const handleChange = (fieldId: string, value: string) => {
     setFormData((prev) => {
@@ -671,13 +667,13 @@ function ClientForm({
                     Estado detectado por código de área del teléfono principal
                   </p>
                 )}
-                {!isEditing && duplicateClient && (
+                {duplicateClient && (
                   <Alert variant="default" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
                     <AlertTriangle className="h-4 w-4 text-amber-600" />
                     <AlertDescription className="text-amber-800 dark:text-amber-300">
                       {duplicateClient.archived
-                        ? 'Este número pertenece a un cliente archivado.'
-                        : 'Ya existe un cliente con este número.'}
+                        ? `Este número pertenece a un cliente archivado: ${getClientDisplayName(duplicateClient)}.`
+                        : `Ya existe un cliente con este número: ${getClientDisplayName(duplicateClient)}.`}
                       {' '}
                       <Link
                         to={`/clientes/${duplicateClient.id}`}
@@ -685,6 +681,15 @@ function ClientForm({
                       >
                         Ver cliente →
                       </Link>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {!duplicateClient && hiddenDuplicates > 0 && (
+                  <Alert variant="default" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800 dark:text-amber-300">
+                      Este número ya es cliente de otro agente del equipo. Consulta con tu supervisor antes de
+                      registrarlo de nuevo.
                     </AlertDescription>
                   </Alert>
                 )}

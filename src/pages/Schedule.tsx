@@ -6,7 +6,7 @@ import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { AlertTriangle, Clock, Phone, Plus, UserPlus } from 'lucide-react'
 import { useCalls, useCreateCall, useUpdateCall } from '@/hooks/useCalls'
-import { useClients } from '@/hooks/useClients'
+import { useClients, usePhoneMatches } from '@/hooks/useClients'
 import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useAssignableMembers } from '@/hooks/useWorkspace'
@@ -37,7 +37,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { useFormDraft } from '@/hooks/useFormDraft'
 import { draftKey, readDraft } from '@/lib/formDraft'
-import { buildLead, findClientByPhone, getCallDisplayName, isLeadCall } from '@/lib/leads'
+import { buildLead, findClientByPhone, getCallDisplayName, isLeadCall, phoneDigits } from '@/lib/leads'
 import type { Call, CallLead, CallOutcome, Client } from '@/types'
 
 /** En qué zona horaria se capturan fecha y hora de la cita. */
@@ -176,7 +176,13 @@ export default function Schedule() {
   const isLead = target === 'lead'
   const selectedClient = isLead ? undefined : clientsById.get(newCallClientId)
   // Spec 19: si el teléfono del lead ya es de un cliente, avisar.
-  const duplicateClient = isLead ? findClientByPhone(activeClients ?? [], leadPhone) : undefined
+  // Spec 07: el índice también encuentra archivados y clientes de otros agentes.
+  const leadDigits = isLead ? phoneDigits(leadPhone) : ''
+  const { data: leadMatches } = usePhoneMatches(leadDigits ? [leadDigits] : [])
+  const duplicateClient = isLead
+    ? findClientByPhone(activeClients ?? [], leadPhone) ?? (leadDigits ? leadMatches?.visible[0] : undefined)
+    : undefined
+  const hiddenDuplicate = isLead && !duplicateClient && !!leadDigits && (leadMatches?.hiddenCount ?? 0) > 0
   const zoneState = isLead ? leadState : selectedClient?.state
   const zonePhone = isLead ? leadPhone : selectedClient ? getPrimaryPhoneNumber(selectedClient) : ''
   const clientZone = zoneState ? getClientTimezone(zoneState, zonePhone) : null
@@ -371,6 +377,11 @@ export default function Schedule() {
                         Agendar con este cliente
                       </Button>
                     </div>
+                  )}
+                  {hiddenDuplicate && (
+                    <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm dark:border-amber-800 dark:bg-amber-950/30">
+                      Este número ya es cliente de otro agente del equipo. Consulta con tu supervisor antes de llamarlo.
+                    </p>
                   )}
                   {canAssign && (
                     <div>

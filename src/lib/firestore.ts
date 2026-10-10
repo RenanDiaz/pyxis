@@ -34,7 +34,7 @@ import type {
   StateInfo,
 } from '@/types'
 import { normalizeClientFields } from '@/lib/clientUtils'
-import { runClientMutation, runClientUpdate } from '@/lib/clientTransactions'
+import { runClientCreate, runClientMutation, runClientUpdate } from '@/lib/clientTransactions'
 import type { StatusTrigger } from '@/lib/statusUtils'
 import { initialStatusFields } from '@/lib/statusHistory'
 import type { ClientChange, ClientMutation } from '@/lib/processMutations'
@@ -377,7 +377,7 @@ export async function createClient(
 ): Promise<string> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   const now = Timestamp.now()
-  const ref = await addDoc(wsCol(ctx.workspaceId, 'clients'), {
+  return runClientCreate(db, ctx.workspaceId, {
     ...normalizeClientFields(data),
     ...initialStatusFields(data.status, ctx.uid, now),
     archived: false,
@@ -386,7 +386,6 @@ export async function createClient(
     created_at: now,
     updated_at: now,
   })
-  return ref.id
 }
 
 export async function updateClient(
@@ -412,13 +411,6 @@ export async function mutateClient(
 
 function currentUid(): string | null {
   return auth?.currentUser?.uid ?? null
-}
-
-export async function findClientsByPhone(workspaceId: string, phone: string): Promise<Client[]> {
-  if (!isFirebaseConfigured || !db || !phone.trim()) return []
-  const q = query(wsCol(workspaceId, 'clients'), where('phone', '==', phone.trim()))
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Client))
 }
 
 // ── Calls ──

@@ -63,6 +63,7 @@ Los JSON también sirven como fallback local si Firestore no responde.
 - **`workspaces/{wId}/members`** — Miembros del workspace con rol y subequipo.
 - **`workspaces/{wId}/subteams`** — Subequipos del workspace.
 - **`workspaces/{wId}/invitations`** — Invitaciones por token.
+- **`workspaces/{wId}/phone_index/{dígitos}`** — Qué clientes usan cada teléfono (spec 07). Se escribe junto con `clients.phone_digits` (`src/lib/phoneIndex.ts`); los miembros leen por id, no listan.
 
 Ver los esquemas completos en los archivos `src/data/*.json` y los types en el código.
 

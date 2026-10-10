@@ -227,6 +227,8 @@ export interface Client {
   id: string
   phone: string
   phones?: ClientPhone[]
+  /** Todos los teléfonos en 10 dígitos (spec 07); lo escribe `clientTransactions`. */
+  phone_digits?: string[]
   llc_name?: string
   state?: string
   /** @deprecated reemplazado por `processes`. Se mantiene solo para migración. */

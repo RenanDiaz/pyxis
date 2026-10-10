@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -8,6 +9,7 @@ import {
   type DocumentReference,
   type Firestore,
 } from 'firebase/firestore'
+import { PHONE_INDEX, writePhoneIndex } from '@/lib/phoneIndex'
 
 // Operaciones de administración del workspace (spec 06). Todas las hace el
 // owner desde el navegador, en el orden que exigen las reglas, y se pueden
@@ -189,7 +191,12 @@ export async function deleteClientCascade(
   await deleteClientDocuments(fs, workspaceId, clientId, deleteFile)
   const calls = await getDocs(query(wsCol(fs, workspaceId, 'calls'), where('client_id', '==', clientId)))
   await deleteAll(fs, calls.docs.map((d) => d.ref))
-  await deleteAll(fs, [wsDoc(fs, workspaceId, 'clients', clientId)])
+  // El cliente sale del índice de teléfonos en el mismo batch (spec 07).
+  const client = await getDoc(wsDoc(fs, workspaceId, 'clients', clientId))
+  const batch = writeBatch(fs)
+  writePhoneIndex(batch, fs, workspaceId, clientId, (client.get('phone_digits') as string[] | undefined) ?? [], [])
+  batch.delete(client.ref)
+  await batch.commit()
 }
 
 // ── Borrar workspace ──
@@ -223,6 +230,7 @@ export async function deleteWorkspaceCascade(
     ['goals', 'Metas'],
     ['invitations', 'Invitaciones'],
     ['subteams', 'Subequipos'],
+    [PHONE_INDEX, 'Índice de teléfonos'],
   ]
   for (const [sub, label] of collections) {
     const snap = await getDocs(wsCol(fs, workspaceId, sub))

@@ -320,3 +320,53 @@ describe('actividad del cliente (spec 03-R6)', () => {
     await assertFails(updateDoc(doc(db('own'), path), { activity: [] }))
   })
 })
+
+describe('índice de teléfonos (spec 07)', () => {
+  const idx = (d: string) => `workspaces/${WS}/phone_index/${d}`
+  const entry = (clientId: string) => ({ client_ids: { [clientId]: true }, last_client_id: clientId })
+
+  /** Cliente del agente con ese número (y su entrada en el índice) en un batch. */
+  function addPhone(fs: Firestore, clientId: string, digits: string, indexed = digits) {
+    const batch = writeBatch(fs)
+    batch.update(doc(fs, `workspaces/${WS}/clients/${clientId}`), { phone_digits: [digits] })
+    batch.set(doc(fs, idx(indexed)), entry(clientId), { merge: true })
+    return batch.commit()
+  }
+
+  it('un miembro lee un número por su id, pero no lista el índice', async () => {
+    await assertSucceeds(addPhone(db('ag'), 'cAg', '3055551234'))
+    await assertSucceeds(getDoc(doc(db('ag2'), idx('3055551234'))))
+    await assertSucceeds(getDoc(doc(db('ag2'), idx('9999999999'))))
+    await assertFails(getDocs(collection(db('ag2'), `workspaces/${WS}/phone_index`)))
+    await assertFails(getDoc(doc(db('out'), idx('3055551234'))))
+    await assertSucceeds(getDocs(collection(db('own'), `workspaces/${WS}/phone_index`)))
+  })
+
+  it('el número debe coincidir con el phone_digits del cliente al terminar el batch', async () => {
+    await assertFails(addPhone(db('ag'), 'cAg', '3055551234', '7865550000'))
+    await assertFails(setDoc(doc(db('ag'), idx('3055551234')), entry('cAg')))
+  })
+
+  it('nadie se agrega con un cliente que no ve ni toca a otros clientes del número', async () => {
+    await assertSucceeds(addPhone(db('ag2'), 'cAg2', '3055551234'))
+    // ag no ve cAg2: no puede agregarlo ni quitarlo.
+    await assertFails(setDoc(doc(db('ag'), idx('3055551234')), entry('cAg2'), { merge: true }))
+    await assertFails(
+      setDoc(doc(db('ag'), idx('3055551234')), { client_ids: {}, last_client_id: 'cAg2' }),
+    )
+    // Agregarse a sí mismo quitando a otro, tampoco.
+    const fs = db('ag')
+    const batch = writeBatch(fs)
+    batch.update(doc(fs, `workspaces/${WS}/clients/cAg`), { phone_digits: ['3055551234'] })
+    batch.set(doc(fs, idx('3055551234')), entry('cAg'))
+    await assertFails(batch.commit())
+  })
+
+  it('no acepta otros campos', async () => {
+    const fs = db('ag')
+    const batch = writeBatch(fs)
+    batch.update(doc(fs, `workspaces/${WS}/clients/cAg`), { phone_digits: ['3055551234'] })
+    batch.set(doc(fs, idx('3055551234')), { ...entry('cAg'), name: 'Juan' })
+    await assertFails(batch.commit())
+  })
+})
