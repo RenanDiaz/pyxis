@@ -74,6 +74,39 @@ describe('reporte de ventas — datos', () => {
   })
 })
 
+describe('reporte de ventas — cancelados (P3)', () => {
+  it('cuenta lo cobrado menos lo reembolsado, sin proyectar saldo; el state fee se resta igual', () => {
+    const c = client({}, [
+      // Pagó 300 de 659 y no se devolvió nada: venta de 300.
+      proc({ id: 'a', state: 'NY', total: 659, stage: 'cancelado', refunded_amount: 0, payments: [pay(300, '2026-10-01')] }),
+      // Pagó 400 y se devolvieron 150: venta de 250.
+      proc({ id: 'b', state: 'NY', total: 659, stage: 'cancelado', refunded_amount: 150, payments: [pay(400, '2026-10-02')] }),
+      // Se devolvió todo: no aparece.
+      proc({ id: 'c', state: 'NY', total: 659, stage: 'cancelado', refunded_amount: 200, payments: [pay(200, '2026-10-03')] }),
+    ])
+    assert.deepEqual(build([c]).accounts.map((a) => [a.charge, a.stateFee]), [[300, 210], [250, 210]])
+    const preview = previewReport([c], '2026-10')
+    assert.equal(preview.totalPending, 0)
+    assert.deepEqual(preview.projected, [])
+    assert.deepEqual(preview.cancelled.map((x) => [x.charge, x.refundMissing]), [[300, false], [250, false]])
+  })
+
+  it('sin reembolso capturado se toma como 0 y se advierte', () => {
+    const c = client({}, [proc({ state: 'NY', total: 659, stage: 'cancelado', payments: [pay(300, '2026-10-01')] })])
+    assert.deepEqual(build([c]).accounts.map((a) => a.charge), [300])
+    assert.deepEqual(previewReport([c], '2026-10').cancelled, [
+      { label: 'ANA PÉREZ — Registro de LLC', charge: 300, refundMissing: true },
+    ])
+  })
+
+  it('el recargo de Stripe solo aplica a lo que no se reembolsó', () => {
+    const c = client({}, [
+      proc({ state: 'NY', total: 659, stage: 'cancelado', refunded_amount: 100, payments: [pay(300, '2026-10-01', 'stripe')] }),
+    ])
+    assert.deepEqual(build([c], '2026-10', 'surcharge').accounts.map((a) => [a.charge, a.stripeFee]), [[208, 8]])
+  })
+})
+
 describe('reporte de ventas — costo estatal por proceso (P8)', () => {
   const real = realStates as unknown as StateInfo[]
   const cost = (p: Partial<ClientProcess>) =>

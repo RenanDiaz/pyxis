@@ -1,6 +1,6 @@
 # 04 — Correcciones del reporte de ventas (Excel)
 
-**Prioridad:** 🔴 Alta · **Estado:** 🟡 parcial — fixes sin dependencias de negocio implementados (ver «Implementado»); el resto bloqueado por P3 · **Tamaño:** M (antes S)
+**Prioridad:** 🔴 Alta · **Estado:** 🟡 casi completo — preguntas de negocio resueltas; queda lo de «Pendiente» · **Tamaño:** M (antes S)
 
 ## Fuente de verdad
 - Excel manual `2026_ISABEL_PAY_SEPT` (hojas June, JULY, AUG, SEPT de 2026).
@@ -19,7 +19,7 @@ las referencias citan solo hoja + tipo + estado.
 | ✔ 1b | Los campos `annual_report.fee`, `dissolution.fee` y `amendments.fee` de `states.json` son **precios de venta** (`pricing: { mode: 'state' }` en `processes.ts`), **no costos estatales**. Ej.: NY dissolution 290 / amendment 290 en el doc vs. 90 de state fee en el Excel; CA annual report 969. | El requisito original ("annual report → fee de annual report del estado") restaría el precio como costo y dejaría NET ≈ 0. **No existe hoy en el doc del estado un costo estatal para esos procesos.** |
 | ✔ 1c | El `state_fee` de registro del doc no coincide con el que se resta en el Excel en varios estados (Sept/Ago/Jul): DE 260 vs 140, MD 195.70 vs 247, CA 30/70/110 vs 75, GA 110 vs 100, IL 153.38 vs 155.88, MN 155 vs 160, VA 100 vs 102.40, MA 520 vs 525, AL 236 vs 245, ID 104 vs 101, TN 307 vs 308.25. Coinciden: FL, NY, NJ, IN, CT, CO, OH, WA, NV, TX, MI, OR, AZ. | NET de registro difiere del manual. Ver P4. |
 | ✔ 2 | `company` cae a `client.llc_name` | 2º registro sin nombre se reporta como la 1ª compañía (ver 03-R7). |
-| 3 | Procesos `cancelado` con pagos se cuentan igual | Ventas infladas si hubo reembolso (P3). El Excel no trae casos. |
+| 3 ✅ | Procesos `cancelado` con pagos se cuentan igual | Ventas infladas si hubo reembolso (P3). El Excel no trae casos. |
 | 4 | Clientes legacy sin `processes` (si no se migró) no aparecen | Ventas faltantes. Confirmar si queda alguno en producción. |
 | 5 | Comentario en `generateSalesReport.ts` dice "en blanco" pero escribe 0 | Confusión al mantener. |
 
@@ -97,6 +97,9 @@ monday) es un spec aparte, fuera del 04.
   (como el manual desde julio). La fila «profit minus base pay» desaparece y la sección
   de gastos sigue el orden del manual: base pay, bonus, comisión, gastos fijos, TOTAL
   PAY, WHAT I TOOK HOME.
+- **P3 (resuelta, 2026-10-10):** un proceso cancelado con pagos cuenta **lo cobrado menos
+  lo reembolsado**; si se devolvió todo, no aparece. El **state fee se resta siempre**
+  (se asume ya pagado).
 - **P8 / P4 (resueltas, 2026-10-09):** costos de la tabla del proveedor
   (`2026_NEW_UPDATED_EXCEL_FOR_LLC`). ITIN: precio 700, costo 250. Certificado de
   Autoridad y demás extraordinarios: `custom` con costo capturado en el proceso.
@@ -162,7 +165,8 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
 3. Sin `process.state` en un proceso con costo derivado del estado ⇒ **0 y advertencia**
    (no caer a `client.state`).
 4. `company` con `getProcessCompanyName` sin fallback al cliente.
-5. Procesos cancelados según P3.
+5. Procesos cancelados según P3: CHARGE = cobrado − reembolsado (`refunded_amount`),
+   sin saldo proyectado; state fee se resta igual.
 6. Diálogo de exportación: tasa de TAX configurable (default 0.39), costo de
    Registered Agent (default 45) y lista de advertencias (procesos sin estado,
    procesos con costo manual vacío, clientes legacy con pagos en el mes).
@@ -226,7 +230,15 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
     También corrige el `state_fee` de registro de 20 estados (P4). A Firestore con
     `npx tsx scripts/update-state-costs.ts [--dry-run]` (solo toca los campos de costo).
 
-**Pendiente:** #2 (company), #3/P3, #4 y editar pagos (req. 14). Costos por confirmar,
+- P3: `ClientProcess.refunded_amount`, que se captura en la tarjeta del proceso cuando
+  está «Cancelado». El reporte cuenta lo cobrado menos lo reembolsado, sin proyectar
+  saldo, y lo omite si se devolvió todo; el state fee se resta igual. El recargo de
+  Stripe solo aplica a lo no reembolsado. El diálogo lista las ventas canceladas y
+  marca las que no tienen el reembolso capturado (se toma como 0).
+
+**Pendiente:** #2 (company), #4 y editar pagos (req. 14). Fuera del reporte, un
+proceso cancelado sigue sumando su saldo en el estado de cuenta, la cotización y el
+status del cliente (spec aparte). Costos por confirmar,
 que hoy quedan vacíos (STATE FEE 0 + advertencia) o con un valor base tomado del texto
 de la tabla:
 - Annual report vacío: **CA** (la tabla solo trae el SOI de $20, y el annual report de
@@ -254,4 +266,4 @@ de la tabla:
       del Excel manual: cada diferencia queda explicada (nombres, montos, filas agrupadas).
 
 ## Preguntas abiertas (bloquean)
-- **P3:** Un proceso cancelado con pagos, ¿se reembolsó? ¿Se reporta como venta, como negativo o se excluye? *(El Excel no trae casos.)*
+Ninguna. Las respuestas están en «Respuestas obtenidas del Excel».

@@ -178,6 +178,12 @@ export interface ClientProcess {
    * captura para procesos de costo manual (custom) o para corregir un caso.
    */
   state_cost?: number
+  /**
+   * Solo procesos `cancelado`: cuánto se le devolvió al cliente (0 = nada). El
+   * reporte de ventas cuenta lo cobrado menos esto (spec 04, P3). Sin capturar
+   * se toma como 0 y el diálogo de exportación lo advierte.
+   */
+  refunded_amount?: number
   created_at: Timestamp
 }
 
