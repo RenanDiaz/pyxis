@@ -1,4 +1,4 @@
-# 19 — Cerrar la creación de workspaces
+# 22 — Cerrar la creación de workspaces
 
 **Prioridad:** 🟠 Alta · **Estado:** propuesto · **Tamaño:** S · **Relacionado:** 18 (R0 cubre Stripe; este spec cierra la puerta de entrada)
 

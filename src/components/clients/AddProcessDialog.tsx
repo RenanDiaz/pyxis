@@ -20,6 +20,7 @@ import {
 import { PROCESSES } from '@/data/processes'
 import type { ClientProcess, ProcessType, StateInfo } from '@/types'
 import { UPPERCASE_INPUT_CLASS } from '@/lib/clientUtils'
+import { localDateKey } from '@/lib/processUtils'
 
 interface AddProcessDialogProps {
   open: boolean
@@ -49,6 +50,10 @@ export default function AddProcessDialog({
   const [pickedState, setStateAbbr] = useState<string | null>(null)
   const stateAbbr = pickedState ?? defaultState ?? ''
   const [llcName, setLlcName] = useState('')
+  // Fecha de venta: opcional. Vacía = cuenta la fecha del primer pago; solo se
+  // llena al capturar tarde una venta ya cerrada (no al cotizar un prospecto).
+  const [soldAt, setSoldAt] = useState('')
+  const today = localDateKey(new Date())
 
   const isCustom = type === 'custom'
   const isRegistration = type === 'registration'
@@ -65,6 +70,7 @@ export default function AddProcessDialog({
     setCustomLabel('')
     setStateAbbr(null)
     setLlcName('')
+    setSoldAt('')
   }
 
   const handleAdd = () => {
@@ -75,6 +81,7 @@ export default function AddProcessDialog({
       payments: [],
       stage: 'pendiente',
       created_at: Timestamp.now(),
+      ...(/^\d{4}-\d{2}-\d{2}$/.test(soldAt) && soldAt <= today ? { sold_at: soldAt } : {}),
       ...(isCustom ? { custom_label: customLabel.trim() } : {}),
       ...(stateAbbr ? { state: stateAbbr } : {}),
       ...(isRegistration && llcName.trim() ? { llc_name: llcName.trim() } : {}),
@@ -156,6 +163,21 @@ export default function AddProcessDialog({
               </p>
             </div>
           )}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="process-sold-at">Fecha de venta — opcional</Label>
+            <Input
+              id="process-sold-at"
+              type="date"
+              max={today}
+              value={soldAt}
+              onChange={(e) => setSoldAt(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Vacía: la venta cuenta en el mes del primer pago. Llénala solo si ya se cerró
+              antes (por ejemplo, una venta de fin de mes que se cobra el mes siguiente).
+            </p>
+          </div>
 
           <div className="space-y-1.5">
             <Label>Estado</Label>

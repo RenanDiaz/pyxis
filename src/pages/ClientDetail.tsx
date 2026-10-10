@@ -31,9 +31,9 @@ import { ArrowLeft, Pencil, Trash2, Phone, Mail, FileDown, FileText, Archive, Ar
 import QuoteDialog from '@/components/clients/QuoteDialog'
 import StatementDialog from '@/components/clients/StatementDialog'
 import ClientTimeline from '@/components/clients/ClientTimeline'
-import type { Client, ClientStatus, ClientProcess } from '@/types'
+import type { Client, ClientActivity, ClientStatus, ClientProcess } from '@/types'
 import { clientMutations, type RunClientMutation } from '@/lib/processMutations'
-import { Timestamp } from 'firebase/firestore'
+import { arrayUnion, Timestamp } from 'firebase/firestore'
 import { toast } from 'sonner'
 import {
   getProcessCompanyName,
@@ -47,19 +47,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { getClientDisplayName, getAllPhones, getPrimaryPhoneNumber, PHONE_LABELS } from '@/lib/clientUtils'
+import { db } from '@/lib/firebase'
+import { countClientDependents } from '@/lib/workspaceAdmin'
+import { getClientActivity, joinNotes, splitNotes } from '@/lib/clientActivity'
 import { formatPhoneForWhatsApp } from '@/lib/phoneUtils'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
-const SYSTEM_NOTE_PREFIX_RE = /^\[sistema\]\s?/i
-
-function isSystemNoteLine(line: string): boolean {
-  return SYSTEM_NOTE_PREFIX_RE.test(line)
-}
-
-function stripSystemNotePrefix(line: string): string {
-  return line.replace(SYSTEM_NOTE_PREFIX_RE, '')
-}
 
 interface NotesDraftNotice {
   savedAt: number
@@ -70,7 +64,10 @@ interface NotesDraftNotice {
 function ClientNotesCard({ client }: { client: Client }) {
   const { user } = useAuth()
   const updateMutation = useUpdateClient()
-  const savedNotes = client.notes ?? ''
+  // El textarea edita solo las notas del agente; los eventos del sistema van
+  // aparte (spec 03-R6). Las líneas "[SISTEMA]" viejas se conservan al guardar.
+  const { agentNotes: savedNotes, legacySystemLines } = splitNotes(client.notes)
+  const activity = getClientActivity(client)
 
   // Borrador de las notas: si se recarga o se cierra el navegador antes de
   // "Guardar notas", lo escrito se recupera al volver al cliente.
@@ -96,7 +93,7 @@ function ClientNotesCard({ client }: { client: Client }) {
   const handleSaveNotes = async () => {
     if (notes === null) return
     try {
-      await updateMutation.mutateAsync({ id: client.id, data: { notes } })
+      await updateMutation.mutateAsync({ id: client.id, data: { notes: joinNotes(notes, legacySystemLines) } })
       draft.clear()
       setDraftNotice(null)
       toast.success('Notas guardadas')
@@ -117,7 +114,6 @@ function ClientNotesCard({ client }: { client: Client }) {
     setDraftNotice(null)
   }
 
-  const systemLines = currentNotes.split('\n').filter((line) => isSystemNoteLine(line))
 
   return (
     <Card>
@@ -133,16 +129,16 @@ function ClientNotesCard({ client }: { client: Client }) {
             onDiscard={discardDraft}
           />
         )}
-        {/* System notes (reassignment history) */}
-        {systemLines.length > 0 && (
-          <div className="space-y-1.5">
-            {systemLines.map((line, i) => (
+        {/* Eventos del sistema (reasignaciones): de solo lectura */}
+        {activity.length > 0 && (
+          <div className="space-y-1.5" aria-label="Actividad del sistema">
+            {activity.map((event, i) => (
               <div
                 key={i}
                 className="flex items-start gap-2 rounded-md border border-muted bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
               >
                 <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                <span>{stripSystemNotePrefix(line)}</span>
+                <span>{event.text}</span>
               </div>
             ))}
           </div>
@@ -183,7 +179,6 @@ export default function ClientDetail() {
   const deleteMutation = useDeleteClient()
   const createCallMutation = useCreateCall()
   // Al reasignar se agregan notas de sistema: remonta el card de notas.
-  const [notesResetKey, setNotesResetKey] = useState(0)
 
   const showAgent = role === 'owner' || role === 'supervisor'
   const { data: members } = useWorkspaceMembers(showAgent ? workspaceId : null)
@@ -224,8 +219,23 @@ export default function ClientDetail() {
     toast.success('Status actualizado')
   }
 
+  // Borrar de verdad solo el owner, y se lleva llamadas, documentos y
+  // archivos (spec 06). El resto archiva.
   const handleDelete = async () => {
-    if (!confirm('¿Estás seguro de eliminar este cliente?')) return
+    if (!workspaceId || !db) return
+    const { calls, documents } = await countClientDependents(db, workspaceId, client.id)
+    const extras = [
+      calls ? `${calls} llamada(s)` : null,
+      documents ? `${documents} documento(s) con sus archivos` : null,
+    ].filter(Boolean)
+    const detail = extras.length ? ` También se borrarán ${extras.join(' y ')}.` : ''
+    if (
+      !confirm(
+        `¿Eliminar a ${getClientDisplayName(client)} de forma permanente?${detail}\n\n` +
+          'Esta acción no se puede deshacer. Si solo quieres sacarlo de las listas, usa Archivar.'
+      )
+    )
+      return
     await deleteMutation.mutateAsync(client.id)
     toast.success('Cliente eliminado')
     navigate('/clientes')
@@ -253,12 +263,14 @@ export default function ClientDetail() {
           // como llamada vencida).
           createCallMutation.mutate(
             {
-              client_id: client.id,
-              scheduled_at: Timestamp.now(),
-              notes: `Contacto iniciado vía ${channel}`,
-              outcome: 'completada',
-              kind: 'contact_attempt',
-              channel,
+              data: {
+                client_id: client.id,
+                scheduled_at: Timestamp.now(),
+                notes: `Contacto iniciado vía ${channel}`,
+                outcome: 'completada',
+                kind: 'contact_attempt',
+                channel,
+              },
             },
             {
               onSuccess: () => {
@@ -285,20 +297,23 @@ export default function ClientDetail() {
 
     const currentUserName = user?.displayName || user?.email || 'Sistema'
     const dateStr = format(new Date(), "d 'de' MMMM yyyy", { locale: es })
-    const reassignNote = `[SISTEMA] Cliente reasignado de ${oldAgent?.display_name || 'Desconocido'} a ${newAgent.display_name} por ${currentUserName} el ${dateStr}`
-    const updatedNotes = client.notes
-      ? `${client.notes}\n\n${reassignNote}`
-      : reassignNote
+    // Evento del sistema aparte de las notas (spec 03-R6): arrayUnion lo
+    // agrega sin reescribir las notas, así que no pisa lo que otro esté editando.
+    const event: ClientActivity = {
+      type: 'reassigned',
+      text: `Cliente reasignado de ${oldAgent?.display_name || 'Desconocido'} a ${newAgent.display_name} por ${currentUserName} el ${dateStr}`,
+      at: Timestamp.now(),
+      by: user?.uid ?? null,
+    }
 
     await updateMutation.mutateAsync({
       id: client.id,
       data: {
         owner_uid: reassignUid,
         subteam_id: newAgent.subteam_id,
-        notes: updatedNotes,
+        activity: arrayUnion(event) as unknown as ClientActivity[],
       },
     })
-    setNotesResetKey((k) => k + 1)
     setShowReassign(false)
     setReassignUid('')
     toast.success(`Cliente reasignado a ${newAgent.display_name}`)
@@ -553,15 +568,18 @@ export default function ClientDetail() {
               Reasignar
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-destructive hover:text-destructive"
-            onClick={handleDelete}
-          >
-            <Trash2 className="mr-1 h-3 w-3" />
-            Eliminar
-          </Button>
+          {role === 'owner' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+            >
+              <Trash2 className="mr-1 h-3 w-3" />
+              Eliminar
+            </Button>
+          )}
         </div>
       </div>
 
@@ -734,7 +752,7 @@ export default function ClientDetail() {
             </Card>
           )}
 
-          <ClientNotesCard key={`${client.id}:${notesResetKey}`} client={client} />
+          <ClientNotesCard key={client.id} client={client} />
         </div>
 
         {/* Right column: processes (with payments), documents, call history */}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useClient, useCreateClient, useUpdateClient, useFindClientsByPhone } from '@/hooks/useClients'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { useClient, useCreateClient, useUpdateClient, usePhoneMatches } from '@/hooks/useClients'
 import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useAssignableMembers } from '@/hooks/useWorkspace'
@@ -25,7 +26,7 @@ import AddProcessDialog from '@/components/clients/AddProcessDialog'
 import DraftBanner from '@/components/shared/DraftBanner'
 import { getStateByAreaCode } from '@/lib/areaCodeMap'
 import { formatPhoneForDisplay, isValidPhone } from '@/lib/phoneUtils'
-import { CLIENT_UPPERCASE_FIELD_IDS, UPPERCASE_INPUT_CLASS } from '@/lib/clientUtils'
+import { CLIENT_UPPERCASE_FIELD_IDS, getClientDisplayName, UPPERCASE_INPUT_CLASS } from '@/lib/clientUtils'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -44,7 +45,12 @@ import StateClock from '@/components/states/StateClock'
 import { getStateTimezone } from '@/lib/timezones'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, Plus, X, AlertTriangle } from 'lucide-react'
-import type { Client, ClientStatus, ClientPhone, PhoneLabel, Partner, ClientProcess } from '@/types'
+import type { Call, CallLead, Client, ClientStatus, ClientPhone, PhoneLabel, Partner, ClientProcess } from '@/types'
+import { db } from '@/lib/firebase'
+import { getCall } from '@/lib/firestore'
+import { convertLeadCalls, convertedClientStatus, getLeadCalls } from '@/lib/leadConversion'
+import { isLeadCall, phoneDigits, splitLeadName } from '@/lib/leads'
+import { isValidEmail, ownershipWarning, taxIdError } from '@/lib/clientValidation'
 import { toast } from 'sonner'
 import { deleteField } from 'firebase/firestore'
 
@@ -141,8 +147,32 @@ interface FormBoot {
   notice: DraftNotice | null
 }
 
-function bootForm(uid: string | undefined, formId: string, client: Client | null): FormBoot {
-  const start = client ? snapshotFromClient(client) : EMPTY_SNAPSHOT
+/** Lead que se convierte en cliente (spec 19). */
+interface LeadSource {
+  call: Call & { lead: CallLead }
+  /** Status inicial: contactado si ya hubo una llamada completada. */
+  status: ClientStatus
+}
+
+function snapshotFromLead({ call, status }: LeadSource): ClientFormSnapshot {
+  const { first_name, last_name } = splitLeadName(call.lead.name)
+  const formData: FormData = { first_name, last_name }
+  if (call.lead.state) formData.state = call.lead.state
+  return {
+    ...EMPTY_SNAPSHOT,
+    formData,
+    phones: [{ number: call.lead.phone, label: 'personal', is_primary: true }],
+    status,
+  }
+}
+
+function bootForm(
+  uid: string | undefined,
+  formId: string,
+  client: Client | null,
+  fromLead: LeadSource | null = null,
+): FormBoot {
+  const start = client ? snapshotFromClient(client) : fromLead ? snapshotFromLead(fromLead) : EMPTY_SNAPSHOT
   const version = client?.updated_at?.toMillis?.() ?? null
   const stored = uid ? readDraft<ClientFormSnapshot>(draftKey(uid, formId)) : null
   if (!stored) return { start, version, shown: start, notice: null }
@@ -163,8 +193,23 @@ function bootForm(uid: string | undefined, formId: string, client: Client | null
 export default function ClientFormPage() {
   const { id } = useParams<{ id: string }>()
   const { data: existingClient, isLoading } = useClient(id)
+  // "Convertir en cliente" desde un lead de la Agenda (spec 19).
+  const [searchParams] = useSearchParams()
+  const fromCall = id ? null : searchParams.get('fromCall')
+  const { wsCtx } = useUserProfile()
+  const { data: fromLead, isLoading: leadLoading } = useQuery({
+    queryKey: ['leadSource', wsCtx?.workspaceId, fromCall],
+    queryFn: async (): Promise<LeadSource | null> => {
+      const call = await getCall(wsCtx!.workspaceId, fromCall!)
+      if (!call || !isLeadCall(call)) return null
+      const leadCalls = await getLeadCalls(db!, wsCtx!, call.lead.phone_digits)
+      return { call, status: convertedClientStatus(leadCalls) }
+    },
+    enabled: !!fromCall && !!wsCtx && !!db,
+    staleTime: Infinity,
+  })
 
-  if (id && isLoading) {
+  if ((id && isLoading) || (fromCall && leadLoading)) {
     return <p className="text-muted-foreground">Cargando...</p>
   }
 
@@ -179,10 +224,22 @@ export default function ClientFormPage() {
     )
   }
 
-  return <ClientForm key={id ?? 'new'} existingClient={existingClient ?? null} />
+  return (
+    <ClientForm
+      key={id ?? (fromLead ? `lead:${fromLead.call.id}` : 'new')}
+      existingClient={existingClient ?? null}
+      fromLead={fromLead ?? null}
+    />
+  )
 }
 
-function ClientForm({ existingClient }: { existingClient: Client | null }) {
+function ClientForm({
+  existingClient,
+  fromLead,
+}: {
+  existingClient: Client | null
+  fromLead: LeadSource | null
+}) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const isEditing = !!id
@@ -199,14 +256,19 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
     wsCtx?.subteamId ?? null,
     wsCtx?.uid
   )
-  const [pickedAgentUid, setSelectedAgentUid] = useState<string>('')
+  // Al convertir un lead, el cliente queda por defecto con el agente del lead.
+  const [pickedAgentUid, setSelectedAgentUid] = useState<string>(fromLead?.call.owner_uid ?? '')
   // Por defecto, el usuario actual (derivado: sin effect que lo sincronice).
   const selectedAgentUid = pickedAgentUid || (canAssign && wsCtx ? wsCtx.uid : '')
 
   // Borrador en localStorage: se autoguarda mientras se edita y se restaura al
   // volver al formulario tras recargar o cerrar el navegador.
-  const formId = isEditing ? `client-form:edit:${id}` : 'client-form:new'
-  const [boot] = useState(() => bootForm(user?.uid, formId, existingClient))
+  const formId = isEditing
+    ? `client-form:edit:${id}`
+    : fromLead
+      ? `client-form:lead:${fromLead.call.id}`
+      : 'client-form:new'
+  const [boot] = useState(() => bootForm(user?.uid, formId, existingClient, fromLead))
   const [draftNotice, setDraftNotice] = useState<DraftNotice | null>(boot.notice)
 
   const [formData, setFormData] = useState<FormData>(boot.shown.formData)
@@ -268,21 +330,17 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
     }
   }
 
-  // Duplicate phone detection (debounced)
-  const [debouncedPhone, setDebouncedPhone] = useState('')
+  // Teléfonos duplicados (spec 07): todos los números del formulario, también
+  // al editar (sin contar a este cliente) y los de otros agentes.
+  const [debouncedDigits, setDebouncedDigits] = useState<string[]>([])
   useEffect(() => {
-    if (isEditing) return
-    const primary = phones.find((p) => p.is_primary) ?? phones[0]
-    const num = primary?.number?.trim() || ''
-    const timer = setTimeout(() => setDebouncedPhone(num), 500)
+    const digits = phones.map((p) => phoneDigits(p.number)).filter(Boolean)
+    const timer = setTimeout(() => setDebouncedDigits(digits), 500)
     return () => clearTimeout(timer)
-  }, [phones, isEditing])
-
-  const { data: duplicateClients } = useFindClientsByPhone(isEditing ? '' : debouncedPhone)
-  const duplicateClient = useMemo(
-    () => duplicateClients?.find((c) => c.id !== id),
-    [duplicateClients, id]
-  )
+  }, [phones])
+  const { data: phoneMatches } = usePhoneMatches(debouncedDigits, id)
+  const duplicateClient = phoneMatches?.visible[0]
+  const hiddenDuplicates = phoneMatches?.hiddenCount ?? 0
 
   const handleChange = (fieldId: string, value: string) => {
     setFormData((prev) => {
@@ -353,6 +411,36 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
       return
     }
 
+    // Email y SSN/ITIN (spec 13). Solo si cambiaron: un dato viejo mal cargado
+    // no debe impedir guardar otra edición.
+    const changed = (field: 'email' | 'ssn_itin') =>
+      (formData[field] ?? '').trim().toLowerCase() !==
+      String(existingClient?.[field] ?? '').trim().toLowerCase()
+    const email = formData.email?.trim() ?? ''
+    if (email && changed('email') && !isValidEmail(email)) {
+      toast.error(`Correo electrónico inválido: ${email}`)
+      document.getElementById('email')?.focus()
+      return
+    }
+    const ssnError = changed('ssn_itin') ? taxIdError(formData.ssn_itin ?? '') : null
+    if (ssnError) {
+      toast.error(`SSN o ITIN del cliente: ${ssnError}`)
+      document.getElementById('ssn_itin')?.focus()
+      return
+    }
+    const existingPartners = existingClient?.partners ?? []
+    for (const [i, partner] of partners.entries()) {
+      const before = existingPartners[i]?.ssn_itin ?? ''
+      const err = (partner.ssn_itin ?? '').trim() !== before.trim() ? taxIdError(partner.ssn_itin ?? '') : null
+      if (err) {
+        toast.error(`SSN o ITIN del socio ${i + 1}: ${err}`)
+        document.getElementById(`partner_ssn_${i}`)?.focus()
+        return
+      }
+    }
+    const pctWarning = ownershipWarning(partners)
+    if (pctWarning && !confirm(`${pctWarning} ¿Guardar de todos modos?`)) return
+
     const cleanPhones = validPhones.map((p) => ({
       number: formatPhoneForDisplay(p.number.trim()),
       label: p.label,
@@ -420,7 +508,19 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
           assignTo,
         })
         draft.clear()
-        toast.success('Cliente creado')
+        if (fromLead && wsCtx && db) {
+          // Las llamadas del lead pasan al cliente nuevo (spec 19).
+          try {
+            const linked = await convertLeadCalls(db, wsCtx, fromLead.call.lead.phone_digits, newId)
+            toast.success(`Cliente creado. ${linked} llamada(s) del lead quedaron en su historial.`)
+          } catch {
+            toast.warning(
+              'Cliente creado, pero no se pudieron vincular las llamadas del lead. En la Agenda, abre el lead y usa "Vincular llamadas".'
+            )
+          }
+        } else {
+          toast.success('Cliente creado')
+        }
         navigate(`/clientes/${newId}`)
       }
     } catch {
@@ -567,13 +667,13 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
                     Estado detectado por código de área del teléfono principal
                   </p>
                 )}
-                {!isEditing && duplicateClient && (
+                {duplicateClient && (
                   <Alert variant="default" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
                     <AlertTriangle className="h-4 w-4 text-amber-600" />
                     <AlertDescription className="text-amber-800 dark:text-amber-300">
                       {duplicateClient.archived
-                        ? 'Este número pertenece a un cliente archivado.'
-                        : 'Ya existe un cliente con este número.'}
+                        ? `Este número pertenece a un cliente archivado: ${getClientDisplayName(duplicateClient)}.`
+                        : `Ya existe un cliente con este número: ${getClientDisplayName(duplicateClient)}.`}
                       {' '}
                       <Link
                         to={`/clientes/${duplicateClient.id}`}
@@ -581,6 +681,15 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
                       >
                         Ver cliente →
                       </Link>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {!duplicateClient && hiddenDuplicates > 0 && (
+                  <Alert variant="default" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800 dark:text-amber-300">
+                      Este número ya es cliente de otro agente del equipo. Consulta con tu supervisor antes de
+                      registrarlo de nuevo.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -786,6 +895,11 @@ function ClientForm({ existingClient }: { existingClient: Client | null }) {
                     </div>
                   </Card>
                 ))}
+                {ownershipWarning(partners) && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400" role="status">
+                    {ownershipWarning(partners)}
+                  </p>
+                )}
                 <Button type="button" variant="outline" size="sm" onClick={addPartner}>
                   <Plus className="mr-1 h-3 w-3" /> Agregar socio
                 </Button>

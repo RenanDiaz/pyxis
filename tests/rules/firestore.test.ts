@@ -1,7 +1,10 @@
 import { after, before, beforeEach, describe, it } from 'node:test'
 import { assertFails, assertSucceeds, type RulesTestEnvironment } from '@firebase/rules-unit-testing'
 import {
+  arrayUnion,
   collection,
+  deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -211,5 +214,159 @@ describe('documents del cliente', () => {
     await assertSucceeds(setDoc(doc(docs(db('ag'), 'cAg'), 'n'), { name: 'a.pdf', uploaded_by_uid: 'ag' }))
     await assertFails(setDoc(doc(docs(db('ag'), 'cAg'), 'm'), { name: 'a.pdf', uploaded_by_uid: 'ag2' }))
     await assertFails(setDoc(doc(docs(db('ag'), 'cAg2'), 'o'), { name: 'a.pdf', uploaded_by_uid: 'ag' }))
+  })
+})
+
+describe('administración del workspace (spec 06)', () => {
+  const transfer = (fs: Firestore, to: string, selfRole = 'supervisor') => {
+    const batch = writeBatch(fs)
+    batch.update(doc(fs, `workspaces/${WS}`), { owner_uid: to })
+    batch.update(doc(fs, `workspaces/${WS}/members/${to}`), { role: 'owner' })
+    batch.update(doc(fs, `workspaces/${WS}/members/own`), { role: selfRole })
+    return batch.commit()
+  }
+
+  it('el owner transfiere la propiedad y queda como supervisor en un batch', async () => {
+    await assertSucceeds(transfer(db('own'), 'sup'))
+    const ws = await getDoc(doc(db('sup'), `workspaces/${WS}`))
+    if (ws.data()?.owner_uid !== 'sup') throw new Error('owner_uid no cambió')
+  })
+
+  it('el owner NO se baja el rol sin entregar la propiedad', async () => {
+    await assertFails(updateDoc(doc(db('own'), `workspaces/${WS}/members/own`), { role: 'supervisor' }))
+  })
+
+  it('NO se cambia owner_uid sin subir al nuevo owner', async () => {
+    await assertFails(updateDoc(doc(db('own'), `workspaces/${WS}`), { owner_uid: 'sup' }))
+  })
+
+  it('al entregar la propiedad el owner anterior queda como supervisor, no como agente', async () => {
+    await assertFails(transfer(db('own'), 'sup', 'agent'))
+  })
+
+  it('un supervisor no transfiere la propiedad', async () => {
+    const fs = db('sup')
+    const batch = writeBatch(fs)
+    batch.update(doc(fs, `workspaces/${WS}`), { owner_uid: 'sup' })
+    batch.update(doc(fs, `workspaces/${WS}/members/sup`), { role: 'owner' })
+    await assertFails(batch.commit())
+  })
+
+  it('solo el owner borra clientes; el agente no borra ni los suyos', async () => {
+    await assertFails(deleteDoc(doc(db('ag'), `workspaces/${WS}/clients/cAg`)))
+    await assertFails(deleteDoc(doc(db('sup'), `workspaces/${WS}/clients/cAg`)))
+    await assertSucceeds(deleteDoc(doc(db('own'), `workspaces/${WS}/clients/cAg`)))
+  })
+
+  it('el owner reasigna clientes y llamadas del miembro que quita', async () => {
+    const fs = db('own')
+    const batch = writeBatch(fs)
+    batch.update(doc(fs, `workspaces/${WS}/clients/cAg2`), { owner_uid: 'ag', subteam_id: 'A' })
+    batch.update(doc(fs, `workspaces/${WS}/calls/callAg2`), { owner_uid: 'ag', subteam_id: 'A' })
+    batch.delete(doc(fs, `workspaces/${WS}/members/ag2`))
+    batch.update(doc(fs, 'users/ag2'), { workspace_id: null })
+    await assertSucceeds(batch.commit())
+  })
+})
+
+describe('llamadas a leads (spec 19)', () => {
+  const lead = { name: 'Juan Pérez', phone: '+1 (305) 555-1234', phone_digits: '3055551234' }
+  const base = { owner_uid: 'ag', subteam_id: 'A', outcome: 'pendiente', notes: '' }
+
+  it('un agente agenda una llamada a un lead sin cliente', async () => {
+    await assertSucceeds(setDoc(doc(db('ag'), `workspaces/${WS}/calls/l1`), { ...base, client_id: null, lead }))
+  })
+
+  it('se rechaza una llamada sin cliente ni lead, o con lead sin nombre o teléfono', async () => {
+    const fs = db('ag')
+    await assertFails(setDoc(doc(fs, `workspaces/${WS}/calls/l2`), { ...base, client_id: null }))
+    await assertFails(setDoc(doc(fs, `workspaces/${WS}/calls/l3`), { ...base, client_id: null, lead: { ...lead, name: '' } }))
+    await assertFails(setDoc(doc(fs, `workspaces/${WS}/calls/l4`), { ...base, client_id: null, lead: { name: 'X' } }))
+    await assertFails(setDoc(doc(fs, `workspaces/${WS}/calls/l5`), { ...base, client_id: 'cAg', lead }))
+  })
+
+  it('otro agente no ve la llamada a un lead ajeno; el supervisor del subequipo sí', async () => {
+    await assertSucceeds(setDoc(doc(db('ag'), `workspaces/${WS}/calls/l1`), { ...base, client_id: null, lead }))
+    await assertFails(getDoc(doc(db('ag2'), `workspaces/${WS}/calls/l1`)))
+    await assertSucceeds(getDoc(doc(db('sup'), `workspaces/${WS}/calls/l1`)))
+  })
+
+  it('convertir: la llamada pasa a un cliente y pierde el lead', async () => {
+    const fs = db('ag')
+    await assertSucceeds(setDoc(doc(fs, `workspaces/${WS}/calls/l1`), { ...base, client_id: null, lead }))
+    await assertSucceeds(
+      updateDoc(doc(fs, `workspaces/${WS}/calls/l1`), { client_id: 'cAg', lead: deleteField(), converted_client_id: 'cAg' }),
+    )
+  })
+
+  it('las llamadas existentes a clientes se siguen actualizando', async () => {
+    await assertSucceeds(updateDoc(doc(db('ag'), `workspaces/${WS}/calls/callAg`), { outcome: 'completada' }))
+  })
+})
+
+describe('actividad del cliente (spec 03-R6)', () => {
+  const evento = { type: 'reassigned', text: 'Cliente reasignado de Ana a Beto', at: null, by: 'own' }
+  const path = `workspaces/${WS}/clients/cAg`
+
+  it('se agregan eventos (arrayUnion) junto con otros cambios', async () => {
+    await assertSucceeds(updateDoc(doc(db('own'), path), { activity: arrayUnion(evento), notes: 'x' }))
+    await assertSucceeds(updateDoc(doc(db('ag'), path), { notes: 'solo notas' }))
+  })
+
+  it('nadie borra ni edita eventos existentes', async () => {
+    await assertSucceeds(updateDoc(doc(db('own'), path), { activity: arrayUnion(evento) }))
+    await assertFails(updateDoc(doc(db('ag'), path), { activity: [] }))
+    await assertFails(updateDoc(doc(db('ag'), path), { activity: [{ ...evento, text: 'editado' }] }))
+    await assertFails(updateDoc(doc(db('own'), path), { activity: [] }))
+  })
+})
+
+describe('índice de teléfonos (spec 07)', () => {
+  const idx = (d: string) => `workspaces/${WS}/phone_index/${d}`
+  const entry = (clientId: string) => ({ client_ids: { [clientId]: true }, last_client_id: clientId })
+
+  /** Cliente del agente con ese número (y su entrada en el índice) en un batch. */
+  function addPhone(fs: Firestore, clientId: string, digits: string, indexed = digits) {
+    const batch = writeBatch(fs)
+    batch.update(doc(fs, `workspaces/${WS}/clients/${clientId}`), { phone_digits: [digits] })
+    batch.set(doc(fs, idx(indexed)), entry(clientId), { merge: true })
+    return batch.commit()
+  }
+
+  it('un miembro lee un número por su id, pero no lista el índice', async () => {
+    await assertSucceeds(addPhone(db('ag'), 'cAg', '3055551234'))
+    await assertSucceeds(getDoc(doc(db('ag2'), idx('3055551234'))))
+    await assertSucceeds(getDoc(doc(db('ag2'), idx('9999999999'))))
+    await assertFails(getDocs(collection(db('ag2'), `workspaces/${WS}/phone_index`)))
+    await assertFails(getDoc(doc(db('out'), idx('3055551234'))))
+    await assertSucceeds(getDocs(collection(db('own'), `workspaces/${WS}/phone_index`)))
+  })
+
+  it('el número debe coincidir con el phone_digits del cliente al terminar el batch', async () => {
+    await assertFails(addPhone(db('ag'), 'cAg', '3055551234', '7865550000'))
+    await assertFails(setDoc(doc(db('ag'), idx('3055551234')), entry('cAg')))
+  })
+
+  it('nadie se agrega con un cliente que no ve ni toca a otros clientes del número', async () => {
+    await assertSucceeds(addPhone(db('ag2'), 'cAg2', '3055551234'))
+    // ag no ve cAg2: no puede agregarlo ni quitarlo.
+    await assertFails(setDoc(doc(db('ag'), idx('3055551234')), entry('cAg2'), { merge: true }))
+    await assertFails(
+      setDoc(doc(db('ag'), idx('3055551234')), { client_ids: {}, last_client_id: 'cAg2' }),
+    )
+    // Agregarse a sí mismo quitando a otro, tampoco.
+    const fs = db('ag')
+    const batch = writeBatch(fs)
+    batch.update(doc(fs, `workspaces/${WS}/clients/cAg`), { phone_digits: ['3055551234'] })
+    batch.set(doc(fs, idx('3055551234')), entry('cAg'))
+    await assertFails(batch.commit())
+  })
+
+  it('no acepta otros campos', async () => {
+    const fs = db('ag')
+    const batch = writeBatch(fs)
+    batch.update(doc(fs, `workspaces/${WS}/clients/cAg`), { phone_digits: ['3055551234'] })
+    batch.set(doc(fs, idx('3055551234')), { ...entry('cAg'), name: 'Juan' })
+    await assertFails(batch.commit())
   })
 })

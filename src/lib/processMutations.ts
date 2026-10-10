@@ -108,6 +108,40 @@ export function removePaymentFrom(
   return replaceAt(processes, index, { ...process, payments: kept })
 }
 
+/**
+ * Corrige un pago ya registrado (monto, fecha, método, nota). Conserva su `id`
+ * y su número de recibo: el recibo reimpreso sale con el mismo número. A un
+ * pago legacy se le fija el número que tenía y se le asigna `id`.
+ */
+export function updatePaymentIn(
+  processes: ClientProcess[],
+  processId: string,
+  key: string,
+  patch: Partial<PaymentInput>,
+  newId: string = crypto.randomUUID(),
+): ClientProcess[] {
+  const index = indexOfProcess(processes, processId)
+  const process = processes[index]
+  const payments = process.payments ?? []
+  // Solo el primero que coincide: dos pagos legacy idénticos comparten huella.
+  const target = payments.findIndex((p) => paymentKey(p) === key)
+  if (target < 0) throw new UserFacingError('El pago ya no existe. Recarga la página.')
+  const current = payments[target]
+  const next: Payment = {
+    ...current,
+    ...patch,
+    id: current.id ?? newId,
+    receipt_number: getReceiptNumber(process, current),
+    amount: roundMoney(patch.amount ?? current.amount),
+  }
+  // La nota vacía se quita (Firestore rechaza `undefined`).
+  if (!next.note) delete next.note
+  return replaceAt(processes, index, {
+    ...process,
+    payments: payments.map((p, i) => (i === target ? next : p)),
+  })
+}
+
 export function patchProcess(
   processes: ClientProcess[],
   processId: string,
@@ -168,6 +202,11 @@ export const clientMutations = {
     (processId: string, key: string): ClientMutation =>
     (client) =>
       balanceChange(client, removePaymentFrom(client.processes ?? [], processId, key)),
+
+  updatePayment:
+    (processId: string, key: string, patch: Partial<PaymentInput>): ClientMutation =>
+    (client) =>
+      balanceChange(client, updatePaymentIn(client.processes ?? [], processId, key, patch)),
 
   /** Cambiar el total recalcula el status; etapa, notas o compañía no. */
   updateProcess:

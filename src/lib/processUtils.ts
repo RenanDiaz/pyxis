@@ -40,6 +40,38 @@ export function getSuggestedPrice(type: string, state?: StateInfo | null): numbe
   }
 }
 
+/** Por qué no se conoce el costo estatal de un proceso (ver `getProcessStateCost`). */
+export type MissingCostReason = 'no_state' | 'no_state_value' | 'manual'
+
+/**
+ * Costo estatal / del proveedor de un proceso: el STATE FEE del reporte de
+ * ventas (spec 04, P8). Prioridad: el capturado en el proceso (`state_cost`),
+ * luego el del catálogo (`ProcessDef.cost`): fijo, o leído del documento del
+ * estado. Si no se puede saber, `cost: null` con el motivo.
+ */
+export function getProcessStateCost(
+  process: Pick<ClientProcess, 'type' | 'state' | 'state_cost'>,
+  state?: StateInfo | null,
+): { cost: number; reason?: undefined } | { cost: null; reason: MissingCostReason } {
+  if (typeof process.state_cost === 'number' && process.state_cost >= 0) {
+    return { cost: process.state_cost }
+  }
+  const def = getProcessDef(process.type)
+  // `custom` no vive en el catálogo: su costo siempre es manual.
+  const cost = def?.cost ?? { mode: 'manual' as const }
+  switch (cost.mode) {
+    case 'fixed':
+      return { cost: cost.amount }
+    case 'manual':
+      return { cost: null, reason: 'manual' }
+    case 'state': {
+      if (!process.state || !state) return { cost: null, reason: 'no_state' }
+      const num = parseFloat(getFieldValue(state, cost.key).replace(/[$,]/g, ''))
+      return isNaN(num) ? { cost: null, reason: 'no_state_value' } : { cost: num }
+    }
+  }
+}
+
 export function getFieldValue(state: StateInfo, key: string): string {
   const parts = key.split('.')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,6 +146,31 @@ export function parsePaymentDate(value: string | undefined | null): Date | null 
 /** Clave de mes (`yyyy-MM`) en hora LOCAL de una fecha. */
 export function localMonthKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Fecha local como `yyyy-MM-dd` (valor de un `<input type="date">`). */
+export function localDateKey(d: Date): string {
+  return `${localMonthKey(d)}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * Fecha de venta del proceso: el mes en que el reporte de ventas lo cuenta.
+ * `sold_at` si el agente la fijó (una venta cerrada antes de su primer pago o
+ * capturada tarde); si no, la fecha del primer pago. `created_at` NO sirve: un
+ * proceso se agrega al cotizar a un prospecto, a veces un mes antes de venderse.
+ */
+export function getProcessSaleDate(process: ClientProcess): Date | null {
+  const sold = /^(\d{4})-(\d{2})-(\d{2})$/.exec(process.sold_at ?? '')
+  if (sold) {
+    const d = new Date(Number(sold[1]), Number(sold[2]) - 1, Number(sold[3]))
+    if (!isNaN(d.getTime())) return d
+  }
+  let first: Date | null = null
+  for (const p of process.payments ?? []) {
+    const d = parsePaymentDate(p.date)
+    if (d && (!first || d.getTime() < first.getTime())) first = d
+  }
+  return first
 }
 
 /**

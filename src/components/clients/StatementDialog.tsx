@@ -70,7 +70,7 @@ export default function StatementDialog({ client, workspace, onOpenChange }: Sta
             <div className="space-y-2">
               {processes.map((p) => {
                 const enabled = canStateAccount(p)
-                const company = p.type === 'registration' ? getProcessCompanyName(client, p) : ''
+                const company = getProcessCompanyName(client, p)
                 const pBalance = enabled ? getProcessBalance(p) : 0
                 return (
                   <label

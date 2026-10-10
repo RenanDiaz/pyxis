@@ -5,14 +5,21 @@ import {
   getWorkspaceMembers,
   updateMemberRole,
   updateMemberSubteam,
-  removeMember,
   getSubteams,
   createSubteam,
   updateSubteam,
   deleteSubteam,
   updateWorkspace,
-  deleteWorkspace,
 } from '@/lib/firestore'
+import { db } from '@/lib/firebase'
+import {
+  deleteWorkspaceCascade,
+  removeMemberWithReassign,
+  transferOwnership,
+  type AdminProgress,
+  type ReassignTarget,
+} from '@/lib/workspaceAdmin'
+import { deleteFileFromStorage } from '@/lib/adminStorage'
 
 export function useWorkspaceMembers(workspaceId: string | null | undefined) {
   return useQuery<WorkspaceMember[]>({
@@ -85,11 +92,13 @@ export function useRemoveMember() {
   const queryClient = useQueryClient()
   return useMutation({
     meta: { errorMessage: 'No se pudo quitar al miembro' },
-    mutationFn: ({ workspaceId, uid }: { workspaceId: string; uid: string }) =>
-      removeMember(workspaceId, uid),
+    mutationFn: ({ workspaceId, uid, target }: { workspaceId: string; uid: string; target: ReassignTarget }) =>
+      removeMemberWithReassign(db!, workspaceId, uid, target),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspaceMembers'] })
       queryClient.invalidateQueries({ queryKey: ['workspaceMember'] })
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: ['calls'] })
     },
   })
 }
@@ -162,11 +171,33 @@ export function useUpdateWorkspace() {
 export function useDeleteWorkspace() {
   const queryClient = useQueryClient()
   return useMutation({
-    meta: { errorMessage: 'No se pudo eliminar el workspace' },
-    mutationFn: (id: string) => deleteWorkspace(id),
+    meta: { errorMessage: 'No se pudo eliminar el workspace. Puedes reintentar: continúa donde quedó.' },
+    mutationFn: (args: {
+      workspaceId: string
+      ownerUid: string
+      logoPath?: string | null
+      onProgress?: (p: AdminProgress) => void
+    }) =>
+      deleteWorkspaceCascade(db!, args.workspaceId, args.ownerUid, {
+        deleteFile: deleteFileFromStorage,
+        logoPath: args.logoPath,
+        onProgress: args.onProgress,
+      }),
+    // Sin workspace, toda la caché es de datos que ya no existen.
+    onSuccess: () => queryClient.clear(),
+  })
+}
+
+export function useTransferOwnership() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { errorMessage: 'No se pudo transferir la propiedad' },
+    mutationFn: ({ workspaceId, fromUid, toUid }: { workspaceId: string; fromUid: string; toUid: string }) =>
+      transferOwnership(db!, workspaceId, fromUid, toUid),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspace'] })
-      queryClient.invalidateQueries({ queryKey: ['userProfile'] })
+      queryClient.invalidateQueries({ queryKey: ['workspaceMember'] })
+      queryClient.invalidateQueries({ queryKey: ['workspaceMembers'] })
     },
   })
 }

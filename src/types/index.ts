@@ -63,17 +63,22 @@ export interface StateInfo {
   sale_price: string
   state_fee: string
   processing_days: string
+  // `fee` es el PRECIO de venta del servicio; `state_cost`, lo que cobra el
+  // estado (costo del reporte de ventas, spec 04 P8). Vacío = sin dato.
   annual_report: {
     fee: string
     due_date: string
+    state_cost?: string
   }
   dissolution: {
     fee: string
     processing_days: string
+    state_cost?: string
   }
   amendments: {
     available: string
     fee: string
+    state_cost?: string
   }
   business_purpose: {
     specific: string
@@ -107,6 +112,7 @@ export type ProcessType =
   | 'ein'
   | 'boi'
   | 'statement_of_formation'
+  | 'itin'
   | 'custom'
 
 export type ProcessStage = 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
@@ -160,6 +166,31 @@ export interface ClientProcess {
   /** Solo `registration`: propósito de esta compañía. Fallback (primer registro): `client.business_purpose`. */
   business_purpose?: string
   notes?: string
+  /**
+   * Fecha de venta (`yyyy-MM-dd`, hora local): el reporte de ventas cuenta el
+   * proceso en ESTE mes, aunque se cobre después. Opcional: sin ella, cuenta la
+   * fecha del primer pago (ver `getProcessSaleDate`).
+   */
+  sold_at?: string
+  /**
+   * Costo estatal / del proveedor de ESTE proceso (STATE FEE del reporte). Sin
+   * él se usa el del catálogo o el del estado (ver `getProcessStateCost`); se
+   * captura para procesos de costo manual (custom) o para corregir un caso.
+   */
+  state_cost?: number
+  /**
+   * Solo procesos `cancelado`: cuánto se le devolvió al cliente (0 = nada). El
+   * reporte de ventas cuenta lo cobrado menos esto (spec 04, P3). Sin capturar
+   * se toma como 0 y el diálogo de exportación lo advierte.
+   */
+  refunded_amount?: number
+  /**
+   * Solo procesos que NO son registro: `id` del registro (compañía) del cliente
+   * al que pertenece este servicio. Sin él, la compañía sale de `llc_name`
+   * (otra compañía, escrita a mano) o, si el cliente tiene una sola, de esa.
+   * Ver `getProcessCompanyName`.
+   */
+  company_id?: string
   created_at: Timestamp
 }
 
@@ -179,10 +210,25 @@ export interface Partner {
   ownership_percentage?: number
 }
 
+/**
+ * Evento del sistema en la ficha del cliente (spec 03-R6). Antes se escribían
+ * como líneas "[SISTEMA] …" dentro de `notes`, mezcladas con lo que el agente
+ * edita. Solo se agregan; las reglas no dejan editarlos ni borrarlos.
+ */
+export interface ClientActivity {
+  type: 'reassigned' | 'system'
+  text: string
+  /** `null` en eventos migrados desde notas viejas (la fecha va en el texto). */
+  at: Timestamp | null
+  by: string | null
+}
+
 export interface Client {
   id: string
   phone: string
   phones?: ClientPhone[]
+  /** Todos los teléfonos en 10 dígitos (spec 07); lo escribe `clientTransactions`. */
+  phone_digits?: string[]
   llc_name?: string
   state?: string
   /** @deprecated reemplazado por `processes`. Se mantiene solo para migración. */
@@ -203,6 +249,8 @@ export interface Client {
   status: ClientStatus
   /** Últimos cambios de status (máx. 50). Ver `src/lib/statusHistory.ts`. */
   status_history?: StatusEvent[]
+  /** Eventos del sistema (reasignaciones…), separados de `notes`. */
+  activity?: ClientActivity[]
   /** Primera vez que pasó a contactado o más avanzado. */
   contacted_at?: Timestamp | null
   /** Última vez que pasó a `cerrado`; `null` si salió de cerrado. */
@@ -229,9 +277,24 @@ export type CallOutcome = 'pendiente' | 'completada' | 'no_contesto' | 'reagenda
 /** `contact_attempt`: el agente tocó Llamar/WhatsApp/Email desde el detalle (no es una cita). */
 export type CallKind = 'scheduled' | 'contact_attempt'
 
+/** Prospecto sin registrar al que se agenda una llamada (spec 19). */
+export interface CallLead {
+  name: string
+  /** Formateado como los teléfonos del cliente. */
+  phone: string
+  /** 10 dígitos: agrupa las llamadas de un mismo lead. */
+  phone_digits: string
+  state?: string
+  notes?: string
+}
+
 export interface Call {
   id: string
-  client_id: string
+  /** `null` ⇔ llamada a un lead (`lead` presente). */
+  client_id: string | null
+  lead?: CallLead
+  /** Cliente que se creó al convertir el lead (trazabilidad). */
+  converted_client_id?: string
   scheduled_at: Timestamp
   duration_minutes?: number
   notes: string

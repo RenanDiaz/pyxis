@@ -3,6 +3,7 @@ import {
   doc,
   getDocs,
   getDoc,
+  getCountFromServer,
   setDoc,
   addDoc,
   updateDoc,
@@ -33,30 +34,14 @@ import type {
   StateInfo,
 } from '@/types'
 import { normalizeClientFields } from '@/lib/clientUtils'
-import { runClientMutation, runClientUpdate } from '@/lib/clientTransactions'
+import { runClientCreate, runClientMutation, runClientUpdate } from '@/lib/clientTransactions'
 import type { StatusTrigger } from '@/lib/statusUtils'
 import { initialStatusFields } from '@/lib/statusHistory'
 import type { ClientChange, ClientMutation } from '@/lib/processMutations'
 import { UserFacingError } from '@/lib/errors'
 
-// ── Workspace context for role-based queries ──
-
-export interface WorkspaceCtx {
-  uid: string
-  workspaceId: string
-  role: WorkspaceRole
-  subteamId: string | null
-}
-
-function addWorkspaceRoleConstraints(ctx: WorkspaceCtx): QueryConstraint[] {
-  if (ctx.role === 'owner') return []
-  // Un supervisor sin subequipo solo ve lo suyo (las reglas no le dejan ver
-  // los registros sin subequipo de otros).
-  if (ctx.role === 'supervisor' && ctx.subteamId) {
-    return [where('subteam_id', '==', ctx.subteamId)]
-  }
-  return [where('owner_uid', '==', ctx.uid)]
-}
+import { addWorkspaceRoleConstraints, type WorkspaceCtx } from '@/lib/roleScope'
+export type { WorkspaceCtx }
 
 // ── Helper: workspace collection path ──
 
@@ -95,6 +80,12 @@ export async function createUserProfile(profile: {
 export async function updateUserWorkspace(uid: string, workspaceId: string): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   await updateDoc(doc(db, 'users', uid), { workspace_id: workspaceId })
+}
+
+/** El usuario quedó apuntando a un workspace del que ya no es miembro. */
+export async function clearUserWorkspace(uid: string): Promise<void> {
+  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
+  await updateDoc(doc(db, 'users', uid), { workspace_id: null })
 }
 
 // ── Workspaces ──
@@ -147,11 +138,6 @@ export async function updateWorkspace(
   await updateDoc(doc(db, 'workspaces', id), data)
 }
 
-export async function deleteWorkspace(id: string): Promise<void> {
-  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  await deleteDoc(doc(db, 'workspaces', id))
-}
-
 // ── Workspace Members ──
 
 export async function getWorkspaceMembers(workspaceId: string): Promise<WorkspaceMember[]> {
@@ -187,14 +173,6 @@ export async function updateMemberSubteam(
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   await updateDoc(wsDoc(workspaceId, 'members', uid), { subteam_id: subteamId })
-}
-
-export async function removeMember(workspaceId: string, uid: string): Promise<void> {
-  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  const batch = writeBatch(db)
-  batch.delete(wsDoc(workspaceId, 'members', uid))
-  batch.update(doc(db, 'users', uid), { workspace_id: null })
-  await batch.commit()
 }
 
 // ── Subteams ──
@@ -399,7 +377,7 @@ export async function createClient(
 ): Promise<string> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   const now = Timestamp.now()
-  const ref = await addDoc(wsCol(ctx.workspaceId, 'clients'), {
+  return runClientCreate(db, ctx.workspaceId, {
     ...normalizeClientFields(data),
     ...initialStatusFields(data.status, ctx.uid, now),
     archived: false,
@@ -408,7 +386,6 @@ export async function createClient(
     created_at: now,
     updated_at: now,
   })
-  return ref.id
 }
 
 export async function updateClient(
@@ -434,18 +411,6 @@ export async function mutateClient(
 
 function currentUid(): string | null {
   return auth?.currentUser?.uid ?? null
-}
-
-export async function deleteClient(workspaceId: string, id: string): Promise<void> {
-  if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
-  await deleteDoc(wsDoc(workspaceId, 'clients', id))
-}
-
-export async function findClientsByPhone(workspaceId: string, phone: string): Promise<Client[]> {
-  if (!isFirebaseConfigured || !db || !phone.trim()) return []
-  const q = query(wsCol(workspaceId, 'clients'), where('phone', '==', phone.trim()))
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Client))
 }
 
 // ── Calls ──
@@ -498,12 +463,18 @@ export async function getUpcomingCalls(ctx: WorkspaceCtx, max: number = 5): Prom
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Call))
 }
 
-export async function getOverdueCalls(ctx: WorkspaceCtx, max: number = 10): Promise<Call[]> {
+export async function getOverdueCalls(
+  ctx: WorkspaceCtx,
+  max: number = 10,
+  // La campana solo mira las vencidas recientes (spec 20).
+  since?: Date
+): Promise<Call[]> {
   if (!isFirebaseConfigured || !db) return []
   const now = Timestamp.now()
   const constraints: QueryConstraint[] = [
     ...addWorkspaceRoleConstraints(ctx),
     where('outcome', '==', 'pendiente'),
+    ...(since ? [where('scheduled_at', '>=', Timestamp.fromDate(since))] : []),
     where('scheduled_at', '<', now),
     orderBy('scheduled_at', 'desc'),
     limit(max),
@@ -513,15 +484,53 @@ export async function getOverdueCalls(ctx: WorkspaceCtx, max: number = 10): Prom
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Call))
 }
 
+/**
+ * Llamadas pendientes PROPIAS en una ventana (avisos, spec 21). Filtra por
+ * `owner_uid` también para owner/supervisor: el aviso es de quien llama.
+ */
+export async function getReminderCalls(ctx: WorkspaceCtx, from: Date, to: Date): Promise<Call[]> {
+  if (!isFirebaseConfigured || !db) return []
+  const q = query(
+    wsCol(ctx.workspaceId, 'calls'),
+    where('owner_uid', '==', ctx.uid),
+    where('outcome', '==', 'pendiente'),
+    where('scheduled_at', '>=', Timestamp.fromDate(from)),
+    where('scheduled_at', '<=', Timestamp.fromDate(to)),
+    orderBy('scheduled_at', 'asc')
+  )
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Call))
+}
+
+/** Cuántas vencidas quedan antes de `before` (fuera de la ventana de la campana). */
+export async function countOverdueBefore(ctx: WorkspaceCtx, before: Date): Promise<number> {
+  if (!isFirebaseConfigured || !db) return 0
+  const q = query(
+    wsCol(ctx.workspaceId, 'calls'),
+    ...addWorkspaceRoleConstraints(ctx),
+    where('outcome', '==', 'pendiente'),
+    where('scheduled_at', '<', Timestamp.fromDate(before))
+  )
+  return (await getCountFromServer(q)).data().count
+}
+
+export async function getCall(workspaceId: string, id: string): Promise<Call | null> {
+  if (!isFirebaseConfigured || !db) return null
+  const snap = await getDoc(wsDoc(workspaceId, 'calls', id))
+  return snap.exists() ? ({ id: snap.id, ...snap.data() } as Call) : null
+}
+
 export async function createCall(
   ctx: WorkspaceCtx,
-  data: Omit<Call, 'id' | 'created_at' | 'owner_uid' | 'subteam_id'>
+  data: Omit<Call, 'id' | 'created_at' | 'owner_uid' | 'subteam_id'>,
+  // Owner/supervisor pueden agendar un lead para uno de sus agentes (spec 19).
+  assignTo?: { owner_uid: string; subteam_id: string | null }
 ): Promise<string> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   const ref = await addDoc(wsCol(ctx.workspaceId, 'calls'), {
     ...data,
-    owner_uid: ctx.uid,
-    subteam_id: ctx.subteamId,
+    owner_uid: assignTo?.owner_uid ?? ctx.uid,
+    subteam_id: assignTo?.subteam_id ?? ctx.subteamId,
     created_at: Timestamp.now(),
   })
   return ref.id

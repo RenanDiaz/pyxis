@@ -18,16 +18,32 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Plus, Trash2 } from 'lucide-react'
-import type { ExpenseConfig } from '@/lib/generateSalesReport'
-import type { StripeFeeMode } from '@/lib/salesReportData'
+import { DEFAULT_TAX_RATE, type ExpenseConfig } from '@/lib/generateSalesReport'
+import {
+  DEFAULT_REGISTERED_AGENT_COST,
+  type CancelledSale,
+  type MissingCost,
+  type ProjectedSale,
+  type StripeFeeMode,
+} from '@/lib/salesReportData'
+import { formatMoney } from '@/lib/format'
 
 /** Config completa de exportación: gastos + opciones de cálculo. */
 export interface ExportSettings {
   expenses: ExpenseConfig
   stripeFeeMode: StripeFeeMode
+  taxRate: number
+  /** Costo del Registered Agent de las cuentas que lo incluyen. */
+  registeredAgentCost: number
 }
 
 const STORAGE_KEY = 'pyxis.salesReport.exportSettings'
+/**
+ * Versión de lo guardado. v2: el Stripe fee pasa a ser el recargo del 4 % del
+ * Excel manual (spec 04, P5); el modo guardado antes («estimar» 2.9 % + $0.30
+ * era el default) ya no existe, así que no se arrastra.
+ */
+const SETTINGS_VERSION = 2
 
 /** Valores por defecto (basados en el ejemplo de junio del SPEC). */
 function defaultSettings(employeeName: string): ExportSettings {
@@ -42,7 +58,9 @@ function defaultSettings(employeeName: string): ExportSettings {
         { label: 'Zoom Phone', amount: 0 },
       ],
     },
-    stripeFeeMode: 'estimate',
+    stripeFeeMode: 'surcharge',
+    taxRate: DEFAULT_TAX_RATE,
+    registeredAgentCost: DEFAULT_REGISTERED_AGENT_COST,
   }
 }
 
@@ -50,7 +68,8 @@ function loadSettings(employeeName: string): ExportSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
-      const parsed = JSON.parse(raw) as ExportSettings
+      const parsed = JSON.parse(raw) as Partial<ExportSettings> & { version?: number }
+      if (parsed.version !== SETTINGS_VERSION) delete parsed.stripeFeeMode
       // El nombre del empleado sigue al agente seleccionado, no al guardado.
       return {
         ...defaultSettings(employeeName),
@@ -64,6 +83,12 @@ function loadSettings(employeeName: string): ExportSettings {
   return defaultSettings(employeeName)
 }
 
+const MISSING_COST_TEXT: Record<MissingCost['reason'], string> = {
+  no_state: 'sin estado',
+  no_state_value: 'el estado no tiene este costo',
+  manual: 'costo sin capturar',
+}
+
 interface ExportReportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -71,6 +96,15 @@ interface ExportReportDialogProps {
   defaultEmployeeName: string
   /** Nº de cuentas y pagos que entran en el mes (para avisar si es 0). */
   accountCount: number
+  /** Cuentas sin estado en el proceso (su state fee sale en 0). */
+  /** Ventas sin costo estatal conocido (su STATE FEE sale en 0). */
+  missingCost: MissingCost[]
+  /** Ventas con saldo pendiente: su CHARGE incluye un monto proyectado. */
+  projected: ProjectedSale[]
+  /** Ventas canceladas: cuentan lo cobrado menos lo reembolsado. */
+  cancelled: CancelledSale[]
+  /** Servicios sin compañía elegida (el cliente tiene varias). */
+  unassignedCompany: string[]
   isExporting: boolean
   onExport: (settings: ExportSettings) => void
 }
@@ -80,6 +114,10 @@ export default function ExportReportDialog({
   onOpenChange,
   defaultEmployeeName,
   accountCount,
+  missingCost,
+  projected,
+  cancelled,
+  unassignedCompany,
   isExporting,
   onExport,
 }: ExportReportDialogProps) {
@@ -128,7 +166,7 @@ export default function ExportReportDialog({
       },
     }
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cleaned, version: SETTINGS_VERSION }))
     } catch {
       // Ignorar si localStorage no está disponible.
     }
@@ -141,14 +179,89 @@ export default function ExportReportDialog({
         <DialogHeader>
           <DialogTitle>Configurar reporte de ventas</DialogTitle>
           <DialogDescription>
-            La tabla de cuentas se genera desde los pagos del mes. Estos valores completan
+            Una fila por cada venta del mes (según su fecha de venta). Estos valores completan
             la sección de gastos y pagos del reporte.
           </DialogDescription>
         </DialogHeader>
 
         {accountCount === 0 && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-            No hay pagos registrados en el mes seleccionado. El reporte saldrá sin cuentas.
+            No hay ventas en el mes seleccionado. El reporte saldrá sin cuentas.
+          </div>
+        )}
+
+        {missingCost.length > 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+            <p className="font-medium">
+              {missingCost.length === 1
+                ? '1 venta no tiene costo estatal: su STATE FEE saldrá en 0.'
+                : `${missingCost.length} ventas no tienen costo estatal: su STATE FEE saldrá en 0.`}
+            </p>
+            <ul className="mt-1 list-disc pl-5">
+              {missingCost.map((item, i) => (
+                <li key={i}>
+                  {item.label}: {MISSING_COST_TEXT[item.reason]}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1 text-xs">Se corrige en el proceso del cliente («Costo estatal»).</p>
+          </div>
+        )}
+
+        {unassignedCompany.length > 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+            <p className="font-medium">
+              {unassignedCompany.length === 1
+                ? '1 venta sin compañía: el cliente tiene varias y no se eligió ninguna.'
+                : `${unassignedCompany.length} ventas sin compañía: el cliente tiene varias y no se eligió ninguna.`}
+            </p>
+            <ul className="mt-1 list-disc pl-5">
+              {unassignedCompany.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+            <p className="mt-1 text-xs">Sale el nombre del cliente. Se corrige en el proceso («Compañía»).</p>
+          </div>
+        )}
+
+        {cancelled.length > 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+            <p className="font-medium">
+              {cancelled.length === 1
+                ? '1 venta cancelada: cuenta lo cobrado menos lo reembolsado.'
+                : `${cancelled.length} ventas canceladas: cuentan lo cobrado menos lo reembolsado.`}
+            </p>
+            <ul className="mt-1 list-disc pl-5">
+              {cancelled.map((c, i) => (
+                <li key={i}>
+                  {c.label}: ${formatMoney(c.charge)}
+                  {c.refundMissing ? ' (reembolso sin capturar: se toma como $0)' : ''}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {projected.length > 0 && (
+          <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">
+            <p className="font-medium">
+              {projected.length === 1
+                ? '1 venta tiene saldo pendiente: su CHARGE incluye lo que falta cobrar.'
+                : `${projected.length} ventas tienen saldo pendiente: su CHARGE incluye lo que falta cobrar.`}
+            </p>
+            {settings.stripeFeeMode === 'surcharge' && projected.some((p) => p.stripe) && (
+              <p className="mt-0.5">
+                Si el primer pago fue con Stripe, el saldo también lleva el recargo del 4 %.
+              </p>
+            )}
+            <ul className="mt-1 list-disc pl-5">
+              {projected.map((p, i) => (
+                <li key={i}>
+                  {p.label}: ${formatMoney(p.pending)} por cobrar
+                  {settings.stripeFeeMode === 'surcharge' && p.stripe ? ' (Stripe)' : ''}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -190,20 +303,54 @@ export default function ExportReportDialog({
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="report-bonus-opcional">Bonus ($) — opcional</Label>
+              <Input
+                id="report-bonus-opcional"
+                type="number"
+                min={0}
+                step="0.01"
+                value={expenses.bonus ?? ''}
+                placeholder="Sin bonus"
+                onChange={(e) => {
+                  const v = e.target.value
+                  patchExpenses({ bonus: v === '' ? undefined : parseFloat(v) || 0 })
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="report-tax-rate">TAX (%)</Label>
+              <Input
+                id="report-tax-rate"
+                type="number"
+                min={0}
+                max={100}
+                step="0.1"
+                value={Math.round(settings.taxRate * 1000) / 10}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, taxRate: (parseFloat(e.target.value) || 0) / 100 }))
+                }
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="report-bonus-opcional">Bonus ($) — opcional</Label>
+            <Label htmlFor="report-registered-agent">Registered Agent ($)</Label>
             <Input
-              id="report-bonus-opcional"
+              id="report-registered-agent"
               type="number"
               min={0}
               step="0.01"
-              value={expenses.bonus ?? ''}
-              placeholder="Sin bonus"
-              onChange={(e) => {
-                const v = e.target.value
-                patchExpenses({ bonus: v === '' ? undefined : parseFloat(v) || 0 })
-              }}
+              className="w-32"
+              value={settings.registeredAgentCost}
+              onChange={(e) =>
+                setSettings((s) => ({ ...s, registeredAgentCost: parseFloat(e.target.value) || 0 }))
+              }
             />
+            <p className="text-xs text-muted-foreground">
+              Costo por cada registro marcado con Registered Agent.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -249,7 +396,7 @@ export default function ExportReportDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="report-stripe-fee-por-pago">Stripe fee por pago</Label>
+            <Label htmlFor="report-stripe-fee-por-pago">Stripe fee</Label>
             <Select
               value={settings.stripeFeeMode}
               onValueChange={(v) =>
@@ -260,12 +407,13 @@ export default function ExportReportDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="estimate">Estimar (2.9% + $0.30)</SelectItem>
-                <SelectItem value="none">Sin comisión ($0.00)</SelectItem>
+                <SelectItem value="surcharge">Recargo del 4 % (como el Excel manual)</SelectItem>
+                <SelectItem value="none">Sin recargo ($0.00)</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Solo se aplica a los pagos hechos con el método Stripe; se estima o se deja en cero.
+              El cliente paga un 4 % extra por pagar con Stripe y Pyxis guarda el pago sin él.
+              El recargo se suma a CHARGE y se resta como STRIPE FEE, así que no cambia el NET.
             </p>
           </div>
         </div>

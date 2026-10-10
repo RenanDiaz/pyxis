@@ -11,6 +11,7 @@ import {
   getReceiptNumber,
   paymentKey,
   removePaymentFrom,
+  updatePaymentIn,
 } from '@/lib/processMutations'
 
 const now = Timestamp.fromMillis(Date.UTC(2026, 9, 1))
@@ -93,6 +94,43 @@ describe('pagos con identidad y recibos estables', () => {
   it('pago o proceso inexistente da un error claro', () => {
     assert.throws(() => removePaymentFrom([proc()], 'p1', 'nope'), /ya no existe/)
     assert.throws(() => addPaymentTo([proc()], 'otro', pay(1, '2026-10-01')), /ya no existe/)
+  })
+})
+
+describe('editar un pago (spec 04, req. 14)', () => {
+  it('corrige monto, fecha, método y nota sin cambiar id ni número de recibo', () => {
+    const p = proc({
+      total: 600,
+      payments: [
+        pay(300, '2026-09-03T12:00:00.000Z', { id: 'a', receipt_number: 1, note: 'anticipo' }),
+        pay(100, '2026-09-09T12:00:00.000Z', { id: 'b', receipt_number: 2 }),
+      ],
+    })
+    const after = updatePaymentIn([p], 'p1', 'a', {
+      amount: 312.004, date: '2026-08-28T12:00:00.000Z', method: 'stripe', note: '',
+    })[0]
+    assert.deepEqual(after.payments[0], {
+      id: 'a', receipt_number: 1, amount: 312, date: '2026-08-28T12:00:00.000Z', method: 'stripe',
+    })
+    assert.deepEqual(after.payments[1], p.payments[1])
+  })
+
+  it('un pago legacy conserva el número que tenía y recibe id', () => {
+    const p = proc({ total: 300, payments: [pay(100, '2026-10-01'), pay(100, '2026-10-02')] })
+    const after = updatePaymentIn([p], 'p1', paymentKey(p.payments[1]), { amount: 150 }, 'nuevo')[0]
+    assert.deepEqual(after.payments[1], { amount: 150, method: 'zelle', date: '2026-10-02', id: 'nuevo', receipt_number: 2 })
+    assert.equal(getReceiptNumber(after, after.payments[0]), 1)
+  })
+
+  it('subir el monto hasta saldar cierra al cliente; bajarlo lo reabre', () => {
+    const p = proc({ total: 300, payments: [pay(200, '2026-10-01', { id: 'a', receipt_number: 1 })] })
+    assert.equal(clientMutations.updatePayment('p1', 'a', { amount: 300 })(client([p])).status, 'cerrado')
+    const paid = proc({ total: 300, payments: [pay(300, '2026-10-01', { id: 'a', receipt_number: 1 })] })
+    assert.equal(clientMutations.updatePayment('p1', 'a', { amount: 250 })(client([paid], 'cerrado')).status, 'en_proceso')
+  })
+
+  it('pago inexistente da un error claro', () => {
+    assert.throws(() => updatePaymentIn([proc()], 'p1', 'nope', { amount: 1 }), /ya no existe/)
   })
 })
 

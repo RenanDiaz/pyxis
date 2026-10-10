@@ -17,22 +17,20 @@ import ExcelJS from 'exceljs'
 
 /* ============================ Tipos de entrada ============================= */
 
-export interface ReportPayment {
-  date: Date
-  charge: number
-  stripeFee: number
-}
-
+/** Una venta = una fila del reporte (spec 04, P6). */
 export interface ReportAccount {
+  /** Fecha de venta. */
+  date: Date
   company: string
   purchase: string
   state: string
+  /** Total vendido, incluido lo que falta cobrar. */
+  charge: number
   stateFee: number
+  /** Costo del Registered Agent; 0 si la cuenta no lo incluye. */
   registeredAgent: number
-  /** true = TAX y NET de esta cuenta restan el Registered Agent (H). Ver SPEC §4. */
-  hasRegisteredAgent: boolean
+  stripeFee: number
   owner: string
-  payments: ReportPayment[] // 1 o 2 (el algoritmo soporta N)
 }
 
 export interface ExpenseConfig {
@@ -47,11 +45,14 @@ export interface ReportInput {
   monthLabel: string
   accounts: ReportAccount[]
   expenses: ExpenseConfig
+  /** Tasa de TAX (0.39 = 39 %). El manual pasó de 0.34 a 0.39 en ago-2026. */
+  taxRate: number
 }
 
 /* ============================== Constantes ================================= */
 
-const TAX_RATE = 0.34
+/** Tasa de TAX por defecto (Excel manual desde ago-2026). */
+export const DEFAULT_TAX_RATE = 0.39
 
 const FONT_HEADER_BIG = { name: 'Arial Black', size: 12, color: { argb: 'FFFF0000' } }
 const FONT_HEADER_SM = { name: 'Arial Black', size: 8, color: { argb: 'FFFF0000' } }
@@ -87,8 +88,6 @@ const COL_WIDTHS: Record<string, number> = {
 
 /** Todas las columnas de la tabla (A→L). */
 const ALL_COLS = 'ABCDEFGHIJKL'.split('')
-/** Columnas "por cuenta" que se fusionan verticalmente cuando hay 2 pagos. */
-const ACCOUNT_COLS = ['A', 'C', 'D', 'E', 'G', 'H', 'L']
 
 /* ============================ Construcción ================================= */
 
@@ -140,52 +139,31 @@ function writeHeader(ws: ExcelJS.Worksheet): void {
 
 /** Devuelve el número de la primera fila libre (fila de totales). */
 function writeAccounts(ws: ExcelJS.Worksheet, input: ReportInput): number {
-  let row = 2
-
   input.accounts.forEach((account, i) => {
-    const n = Math.max(1, account.payments.length)
-    const startRow = row
-    const endRow = row + n - 1
-
-    // Columnas por pago (una fila por pago)
-    account.payments.forEach((p, k) => {
-      const r = startRow + k
-      setCell(ws, `B${r}`, normalizeDate(p.date), { font: FONT_DATA, numFmt: FMT_DATE })
-      setCell(ws, `F${r}`, p.charge, { font: FONT_DATA, numFmt: FMT_NUM })
-      setCell(ws, `I${r}`, { formula: taxFormula(r, startRow, account.hasRegisteredAgent) },
-        { font: FONT_DATA, numFmt: FMT_NUM })
-      setCell(ws, `J${r}`, p.stripeFee, { font: FONT_DATA, numFmt: FMT_NUM })
-      setCell(ws, `K${r}`, { formula: netFormula(r, startRow, account.hasRegisteredAgent) },
-        { font: FONT_DATA, numFmt: FMT_NUM })
+    const r = i + 2
+    // State fee, RA (0 si no aplica) y Stripe fee restan antes del TAX, como el
+    // manual: el recargo de Stripe no paga impuesto (spec 04, #7).
+    const costs = `-G${r}-H${r}-J${r}`
+    setCell(ws, `A${r}`, i + 1, { font: FONT_DATA })
+    setCell(ws, `B${r}`, normalizeDate(account.date), { font: FONT_DATA, numFmt: FMT_DATE })
+    setCell(ws, `C${r}`, account.company, { font: FONT_DATA, align: LEFT })
+    setCell(ws, `D${r}`, account.purchase, { font: FONT_DATA, align: LEFT })
+    setCell(ws, `E${r}`, account.state, { font: FONT_DATA })
+    setCell(ws, `F${r}`, account.charge, { font: FONT_DATA, numFmt: FMT_NUM })
+    setCell(ws, `G${r}`, account.stateFee, { font: FONT_DATA, numFmt: FMT_NUM })
+    setCell(ws, `H${r}`, account.registeredAgent, { font: FONT_DATA, numFmt: FMT_NUM })
+    setCell(ws, `I${r}`, { formula: `(F${r}${costs})*${input.taxRate}` },
+      { font: FONT_DATA, numFmt: FMT_NUM })
+    setCell(ws, `J${r}`, account.stripeFee, { font: FONT_DATA, numFmt: FMT_NUM })
+    setCell(ws, `K${r}`, { formula: `F${r}${costs}-I${r}` },
+      { font: FONT_DATA, numFmt: FMT_NUM })
+    setCell(ws, `L${r}`, account.owner, { font: FONT_DATA, align: LEFT })
+    ALL_COLS.forEach((col) => {
+      ws.getCell(`${col}${r}`).border = BORDER_ALL
     })
-
-    // Columnas por cuenta (valor en startRow)
-    setCell(ws, `A${startRow}`, i + 1, { font: FONT_DATA })
-    setCell(ws, `C${startRow}`, account.company, { font: FONT_DATA, align: LEFT })
-    setCell(ws, `D${startRow}`, account.purchase, { font: FONT_DATA, align: LEFT })
-    setCell(ws, `E${startRow}`, account.state, { font: FONT_DATA })
-    setCell(ws, `G${startRow}`, account.stateFee, { font: FONT_DATA, numFmt: FMT_NUM })
-    setCell(ws, `H${startRow}`, account.registeredAgent, { font: FONT_DATA, numFmt: FMT_NUM })
-    setCell(ws, `L${startRow}`, account.owner, { font: FONT_DATA, align: LEFT })
-
-    // Merges verticales de las columnas por cuenta cuando hay más de un pago
-    if (n > 1) {
-      ACCOUNT_COLS.forEach((col) => {
-        ws.mergeCells(`${col}${startRow}:${col}${endRow}`)
-      })
-    }
-
-    // Bordes en todas las celdas del bloque
-    for (let r = startRow; r <= endRow; r++) {
-      ALL_COLS.forEach((col) => {
-        ws.getCell(`${col}${r}`).border = BORDER_ALL
-      })
-    }
-
-    row = endRow + 1
   })
 
-  return row
+  return input.accounts.length + 2
 }
 
 /**
@@ -196,13 +174,6 @@ function normalizeDate(d: Date): Date {
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0))
 }
 
-function taxFormula(r: number, s: number, subH: boolean): string {
-  return subH ? `(F${r}-G${s}-H${s})*${TAX_RATE}` : `(F${r}-G${s})*${TAX_RATE}`
-}
-
-function netFormula(r: number, s: number, subH: boolean): string {
-  return subH ? `F${r}-G${s}-H${s}-I${r}-J${r}` : `F${r}-G${s}-I${r}-J${r}`
-}
 
 /* ------------------------------- Totales ---------------------------------- */
 
@@ -210,7 +181,7 @@ function writeTotals(ws: ExcelJS.Worksheet, totalsRow: number): void {
   const last = totalsRow - 1
   const cols = ['F', 'G', 'H', 'I', 'J', 'K']
   cols.forEach((col) => {
-    // Si no hay cuentas, `last` < 2: dejar la fila de totales en blanco.
+    // Si no hay cuentas, `last` < 2: los totales quedan en 0.
     const value = last >= 2 ? { formula: `SUM(${col}2:${col}${last})` } : 0
     setCell(ws, `${col}${totalsRow}`, value, {
       font: FONT_TOTAL,
@@ -232,22 +203,22 @@ function writeExpenses(ws: ExcelJS.Worksheet, input: ReportInput, totalsRow: num
 
   let r = totalsRow + 2 // deja una fila en blanco
 
-  const profitMinusBaseRow = r
-  putLabel(ws, r, 'profit minus base pay', { formula: `K${T}-${basePay}` }, FONT_LABEL_BLACK)
+  // Mismo orden que el Excel manual: base, bonus, comisión.
+  const basePayRow = r
+  putLabel(ws, r, 'base pay ', basePay, FONT_LABEL_BLACK)
   r++
 
+  let bonusRow: number | null = null
   if (bonus != null) {
+    bonusRow = r
     putLabel(ws, r, `Bonus de ${emp} `, bonus, FONT_LABEL_BLACK)
     r++
   }
 
+  // Comisión = NET total × tasa, sin descontar la base (spec 04, P7).
   const commissionRow = r
   putLabel(ws, r, `Commision de ${emp}`,
-    { formula: `K${profitMinusBaseRow}*${commissionRate}` }, FONT_LABEL_BLACK)
-  r++
-
-  const basePayRow = r
-  putLabel(ws, r, 'base pay ', basePay, FONT_LABEL_BLACK)
+    { formula: `K${T}*${commissionRate}` }, FONT_LABEL_BLACK)
   r++
 
   const fixedRows: number[] = []
@@ -259,13 +230,17 @@ function writeExpenses(ws: ExcelJS.Worksheet, input: ReportInput, totalsRow: num
 
   r++ // fila en blanco
 
+  // TOTAL PAY = comisión + base + bonus (como el Excel manual).
+  const totalPayParts = [commissionRow, basePayRow, ...(bonusRow ? [bonusRow] : [])]
+  const totalPayRow = r
   putLabel(ws, r, `${emp.toUpperCase()}  TOTAL PAY `,
-    { formula: `K${commissionRow}+K${basePayRow}` }, FONT_LABEL_RED)
+    { formula: totalPayParts.map((x) => `K${x}`).join('+') }, FONT_LABEL_RED)
   r++
 
-  const sumParts = [`K${commissionRow}`, `K${basePayRow}`, ...fixedRows.map((fr) => `K${fr}`)].join('+')
+  // La base ya va dentro de TOTAL PAY: no se resta dos veces.
+  const sumParts = [totalPayRow, ...fixedRows].map((x) => `K${x}`).join('+')
   putLabel(ws, r, 'WHAT I TOOK HOME',
-    { formula: `K${profitMinusBaseRow}-(${sumParts})` }, FONT_LABEL_RED)
+    { formula: `K${T}-(${sumParts})` }, FONT_LABEL_RED)
 }
 
 function putLabel(

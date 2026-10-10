@@ -4,41 +4,60 @@
  * Transforma los datos del CRM (clientes → procesos → pagos) al modelo de
  * entrada del reporte de ventas (`ReportInput`) para un mes concreto.
  *
- * Reglas de mapeo (ver decisiones en el SPEC):
- *  - Una "cuenta" del reporte = un PROCESO contratado ("una cuenta = una venta").
- *  - La venta cuenta en el mes en que EMPEZÓ el proceso, es decir el mes de su
- *    PRIMER pago. Un proceso se incluye en el reporte de un mes solo si su primer
- *    pago cae en ese mes (`yyyy-MM`).
- *  - Una vez que el proceso pertenece al mes, se incluyen TODOS sus pagos, aunque
- *    alguno se haya hecho en un mes posterior (ese pago es parte de la misma
- *    venta y no debe contarse aparte en el mes en que se cobró).
- *  - `stateFee` se deriva del documento del estado (states.json).
- *  - El costo del Registered Agent no se registra en el CRM → columna H en 0;
- *    si el proceso incluye Registered Agent (`has_registered_agent`), las
- *    fórmulas de TAX y NET de esa cuenta restan H (se puede completar en Excel).
- *  - `stripeFee` solo se calcula para los pagos cuyo método es `stripe`; se deja
- *    en 0 o se estima (2.9% + $0.30) según `stripeFeeMode`. Los pagos hechos con
- *    cualquier otro método nunca tienen comisión de Stripe.
+ * Reglas de mapeo (spec 04):
+ *  - Una "cuenta" del reporte = un PROCESO vendido = UNA fila (P6).
+ *  - Una venta es un proceso con al menos un pago: sin pagos es un prospecto o
+ *    una cotización, no una venta.
+ *  - La venta cuenta en el mes de su FECHA DE VENTA (`getProcessSaleDate`), no
+ *    en el del primer pago: una venta cerrada a fin de mes y cobrada el
+ *    siguiente es del mes en que se cerró (P10).
+ *  - CHARGE = total acordado del proceso, aunque falte cobrar parte (lo que
+ *    importa es que aparezcan todas las ventas). Sin total, lo cobrado. El saldo
+ *    pendiente es un monto PROYECTADO: se advierte en el diálogo de exportación,
+ *    no en el Excel.
+ *  - Cancelados (P3): un proceso `cancelado` con pagos cuenta lo COBRADO menos lo
+ *    reembolsado (`refunded_amount`), sin proyectar saldo; si se devolvió todo,
+ *    no aparece. El state fee se resta igual (se asume ya pagado).
+ *  - `stateFee` = costo estatal del proceso (`getProcessStateCost`, P8): el
+ *    capturado en el proceso, o el del catálogo (fijo, o del estado del PROCESO:
+ *    registro, annual report, dissolution, amendment). Si no se conoce va en 0 y
+ *    la UI lo advierte. Nunca se usa `client.state`, que puede ser el de otra
+ *    compañía del cliente.
+ *  - Registered Agent (#9): Pyxis no guarda su costo; si el proceso lo incluye
+ *    (`has_registered_agent`), H = `registeredAgentCost` (45 por defecto, como
+ *    el Excel manual); si no, 0.
+ *  - Stripe (P5): el cliente paga un RECARGO del 4 % sobre lo que paga con
+ *    Stripe, y Pyxis guarda el pago SIN recargo (el recargo no es venta, spec 18).
+ *    Como el Excel manual, el recargo se suma a CHARGE y se resta como STRIPE FEE
+ *    (efecto neutro en NET). El saldo pendiente se proyecta con el método del
+ *    PRIMER pago: si fue Stripe, también lleva recargo. Con `stripeFeeMode`
+ *    `'none'` no se suma ni se resta nada.
  * -----------------------------------------------------------------------------
  */
 
 import type { Client, ClientProcess, Payment, StateInfo } from '@/types'
 import {
   getProcessLabel,
+  getProcessStateCost,
+  type MissingCostReason,
+  getProcessSaleDate,
   hasRegisteredAgent,
   localMonthKey,
   parsePaymentDate,
 } from '@/lib/processUtils'
 import { getClientDisplayName } from '@/lib/clientUtils'
-import { getProcessCompanyName } from '@/lib/companyUtils'
+import { getProcessCompanyName, hasUnassignedCompany } from '@/lib/companyUtils'
 import type { ExpenseConfig, ReportAccount, ReportInput } from '@/lib/generateSalesReport'
-import { sumMoney } from '@/lib/money'
+import { fromCents, sumMoney, toCents } from '@/lib/money'
 
-export type StripeFeeMode = 'none' | 'estimate'
+/** `surcharge` = recargo del 4 % como el Excel manual; `none` = sin recargo. */
+export type StripeFeeMode = 'surcharge' | 'none'
 
-// Stripe: 2.9% + $0.30 por transacción (estimación estándar).
-const STRIPE_PERCENT = 0.029
-const STRIPE_FLAT = 0.3
+/** Recargo que paga el cliente sobre lo cobrado con Stripe (Excel manual). */
+export const STRIPE_SURCHARGE_RATE = 0.04
+
+/** Costo del Registered Agent por cuenta que lo incluye (Excel manual). */
+export const DEFAULT_REGISTERED_AGENT_COST = 45
 
 export interface BuildReportParams {
   clients: Client[]
@@ -49,140 +68,194 @@ export interface BuildReportParams {
   monthLabel: string
   expenses: ExpenseConfig
   stripeFeeMode: StripeFeeMode
+  taxRate: number
+  /** Costo del Registered Agent (columna H) de las cuentas que lo incluyen. */
+  registeredAgentCost: number
 }
 
-/** Convierte "$245", "245.0", "N/A" → número (0 si no es parseable). */
-function parseMoney(raw: string | undefined): number {
-  if (!raw) return 0
-  const num = parseFloat(raw.replace(/[$,]/g, ''))
-  return Number.isNaN(num) ? 0 : num
+/** Documento del estado del proceso, si tiene estado y existe. */
+function stateOf(process: ClientProcess, states: StateInfo[]): StateInfo | undefined {
+  const abbr = (process.state ?? '').toUpperCase()
+  return abbr ? states.find((s) => s.abbreviation.toUpperCase() === abbr) : undefined
 }
 
-/**
- * Todos los pagos del proceso con su `Date` ya parseada, ordenados por fecha.
- * Se descartan los pagos sin fecha válida. La comparación de mes se hace en hora
- * LOCAL (no por `slice` del string: un ISO en UTC puede caer en el mes vecino
- * cerca de la frontera).
- */
-function sortedPaymentsOf(
-  process: ClientProcess,
-): Array<{ payment: Payment; date: Date }> {
-  return (process.payments ?? [])
-    .map((payment) => ({ payment, date: parsePaymentDate(payment.date) }))
-    .filter((x): x is { payment: Payment; date: Date } => x.date !== null)
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
+function stripeSurcharge(amount: number, mode: StripeFeeMode): number {
+  if (mode === 'none' || amount <= 0) return 0
+  return fromCents(Math.round(toCents(amount) * STRIPE_SURCHARGE_RATE))
 }
 
-/**
- * Pagos que hacen que el proceso pertenezca al mes `monthKey`: si su PRIMER pago
- * (el que marca el inicio de la venta) cae en ese mes, devuelve TODOS los pagos
- * del proceso; si no, devuelve `[]` (el proceso pertenece a otro mes).
- */
-function monthPaymentsOf(
-  process: ClientProcess,
-  monthKey: string,
-): Array<{ payment: Payment; date: Date }> {
-  const payments = sortedPaymentsOf(process)
-  if (payments.length === 0) return []
-  // La venta cuenta en el mes de su primer pago; si no arrancó en este mes, no
-  // se incluye (y así el segundo pago tampoco reaparece en el mes en que se hizo).
-  if (localMonthKey(payments[0].date) !== monthKey) return []
-  return payments
-}
-
-function estimateStripeFee(charge: number, mode: StripeFeeMode): number {
-  if (mode === 'none') return 0
-  if (charge <= 0) return 0
-  return Math.round((charge * STRIPE_PERCENT + STRIPE_FLAT) * 100) / 100
+/** Una venta del mes, con lo cobrado y lo proyectado ya calculados. */
+interface MonthSale {
+  client: Client
+  process: ClientProcess
+  saleDate: Date
+  /** Pagos con fecha válida, ordenados por fecha. */
+  payments: Payment[]
+  /** Total acordado (o lo cobrado si no hay total, o si se cobró de más). */
+  charge: number
+  /** Parte de `charge` que falta cobrar: monto proyectado. */
+  pending: number
+  /** Proceso cancelado: `charge` es lo cobrado menos lo reembolsado. */
+  cancelled: boolean
 }
 
 /**
- * Construye el `ReportInput` para el mes dado. Las cuentas quedan ordenadas por
- * la fecha del primer pago (mismo criterio que el reporte original) y numeradas
- * en ese orden por el generador.
+ * Ventas cuyo `getProcessSaleDate` cae en `monthKey` y que tienen al menos un
+ * pago, ordenadas por fecha de venta. Base común del reporte y su vista previa.
  */
-export function buildReportInput(params: BuildReportParams): ReportInput {
-  const { clients, states, monthKey, monthLabel, expenses, stripeFeeMode } = params
-
-  const stateFeeByAbbr = new Map<string, number>()
-  for (const s of states) {
-    stateFeeByAbbr.set(s.abbreviation.toUpperCase(), parseMoney(s.state_fee))
-  }
-
-  const accounts: ReportAccount[] = []
-
+function monthSalesOf(clients: Client[], monthKey: string): MonthSale[] {
+  const sales: MonthSale[] = []
   for (const client of clients) {
-    const processes = client.processes ?? []
-    for (const process of processes) {
-      // Pagos del proceso que caen en el mes objetivo, ordenados por fecha.
-      const monthPayments = monthPaymentsOf(process, monthKey)
-
-      if (monthPayments.length === 0) continue
-
-      const stateAbbr = (process.state || client.state || '').toUpperCase()
-      const stateFee = stateAbbr ? stateFeeByAbbr.get(stateAbbr) ?? 0 : 0
-
-      accounts.push({
-        // Cada registro de LLC es una compañía distinta: se reporta la del
-        // proceso, no la del cliente.
-        // Un registro sin nombre propio no toma `client.llc_name` (sería la
-        // compañía de otro registro); los demás procesos sí son de esa compañía.
-        company:
-          (process.type === 'registration'
-            ? getProcessCompanyName(client, process)
-            : client.llc_name?.trim()) || getClientDisplayName(client),
-        purchase: getProcessLabel(process),
-        state: process.state || client.state || '',
-        stateFee,
-        registeredAgent: 0,
-        hasRegisteredAgent: hasRegisteredAgent(process),
-        owner: getClientDisplayName(client),
-        payments: monthPayments.map(({ payment, date }) => ({
-          date,
-          charge: payment.amount,
-          // La comisión de Stripe solo aplica a los pagos hechos con Stripe.
-          stripeFee:
-            payment.method === 'stripe' ? estimateStripeFee(payment.amount, stripeFeeMode) : 0,
-        })),
+    for (const process of client.processes ?? []) {
+      const saleDate = getProcessSaleDate(process)
+      if (!saleDate || localMonthKey(saleDate) !== monthKey) continue
+      // La comparación es en hora LOCAL: un ISO en UTC puede caer en el mes vecino.
+      const payments = (process.payments ?? [])
+        .map((payment) => ({ payment, time: parsePaymentDate(payment.date)?.getTime() }))
+        .filter((x): x is { payment: Payment; time: number } => x.time !== undefined)
+        .sort((a, b) => a.time - b.time)
+        .map((x) => x.payment)
+      if (payments.length === 0) continue
+      const paid = toCents(sumMoney(payments.map((p) => p.amount)))
+      const cancelled = process.stage === 'cancelado'
+      // Cancelado: lo cobrado menos lo devuelto, sin saldo por cobrar (P3).
+      const refunded = cancelled ? Math.min(Math.max(toCents(process.refunded_amount), 0), paid) : 0
+      const charge = cancelled ? paid - refunded : Math.max(toCents(process.total), paid)
+      if (charge <= 0) continue
+      sales.push({
+        client,
+        process,
+        saleDate,
+        payments,
+        charge: fromCents(charge),
+        pending: cancelled ? 0 : fromCents(charge - paid),
+        cancelled,
       })
     }
   }
+  return sales.sort((a, b) => a.saleDate.getTime() - b.saleDate.getTime())
+}
 
-  // Orden por fecha del primer pago de cada cuenta.
-  accounts.sort(
-    (a, b) => a.payments[0].date.getTime() - b.payments[0].date.getTime()
-  )
+/** "CLIENTE — Proceso", para las advertencias de la UI. */
+function saleLabel(sale: MonthSale): string {
+  return `${getClientDisplayName(sale.client)} — ${getProcessLabel(sale.process)}`
+}
 
-  return { monthLabel, accounts, expenses }
+/** El saldo se proyecta con el método del primer pago (P6). */
+function projectsStripe(sale: MonthSale): boolean {
+  return sale.pending > 0 && sale.payments[0].method === 'stripe'
+}
+
+/**
+ * Construye el `ReportInput` para el mes dado: una cuenta por venta, ordenadas
+ * por fecha de venta y numeradas en ese orden por el generador.
+ */
+export function buildReportInput(params: BuildReportParams): ReportInput {
+  const {
+    clients, states, monthKey, monthLabel, expenses, stripeFeeMode, taxRate, registeredAgentCost,
+  } = params
+
+
+  const accounts = monthSalesOf(clients, monthKey).map((sale): ReportAccount => {
+    const { client, process } = sale
+    // El recargo aplica a lo pagado con Stripe, y al saldo si el primer pago
+    // fue con Stripe. Se suma a CHARGE y se resta como STRIPE FEE.
+    // Nunca más que CHARGE: en un cancelado, lo reembolsado no lleva recargo.
+    const stripeBase = Math.min(
+      sumMoney([
+        ...sale.payments.filter((p) => p.method === 'stripe').map((p) => p.amount),
+        projectsStripe(sale) ? sale.pending : 0,
+      ]),
+      sale.charge,
+    )
+    const surcharge = stripeSurcharge(stripeBase, stripeFeeMode)
+
+    return {
+      date: sale.saleDate,
+      // La compañía de ESE proceso (spec 04, #2): la del registro, o la vinculada
+      // a un servicio. Sin compañía (o varias sin elegir), el nombre del cliente.
+      company: getProcessCompanyName(client, process) || getClientDisplayName(client),
+      purchase: getProcessLabel(process),
+      state: process.state ?? '',
+      charge: sumMoney([sale.charge, surcharge]),
+      stateFee: getProcessStateCost(process, stateOf(process, states)).cost ?? 0,
+      registeredAgent: hasRegisteredAgent(process) ? registeredAgentCost : 0,
+      stripeFee: surcharge,
+      owner: getClientDisplayName(client),
+    }
+  })
+
+  return { monthLabel, accounts, expenses, taxRate }
+}
+
+/** Venta sin costo estatal conocido, con el motivo. */
+export interface MissingCost {
+  label: string
+  reason: MissingCostReason
+}
+
+/** Venta cancelada que sigue en el reporte (no se devolvió todo). */
+export interface CancelledSale {
+  label: string
+  /** Lo que queda: cobrado menos reembolsado. */
+  charge: number
+  /** No se capturó cuánto se devolvió: se tomó como 0. */
+  refundMissing: boolean
+}
+
+/** Venta con saldo pendiente: su CHARGE incluye un monto proyectado. */
+export interface ProjectedSale {
+  label: string
+  pending: number
+  /** El saldo se proyectó como pago con Stripe (método del primer pago). */
+  stripe: boolean
 }
 
 /**
  * Resumen ligero para mostrar en la UI antes de exportar (sin construir el
- * workbook): cuántas cuentas y pagos entran en el mes y el total cobrado.
+ * workbook): cuántas ventas entran en el mes, cuánto suman y qué falta cobrar.
  */
 export interface ReportPreview {
   accountCount: number
-  paymentCount: number
+  /** Suma de CHARGE: lo vendido en el mes, cobrado o no. */
   totalCharge: number
+  /** Parte de `totalCharge` que falta cobrar (proyectada). */
+  totalPending: number
+  /** Ventas del mes sin costo estatal conocido: su STATE FEE sale en 0. */
+  missingCost: MissingCost[]
+  projected: ProjectedSale[]
+  /** Ventas canceladas: cuentan lo cobrado menos lo reembolsado (P3). */
+  cancelled: CancelledSale[]
+  /** Servicios de clientes con varias compañías sin una elegida: sale el nombre del cliente (#2). */
+  unassignedCompany: string[]
 }
 
 export function previewReport(
   clients: Client[],
-  monthKey: string
+  monthKey: string,
+  states: StateInfo[] = [],
 ): ReportPreview {
-  let accountCount = 0
-  let paymentCount = 0
-  let totalCharge = 0
-
-  for (const client of clients) {
-    for (const process of client.processes ?? []) {
-      const monthPayments = monthPaymentsOf(process, monthKey)
-      if (monthPayments.length === 0) continue
-      accountCount += 1
-      paymentCount += monthPayments.length
-      totalCharge = sumMoney([totalCharge, ...monthPayments.map(({ payment }) => payment.amount)])
-    }
+  const sales = monthSalesOf(clients, monthKey)
+  const missingCost: ReportPreview['missingCost'] = []
+  for (const sale of sales) {
+    const { reason } = getProcessStateCost(sale.process, stateOf(sale.process, states))
+    if (reason) missingCost.push({ label: saleLabel(sale), reason })
   }
-
-  return { accountCount, paymentCount, totalCharge }
+  return {
+    accountCount: sales.length,
+    totalCharge: sumMoney(sales.map((s) => s.charge)),
+    totalPending: sumMoney(sales.map((s) => s.pending)),
+    missingCost,
+    projected: sales
+      .filter((s) => s.pending > 0)
+      .map((s) => ({ label: saleLabel(s), pending: s.pending, stripe: projectsStripe(s) })),
+    unassignedCompany: sales.filter((s) => hasUnassignedCompany(s.client, s.process)).map(saleLabel),
+    cancelled: sales
+      .filter((s) => s.cancelled)
+      .map((s) => ({
+        label: saleLabel(s),
+        charge: s.charge,
+        refundMissing: typeof s.process.refunded_amount !== 'number',
+      })),
+  }
 }

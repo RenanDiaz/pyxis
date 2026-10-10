@@ -63,6 +63,7 @@ Los JSON también sirven como fallback local si Firestore no responde.
 - **`workspaces/{wId}/members`** — Miembros del workspace con rol y subequipo.
 - **`workspaces/{wId}/subteams`** — Subequipos del workspace.
 - **`workspaces/{wId}/invitations`** — Invitaciones por token.
+- **`workspaces/{wId}/phone_index/{dígitos}`** — Qué clientes usan cada teléfono (spec 07). Se escribe junto con `clients.phone_digits` (`src/lib/phoneIndex.ts`); los miembros leen por id, no listan.
 
 Ver los esquemas completos en los archivos `src/data/*.json` y los types en el código.
 
@@ -148,7 +149,7 @@ type ProcessType =
   | 'registration' | 'annual_report' | 'dissolution' | 'amendment'
   | 'newspaper_research' | 'newspaper_publication'
   | 'sale_tax_license' | 'resale_certificate' | 'ein' | 'boi'
-  | 'statement_of_formation'
+  | 'statement_of_formation' | 'itin'
   | 'custom' // proceso extraordinario con nombre libre (custom_label)
 
 type ProcessStage = 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
@@ -168,6 +169,10 @@ interface ClientProcess {
   business_address?: string
   business_purpose?: string
   notes?: string
+  sold_at?: string           // fecha de venta (yyyy-MM-dd): mes en que la cuenta el reporte
+  state_cost?: number        // costo estatal capturado (STATE FEE del reporte); manda sobre el catálogo
+  refunded_amount?: number   // solo `cancelado`: cuánto se devolvió (el reporte cuenta cobrado − esto)
+  company_id?: string        // solo NO registro: id del registro (compañía) al que pertenece el servicio
   created_at: Timestamp
 }
 ```
@@ -189,6 +194,16 @@ Además existe el tipo **`custom`** (no vive en `PROCESSES`): un proceso
 extraordinario con nombre libre (`custom_label`) que el agente captura en
 `AddProcessDialog` para un solo cliente, sin registrarlo en el catálogo.
 Precio manual y sin fields derivados del estado.
+
+Además, cada `ProcessDef` tiene un **modelo de costo** (`cost`, mismo esquema):
+el STATE FEE del reporte de ventas. Registro → `state_fee` del estado; annual
+report, dissolution y amendment → `<sección>.state_cost` del estado (en el doc
+del estado, `fee` es el PRECIO de venta y `state_cost` lo que cobra el estado);
+EIN, BOI, Sales Tax, Resale e investigación de periódicos → 0; **ITIN** precio
+fijo 700 y costo fijo 250; publicaciones, Statement of Formation y `custom` →
+manual (el agente lo captura en el proceso). `getProcessStateCost` resuelve el
+costo o el motivo por el que falta. Los costos de los estados se cargan a
+Firestore con `npx tsx scripts/update-state-costs.ts [--dry-run]`.
 
 Los `fields` (solo para procesos `state`) definen qué datos del estado se
 muestran en el card informativo. Helpers en `src/lib/processUtils.ts`:
@@ -224,6 +239,12 @@ compañía se vería repetida en cada registro del cliente y el .docx saldría
 duplicado. Helpers: `getProcessCompany`, `getProcessCompanyName`,
 `inheritsClientCompany`, `getRegistrationProcesses`,
 `backfillFirstRegistrationCompany`.
+
+Los **demás servicios** (EIN, amendment…) pertenecen a una compañía del cliente:
+el registro vinculado (`company_id`), otra escrita a mano (`llc_name`) o, si el
+cliente tiene una sola, esa. `getProcessCompanyName` resuelve todos los tipos
+(reporte, recibo, cotización, estado de cuenta); `hasUnassignedCompany` marca
+los servicios de clientes con varias compañías sin una elegida.
 
 Al agregar un registro cuando ya existe otro (`ClientDetail` y `ClientForm`) se
 llama `backfillFirstRegistrationCompany`: baja los datos del cliente al primer

@@ -20,18 +20,14 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
 
 
 /**
- * Nombre del receptor del recibo: la compañía de ESTE proceso cuando es un
- * registro de LLC (un cliente puede tener varias), la del cliente para los
- * demás procesos, y el nombre de la persona si no hay compañía.
+ * Nombre del receptor del recibo: la compañía de ESTE proceso (la del registro,
+ * o la vinculada a un servicio; ver `getProcessCompanyName`), y el nombre de la
+ * persona si no hay compañía.
  */
 function getRecipientName(client: Client, process: ClientProcess): string {
-  // Un registro sin nombre propio NO cae a `client.llc_name`: sería la compañía
-  // de otro registro (ver la regla de herencia en companyUtils).
-  const company =
-    process.type === 'registration'
-      ? getProcessCompanyName(client, process)
-      : client.llc_name?.trim()
-  return company || getClientDisplayName(client)
+  // La compañía de ESE proceso (registro, o la vinculada a un servicio); nunca
+  // `client.llc_name` a ciegas: con varias LLC sería la de otro registro.
+  return getProcessCompanyName(client, process) || getClientDisplayName(client)
 }
 
 function getServiceLabel(process: ClientProcess): string {

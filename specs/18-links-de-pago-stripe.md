@@ -1,6 +1,6 @@
 # 18 — Links de pago con Stripe
 
-**Prioridad:** 🟠 Alta · **Estado:** propuesto · **Tamaño:** L · **Depende de:** 17 ✅ (Worker en Cloudflare + staging) · Recomendado: 19 (cerrar creación de workspaces)
+**Prioridad:** 🟠 Alta · **Estado:** propuesto · **Tamaño:** L · **Depende de:** 17 ✅ (Worker en Cloudflare + staging) · Recomendado: 22 (cerrar creación de workspaces)
 
 ## Problema
 Para cobrar un abono hoy, el agente le pasa al cliente las instrucciones de Zelle o de transferencia y después registra el pago a mano. Queremos que el agente genere desde Pyxis un **link de pago de Stripe** por abono y lo copie para mandarlo por WhatsApp o correo. El dinero cae en la cuenta de Stripe **del workspace**.
@@ -9,7 +9,7 @@ Para cobrar un abono hoy, el agente le pasa al cliente las instrucciones de Zell
 | Tema | Decisión |
 |---|---|
 | Cuenta Stripe | **Una por workspace**, conectada con Stripe Connect. Pyxis es la plataforma. |
-| Habilitación | **Solo workspaces aprobados por un admin global** (R0). Cualquiera puede crear un workspace (hasta el spec 19), y cada cuenta conectada queda bajo la plataforma: nadie conecta Stripe sin aprobación. |
+| Habilitación | **Solo workspaces aprobados por un admin global** (R0). Cualquiera puede crear un workspace (hasta el spec 22), y cada cuenta conectada queda bajo la plataforma: nadie conecta Stripe sin aprobación. |
 | Backend | Worker de Cloudflare (spec 17). Firebase sigue en Spark, sin Cloud Functions. |
 | Quién genera links | **Cualquier miembro** que pueda ver al cliente (mismo `canSee` de las reglas). |
 | Granularidad | **Un link = un abono** de un proceso. Se paga una sola vez. |
@@ -343,7 +343,7 @@ R0. Mismo patrón que `set-admin.ts`: Admin SDK con `scripts/serviceAccountKey.j
    - **Si es la plataforma:** firma los términos de Connect, responde ante Stripe por la plataforma y **puede consultar por API los cobros de todos los workspaces conectados**. Aceptable si los demás workspaces son equipos o socios suyos, no si son empresas independientes o competidoras.
    - **Si no:** Avanza Hispano se conecta como un workspace más y la plataforma queda a nombre del dueño de Pyxis (entidad de EE.UU.; Stripe no opera en Panamá, verificar).
    - R0 cubre el riesgo de que desconocidos queden bajo la plataforma, pero no el de visibilidad.
-2. **Texto legal del recargo:** ¿el aviso de R2 es suficiente o se quiere un checkbox "Entiendo y acepto" al activarlo? *(Recomendación: checkbox, para dejar constancia de que lo decidió el owner).*
-3. **¿El recargo se muestra en el recibo de Pyxis?**
+2. ✅ **Resuelta (2026-10-09): checkbox "Entiendo y acepto".** ~~Texto legal del recargo:~~ ¿el aviso de R2 es suficiente o se quiere un checkbox "Entiendo y acepto" al activarlo? *(Recomendación: checkbox, para dejar constancia de que lo decidió el owner).*
+3. ✅ **Resuelta (2026-10-09): no se muestra en el recibo de Pyxis.** ~~¿El recargo se muestra en el recibo de Pyxis?~~
    - **Propuesta v1:** no. El recibo es del abono, y el comprobante del recargo es el de Stripe.
    - Confirmar con negocio y con el reporte de ventas (spec 04): el recargo no es venta.

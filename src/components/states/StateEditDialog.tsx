@@ -27,10 +27,13 @@ interface StateFormValues {
   processing_days: string
   annual_report_fee: string
   annual_report_due_date: string
+  annual_report_state_cost: string
   dissolution_fee: string
   dissolution_processing_days: string
+  dissolution_state_cost: string
   amendments_available: boolean
   amendments_fee: string
+  amendments_state_cost: string
   business_purpose_specific: boolean
   business_purpose_general: boolean
   name_check_link: string
@@ -50,10 +53,13 @@ function toFormValues(state: StateInfo): StateFormValues {
     processing_days: state.processing_days,
     annual_report_fee: state.annual_report.fee,
     annual_report_due_date: state.annual_report.due_date,
+    annual_report_state_cost: state.annual_report.state_cost ?? '',
     dissolution_fee: state.dissolution.fee,
     dissolution_processing_days: state.dissolution.processing_days,
+    dissolution_state_cost: state.dissolution.state_cost ?? '',
     amendments_available: isYes(state.amendments.available),
     amendments_fee: state.amendments.fee,
+    amendments_state_cost: state.amendments.state_cost ?? '',
     business_purpose_specific: isYes(state.business_purpose.specific),
     business_purpose_general: isYes(state.business_purpose.general),
     name_check_link: state.name_check_link,
@@ -72,14 +78,17 @@ function toStateData(state: StateInfo, form: StateFormValues): StateInfo {
     annual_report: {
       fee: form.annual_report_fee.trim(),
       due_date: form.annual_report_due_date.trim(),
+      state_cost: form.annual_report_state_cost.trim(),
     },
     dissolution: {
       fee: form.dissolution_fee.trim(),
       processing_days: form.dissolution_processing_days.trim(),
+      state_cost: form.dissolution_state_cost.trim(),
     },
     amendments: {
       available: form.amendments_available ? 'SI' : 'NO',
       fee: form.amendments_fee.trim(),
+      state_cost: form.amendments_state_cost.trim(),
     },
     business_purpose: {
       specific: form.business_purpose_specific ? 'SI' : 'NO',
@@ -195,7 +204,7 @@ export default function StateEditDialog({ state, open, onOpenChange }: StateEdit
             />
             <Field
               id="state_fee"
-              label="Fee del estado"
+              label="Costo estatal"
               value={form.state_fee}
               onChange={(v) => set('state_fee', v)}
               placeholder="$245"
@@ -213,10 +222,17 @@ export default function StateEditDialog({ state, open, onOpenChange }: StateEdit
           <div className="grid gap-3 sm:grid-cols-2">
             <Field
               id="annual_report_fee"
-              label="Fee"
+              label="Precio de venta"
               value={form.annual_report_fee}
               onChange={(v) => set('annual_report_fee', v)}
               placeholder="149"
+            />
+            <Field
+              id="annual_report_state_cost"
+              label="Costo estatal"
+              value={form.annual_report_state_cost}
+              onChange={(v) => set('annual_report_state_cost', v)}
+              placeholder="Sin dato"
             />
             <Field
               id="annual_report_due_date"
@@ -231,10 +247,17 @@ export default function StateEditDialog({ state, open, onOpenChange }: StateEdit
           <div className="grid gap-3 sm:grid-cols-2">
             <Field
               id="dissolution_fee"
-              label="Fee"
+              label="Precio de venta"
               value={form.dissolution_fee}
               onChange={(v) => set('dissolution_fee', v)}
               placeholder="300"
+            />
+            <Field
+              id="dissolution_state_cost"
+              label="Costo estatal"
+              value={form.dissolution_state_cost}
+              onChange={(v) => set('dissolution_state_cost', v)}
+              placeholder="Sin dato"
             />
             <Field
               id="dissolution_processing_days"
@@ -255,10 +278,17 @@ export default function StateEditDialog({ state, open, onOpenChange }: StateEdit
             />
             <Field
               id="amendments_fee"
-              label="Fee"
+              label="Precio de venta"
               value={form.amendments_fee}
               onChange={(v) => set('amendments_fee', v)}
               placeholder="325"
+            />
+            <Field
+              id="amendments_state_cost"
+              label="Costo estatal"
+              value={form.amendments_state_cost}
+              onChange={(v) => set('amendments_state_cost', v)}
+              placeholder="Sin dato"
             />
           </div>
 

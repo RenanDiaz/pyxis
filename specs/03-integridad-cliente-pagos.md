@@ -1,6 +1,6 @@
 # 03 — Integridad de escrituras del cliente y dinero
 
-**Prioridad:** 🔴 Alta · **Estado:** implementado salvo R6 (ver abajo)
+**Prioridad:** 🔴 Alta · **Estado:** implementado (R6 el 2026-10-09)
 
 ## Problema
 `processes` (con sus pagos) vive como array dentro del doc del cliente y se
@@ -48,7 +48,23 @@ documentos inconsistentes.
   - `ci.yml` corre build y tests unitarios en cada PR.
   - `rules-tests.yml` corre también los tests de transacciones.
 
-**Pendiente:** R6 (notas de sistema separadas). No es dinero; va en un PR propio.
+**R6 (2026-10-09), notas de sistema separadas:**
+- **Datos:** `client.activity: ClientActivity[]`, con `{ type, text, at, by }`.
+- **Reasignar:** agrega el evento con `arrayUnion` y ya **no reescribe
+  `notes`**. Así no pisa lo que otro esté editando, y el bloque de notas no se
+  remonta.
+- **Reglas:** `activityAppendOnly()` en el update de clientes. Nadie edita ni
+  borra eventos, ni siquiera el owner. Tiene tests.
+- **UI:** el textarea edita solo las notas del agente. Los eventos se ven
+  aparte y no se pueden editar (`getClientActivity`).
+- **Datos sin migrar:** las líneas `[SISTEMA]` viejas se separan al leer
+  (`splitNotes`) y se conservan al guardar (`joinNotes`). La app funciona bien
+  sin correr la migración.
+- **Migración (opcional, limpieza):**
+  `npx tsx scripts/migrate-system-notes.ts [--dry-run]` pasa esas líneas a
+  `activity` con `at: null` (la fecha va en el texto). Probada en el emulador;
+  se puede volver a correr sin efecto.
+- **Lógica pura:** `src/lib/clientActivity.ts`, con tests.
 
 **Cambio de comportamiento:** las mutaciones de procesos son transacciones. Sin conexión fallan con un error explícito, en vez de quedar en cola como antes con `updateDoc`.
 

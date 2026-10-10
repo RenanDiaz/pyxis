@@ -182,6 +182,12 @@ export async function uploadClientFile(
   }
 }
 
+/** Borra un archivo por su ruta (cascadas de la spec 06). */
+export async function deleteStoragePath(storagePath: string): Promise<void> {
+  if (!isFirebaseConfigured || !storage) return
+  await deleteObject(ref(storage, storagePath))
+}
+
 export async function deleteClientFile(
   workspaceId: string,
   clientId: string,
