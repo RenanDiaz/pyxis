@@ -1,6 +1,6 @@
 # 18 — Links de pago con Stripe
 
-**Prioridad:** 🟠 Alta · **Estado:** propuesto · **Tamaño:** L · **Depende de:** 17 (Worker en Cloudflare + staging)
+**Prioridad:** 🟠 Alta · **Estado:** propuesto · **Tamaño:** L · **Depende de:** 17 ✅ (Worker en Cloudflare + staging) · Recomendado: 22 (cerrar creación de workspaces)
 
 ## Problema
 Para cobrar un abono hoy, el agente le pasa al cliente las instrucciones de Zelle o de transferencia y después registra el pago a mano. Queremos que el agente genere desde Pyxis un **link de pago de Stripe** por abono y lo copie para mandarlo por WhatsApp o correo. El dinero cae en la cuenta de Stripe **del workspace**.
@@ -9,6 +9,7 @@ Para cobrar un abono hoy, el agente le pasa al cliente las instrucciones de Zell
 | Tema | Decisión |
 |---|---|
 | Cuenta Stripe | **Una por workspace**, conectada con Stripe Connect. Pyxis es la plataforma. |
+| Habilitación | **Solo workspaces aprobados por un admin global** (R0). Cualquiera puede crear un workspace (hasta el spec 22), y cada cuenta conectada queda bajo la plataforma: nadie conecta Stripe sin aprobación. |
 | Backend | Worker de Cloudflare (spec 17). Firebase sigue en Spark, sin Cloud Functions. |
 | Quién genera links | **Cualquier miembro** que pueda ver al cliente (mismo `canSee` de las reglas). |
 | Granularidad | **Un link = un abono** de un proceso. Se paga una sola vez. |
@@ -16,6 +17,7 @@ Para cobrar un abono hoy, el agente le pasa al cliente las instrucciones de Zell
 | Conciliación | **Sin webhook en v1.** Botón **"Verificar estado"** que consulta a Stripe en el momento. El abono lo registra el agente con un clic, con datos prellenados. |
 
 ## Alcance
+- **Admin global:** habilitar o deshabilitar Stripe por workspace (script).
 - **Owner:**
   - Conectar o desconectar la cuenta Stripe del workspace.
   - Configurar el recargo.
@@ -32,12 +34,31 @@ Para cobrar un abono hoy, el agente le pasa al cliente las instrucciones de Zell
 
 ## Requisitos
 
+### R0 — Habilitación por un admin global
+1. **Ningún workspace puede usar Stripe por defecto.** Lo habilita un **admin global** (`admins/{uid}`, el mismo rol que edita la referencia de estados).
+2. **Cómo:** con un script, igual que `set-admin.ts`:
+   ```
+   npx tsx scripts/stripe-access.ts --list
+   npx tsx scripts/stripe-access.ts --enable  <workspaceId | email del owner> [--note "Avanza Hispano"]
+   npx tsx scripts/stripe-access.ts --disable <workspaceId | email del owner>
+   ```
+   - Escribe `workspaces/{wId}/integrations/stripe_settings` con `{ enabled, updated_by_email, updated_at, note? }`.
+   - `--list` muestra todos los workspaces con: nombre, email del owner, habilitado o no, y si tiene cuenta conectada (live/test).
+   - *Sin UI de admin en v1:* hay pocos workspaces y el script deja la decisión en quien tiene la service account.
+3. **El Worker lo valida en cada endpoint que crea o usa una cuenta** (`connect`, `payment-links` y sus acciones). Si no está habilitado, responde **403** `stripe_not_enabled`. La UI nunca es la única barrera.
+4. **Deshabilitar un workspace que ya está conectado:**
+   - Bloquea crear cuentas, generar links nuevos y continuar el onboarding.
+   - "Verificar estado" y "Desactivar" siguen funcionando: hay que poder cerrar lo que quedó abierto.
+   - Los links ya generados siguen siendo cobrables en Stripe hasta que alguien los desactive. El script avisa cuántos links activos quedan.
+5. **El modo test también requiere habilitación:** misma regla en staging que en producción.
+
 ### R1 — Conectar Stripe (owner, `/workspace`)
 1. Nueva sección **"Pagos con Stripe"** en `WorkspaceSettings`, debajo de `ReceiptBrandingSection`.
 2. **Estados de la sección:**
 
    | Estado | Qué se ve |
    |---|---|
+   | No habilitado (R0) | "Los pagos con Stripe no están habilitados para este workspace. Escríbenos a soporte@mipyxis.com para activarlos." Sin botones. |
    | No conectado | Botón **"Conectar Stripe"** |
    | Onboarding incompleto | Aviso **"Falta completar el registro en Stripe"** y botón **"Continuar registro"** |
    | Conectado | Nombre del negocio en Stripe, ✓ "Puede cobrar", botón **"Abrir Dashboard de Stripe"** (link externo) y botón **"Desconectar"** |
@@ -67,7 +88,7 @@ Para cobrar un abono hoy, el agente le pasa al cliente las instrucciones de Zell
 ### R3 — Generar link (cualquier miembro, `ProcessCard`)
 1. **Botón:** **"Link de pago"** en el bloque de pagos del proceso (`PaymentSection`), junto a "Registrar pago".
 2. **Deshabilitado** con tooltip si:
-   - El workspace no tiene Stripe conectado o no puede cobrar: "El owner debe conectar Stripe en Configuración".
+   - El workspace no tiene Stripe habilitado (R0), conectado, o no puede cobrar: "El owner debe conectar Stripe en Configuración".
    - El proceso no tiene total: "Define el total del proceso".
    - El saldo es 0: "Este proceso no tiene saldo pendiente".
 3. **Diálogo:**
@@ -135,6 +156,14 @@ interface Payment {
   payment_link_id?: string
 }
 
+/** workspaces/{wId}/integrations/stripe_settings — R0. Solo lo escribe scripts/stripe-access.ts (Admin SDK). */
+interface StripeSettings {
+  enabled: boolean
+  updated_by_email: string
+  updated_at: Timestamp
+  note?: string
+}
+
 /** workspaces/{wId}/integrations/stripe_{live|test} — solo lo escribe el Worker. */
 interface StripeConnection {
   account_id: string            // acct_…
@@ -184,7 +213,7 @@ interface PaymentLinkRecord {
 ```
 match /workspaces/{workspaceId}/integrations/{doc} {
   allow read: if isWorkspaceMember(workspaceId);
-  allow write: if false;            // solo el Worker (service account)
+  allow write: if false;            // stripe_settings: script (Admin SDK); stripe_{mode}: Worker
 }
 // dentro de match /clients/{clientId}:
 match /payment_links/{linkId} {
@@ -207,14 +236,14 @@ match /payment_links/{linkId} {
 `firebase-admin` **no** se usa en el Worker: depende de APIs de Node y gRPC que Workers no soporta bien.
 
 ### Endpoints
-Todos requieren un ID token. Los marcados *owner* leen `members/{uid}` y exigen `role == 'owner'`.
+Todos requieren un ID token. Los marcados *owner* leen `members/{uid}` y exigen `role == 'owner'`. Los marcados **habilitado** leen `integrations/stripe_settings` y exigen `enabled == true` (R0); si no, 403 `stripe_not_enabled`.
 
 | Método y ruta | Quién | Hace |
 |---|---|---|
-| `GET /api/stripe/status?workspaceId` | miembro | Devuelve `{ mode, connected, charges_enabled, details_submitted, business_name }`. Si es owner y hay cuenta, refresca la conexión desde Stripe. |
-| `POST /api/stripe/connect` `{ workspaceId }` | owner | Crea la cuenta si no existe (y guarda `account_id` **antes** de redirigir, para que un reintento no cree otra), crea el Account Link y devuelve `{ url }`. |
+| `GET /api/stripe/status?workspaceId` | miembro | Devuelve `{ mode, enabled, connected, charges_enabled, details_submitted, business_name }`. Si es owner y hay cuenta, refresca la conexión desde Stripe. |
+| `POST /api/stripe/connect` `{ workspaceId }` | owner, **habilitado** | Crea la cuenta si no existe (y guarda `account_id` **antes** de redirigir, para que un reintento no cree otra), crea el Account Link y devuelve `{ url }`. |
 | `POST /api/stripe/disconnect` `{ workspaceId }` | owner | Borra `integrations/stripe_{mode}`. |
-| `POST /api/payment-links` `{ workspaceId, clientId, processId, amount }` | miembro con `canSee` | Lee el cliente y el workspace con el token del usuario y valida el proceso, el total, `1 ≤ amount ≤ saldo` y la conexión. Calcula el recargo, crea el Payment Link y el doc. Devuelve el `PaymentLinkRecord`. |
+| `POST /api/payment-links` `{ workspaceId, clientId, processId, amount }` | miembro con `canSee`, **habilitado** | Lee el cliente y el workspace con el token del usuario y valida el proceso, el total, `1 ≤ amount ≤ saldo` y la conexión. Calcula el recargo, crea el Payment Link y el doc. Devuelve el `PaymentLinkRecord`. |
 | `POST /api/payment-links/:id/refresh` `{ workspaceId, clientId }` | miembro con `canSee` | R5. Devuelve el registro actualizado. |
 | `POST /api/payment-links/:id/deactivate` `{ workspaceId, clientId }` | miembro con `canSee` | R7. |
 
@@ -224,7 +253,10 @@ Todos requieren un ID token. Los marcados *owner* leen `members/{uid}` y exigen 
 - `getPendingBalance(process)`: reusa `money.ts` y `getProcessPaid`.
 - `isLinkRegistered(process, linkId)`.
 
-El Worker importa este módulo y `getProcessLabel` (`src/lib/processUtils.ts`) con el alias `@` del spec 17. Ninguno de los dos debe importar el SDK de Firebase en runtime: hoy `processUtils` solo importa tipos y `@/data/processes`. Verificarlo al implementar.
+El Worker importa este módulo y `getProcessLabel` (`src/lib/processUtils.ts`) con `@/…`, que resuelven los `paths` de `tsconfig.worker.json` (spec 17). Ninguno de los dos debe importar el SDK de Firebase en runtime: hoy `processUtils` solo importa tipos y `@/data/processes`. Verificarlo al implementar.
+
+### Script (`scripts/stripe-access.ts`)
+R0. Mismo patrón que `set-admin.ts`: Admin SDK con `scripts/serviceAccountKey.json`. Acepta el ID del workspace o el email del owner (busca `users` por email → `workspace_id`). Imprime qué cambió y, al deshabilitar, cuántos `payment_links` activos quedan.
 
 ### Frontend
 | Archivo | Cambio |
@@ -248,9 +280,13 @@ El Worker importa este módulo y `getProcessLabel` (`src/lib/processUtils.ts`) c
 
 - **Service account dedicada** (`pyxis-worker@…`), no la de `firebase-admin` de los scripts. Rol mínimo: Cloud Datastore User.
 - **Local:** `.dev.vars` (ignorado por git) y `.dev.vars.example` con los nombres.
+- **Subirlos:** `npx wrangler secret put <NOMBRE> --env staging` (o sin `--env` para producción), o en el dashboard con tipo **Secret**. Las variables tipo *Text* creadas en el dashboard las borra el siguiente `wrangler deploy`.
+- `FIREBASE_PROJECT_ID` y `APP_URL` van en `vars` de `wrangler.jsonc` (por entorno), no en el dashboard.
+- **Estado (2026-10-09):** `FIREBASE_SA_*` cargados en `pyxis-staging`. `STRIPE_SECRET_KEY` pendiente hasta tener R0.
 
 ### Setup manual de Stripe (una vez, en la cuenta de plataforma)
-- [ ] Crear la cuenta de **plataforma**. Ver la pregunta abierta 1 sobre la entidad legal y el país.
+- [ ] Definir la cuenta de **plataforma** (pregunta abierta 1).
+- [ ] Acceso como miembro del equipo con rol **Developer** (no pedir claves por chat). Desarrollo en un **Sandbox** propio dentro de esa cuenta.
 - [ ] Activar **Connect** y completar el *platform profile*. Soporte: `soporte@mipyxis.com`.
 - [ ] **Branding:** nombre "Pyxis", ícono y color. Es lo que ve el owner en el onboarding.
 - [ ] Copiar las claves de test y live a los secretos de staging y producción.
@@ -266,6 +302,11 @@ El Worker importa este módulo y `getProcessLabel` (`src/lib/processUtils.ts`) c
 - [ ] Un `amount` mayor al saldo devuelve 400.
 - [ ] Un proceso sin total devuelve 400.
 - [ ] Si el navegador manda un monto manipulado, el link usa el recalculado o se rechaza. Nunca usa el del navegador sin validar.
+
+**Habilitación (R0):**
+- [ ] Workspace sin `stripe_settings.enabled`: la sección muestra "no habilitado", y `POST /api/stripe/connect` y `POST /api/payment-links` responden 403 `stripe_not_enabled` aunque se llamen directo (curl con token válido de owner).
+- [ ] `stripe-access.ts --enable` lo habilita y el owner ya puede conectar. `--disable` vuelve a bloquear la creación de links; "Verificar estado" y "Desactivar" siguen funcionando.
+- [ ] Ningún cliente (ni el owner) puede escribir `integrations/stripe_settings` (test de reglas).
 
 **Permisos:**
 - [ ] Un agente **no** puede generar un link para un cliente de otro agente: Firestore rechaza la lectura y la API responde 403.
@@ -297,12 +338,11 @@ El Worker importa este módulo y `getProcessLabel` (`src/lib/processUtils.ts`) c
 - [ ] `CLAUDE.md` documenta la arquitectura del Worker, las colecciones nuevas y los secretos.
 
 ## Preguntas abiertas
-1. **🔴 Bloquea el setup de Stripe (no el código): entidad y país de la cuenta de plataforma.**
-   - Stripe exige que la plataforma Connect esté en un país soportado. Hasta donde sé, **Panamá no lo está**. Verificarlo en la lista de países de Stripe.
-   - **Opciones:**
-     - Una LLC de EE.UU. a nombre del dueño del producto.
-     - Que la plataforma sea la empresa de uno de los workspaces.
-   - Esto también define quién firma los términos de Connect y responde ante Stripe.
+1. **🔴 Bloquea pasar a producción (no el código): qué cuenta es la plataforma.**
+   - **Candidata (2026-10-09):** la cuenta de Stripe de **Avanza Hispano**, que ya existe.
+   - **Si es la plataforma:** firma los términos de Connect, responde ante Stripe por la plataforma y **puede consultar por API los cobros de todos los workspaces conectados**. Aceptable si los demás workspaces son equipos o socios suyos, no si son empresas independientes o competidoras.
+   - **Si no:** Avanza Hispano se conecta como un workspace más y la plataforma queda a nombre del dueño de Pyxis (entidad de EE.UU.; Stripe no opera en Panamá, verificar).
+   - R0 cubre el riesgo de que desconocidos queden bajo la plataforma, pero no el de visibilidad.
 2. ✅ **Resuelta (2026-10-09): checkbox "Entiendo y acepto".** ~~Texto legal del recargo:~~ ¿el aviso de R2 es suficiente o se quiere un checkbox "Entiendo y acepto" al activarlo? *(Recomendación: checkbox, para dejar constancia de que lo decidió el owner).*
 3. ✅ **Resuelta (2026-10-09): no se muestra en el recibo de Pyxis.** ~~¿El recargo se muestra en el recibo de Pyxis?~~
    - **Propuesta v1:** no. El recibo es del abono, y el comprobante del recargo es el de Stripe.
