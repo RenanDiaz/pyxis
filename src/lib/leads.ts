@@ -1,15 +1,11 @@
 import type { Call, CallLead, Client } from '@/types'
 import { formatPhoneForDisplay } from '@/lib/phoneUtils'
 import { getClientDisplayName } from '@/lib/clientUtils'
+import { phoneDigits } from '@/lib/phoneDigits'
+
+export { phoneDigits }
 
 // Leads (spec 19): prospectos sin registrar que viven dentro de la llamada.
-
-/** 10 dígitos de un teléfono US (sin el "1" del país); `''` si no lo es. */
-export function phoneDigits(phone: string): string {
-  let digits = phone.replace(/\D/g, '')
-  if (digits.length === 11 && digits.startsWith('1')) digits = digits.slice(1)
-  return digits.length === 10 ? digits : ''
-}
 
 export interface LeadInput {
   name: string

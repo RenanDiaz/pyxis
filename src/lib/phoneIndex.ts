@@ -6,22 +6,16 @@ import {
   type Transaction,
   type WriteBatch,
 } from 'firebase/firestore'
-import type { Client, ClientPhone } from '@/types'
-import { phoneDigits } from '@/lib/leads'
+import type { Client } from '@/types'
+import { PHONE_INDEX } from '@/lib/phoneDigits'
+
+export { clientPhoneDigits, PHONE_INDEX } from '@/lib/phoneDigits'
 
 // Teléfonos duplicados (spec 07). Cada número tiene un doc
 // `workspaces/{wId}/phone_index/{10 dígitos}` con los ids de los clientes que
 // lo usan. Cualquier miembro puede leer UN número por su id (no listar), así
 // que puede enterarse de que un número ya es cliente de otro agente sin poder
 // recorrer los teléfonos del workspace ni ver datos del cliente.
-
-export const PHONE_INDEX = 'phone_index'
-
-/** Todos los teléfonos del cliente (principal y secundarios), en 10 dígitos y sin repetir. */
-export function clientPhoneDigits(client: { phone?: string; phones?: ClientPhone[] }): string[] {
-  const all = [client.phone ?? '', ...(client.phones ?? []).map((p) => p.number)]
-  return [...new Set(all.map(phoneDigits).filter(Boolean))]
-}
 
 const indexRef = (fs: Firestore, workspaceId: string, digits: string) =>
   doc(fs, 'workspaces', workspaceId, PHONE_INDEX, digits)

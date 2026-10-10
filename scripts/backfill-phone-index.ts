@@ -26,7 +26,7 @@ import { readFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { updateIfUnchanged } from './lib/updateIfUnchanged'
-import { clientPhoneDigits, PHONE_INDEX } from '../src/lib/phoneIndex'
+import { clientPhoneDigits, PHONE_INDEX } from '../src/lib/phoneDigits'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DRY_RUN = process.argv.includes('--dry-run')
