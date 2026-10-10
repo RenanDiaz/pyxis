@@ -370,3 +370,29 @@ describe('índice de teléfonos (spec 07)', () => {
     await assertFails(batch.commit())
   })
 })
+
+describe('suscripciones a avisos con Pyxis cerrado (spec 21 fase 2)', () => {
+  const sub = {
+    endpoint: 'https://fcm.googleapis.com/fcm/send/abc',
+    p256dh: 'BPk',
+    auth: 'xyz',
+    timezone: 'America/New_York',
+    user_agent: 'Chrome',
+    updated_at: serverTimestamp(),
+  }
+
+  it('cada usuario gestiona solo las suyas', async () => {
+    await assertSucceeds(setDoc(doc(db('ag'), 'users/ag/push_subscriptions/s1'), sub))
+    await assertSucceeds(getDoc(doc(db('ag'), 'users/ag/push_subscriptions/s1')))
+    await assertFails(getDoc(doc(db('ag2'), 'users/ag/push_subscriptions/s1')))
+    await assertFails(getDocs(collection(db('own'), 'users/ag/push_subscriptions')))
+    await assertFails(setDoc(doc(db('ag2'), 'users/ag/push_subscriptions/s2'), sub))
+    await assertFails(deleteDoc(doc(db('ag2'), 'users/ag/push_subscriptions/s1')))
+    await assertSucceeds(deleteDoc(doc(db('ag'), 'users/ag/push_subscriptions/s1')))
+  })
+
+  it('solo endpoints https y sin campos extra', async () => {
+    await assertFails(setDoc(doc(db('ag'), 'users/ag/push_subscriptions/s1'), { ...sub, endpoint: 'http://x' }))
+    await assertFails(setDoc(doc(db('ag'), 'users/ag/push_subscriptions/s1'), { ...sub, owner: 'ag2' }))
+  })
+})

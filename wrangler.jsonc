@@ -28,11 +28,16 @@
   // se prueban en staging.
   "preview_urls": false,
   "observability": { "enabled": true },
+  // Avisos de llamadas con Pyxis cerrado (spec 21 fase 2): cada minuto.
+  "triggers": { "crons": ["* * * * *"] },
   "env": {
     "staging": {
       "name": "pyxis-staging",
       "routes": [{ "pattern": "staging.mipyxis.com", "custom_domain": true }],
-      "preview_urls": false
+      "preview_urls": false,
+      // Staging lee el mismo Firebase que producción: con su propio cron, cada
+      // aviso saldría dos veces.
+      "triggers": { "crons": [] }
     }
   }
 }

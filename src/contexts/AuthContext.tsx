@@ -10,7 +10,8 @@ import {
   GoogleAuthProvider,
   type User,
 } from 'firebase/auth'
-import { auth, isFirebaseConfigured } from '@/lib/firebase'
+import { auth, db, isFirebaseConfigured } from '@/lib/firebase'
+import { disablePush } from '@/lib/pushSubscription'
 import { getUserProfile, createUserProfile } from '@/lib/firestore'
 import { clearUserDrafts, pruneExpiredDrafts } from '@/lib/formDraft'
 
@@ -112,6 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Los borradores tienen datos de clientes: no deben quedar en un navegador
     // compartido después de cerrar sesión.
     if (user) clearUserDrafts(user.uid)
+    // Tampoco deben seguir llegando sus avisos de llamadas a este navegador
+    // (spec 21 fase 2). Si falla, no impide cerrar sesión.
+    if (user && db) await disablePush(db, user.uid).catch(() => {})
     queryClient.clear()
     if (!isFirebaseConfigured || !auth) {
       setUser(null)

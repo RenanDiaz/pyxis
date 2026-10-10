@@ -5,3 +5,8 @@
 # Los chunks llevan hash en el nombre: nunca cambian, el navegador no revalida.
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+# Service worker de los avisos (spec 21 fase 2): el navegador debe ver siempre
+# la última versión.
+/sw.js
+  Cache-Control: no-cache

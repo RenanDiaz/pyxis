@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { useUserProfile } from '@/hooks/useUserProfile'
@@ -18,6 +18,8 @@ import {
   type ReminderPrefs,
 } from '@/lib/reminderPrefs'
 import type { Client } from '@/types'
+import { db } from '@/lib/firebase'
+import { disablePush, enablePush, getPushStatus, type PushStatus } from '@/lib/pushSubscription'
 
 const CHECK_EVERY_MS = 15_000
 
@@ -96,6 +98,18 @@ export function useCallReminders() {
     latest.current = { calls, clientsById, prefs, navigate }
   })
 
+  // Clic en un aviso de Web Push con Pyxis abierto: el service worker pide
+  // navegar y la app usa su router, sin recargar (spec 21 fase 2).
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as { type?: string; url?: string } | null
+      if (data?.type === 'pyxis:navigate' && data.url?.startsWith('/')) latest.current.navigate(data.url)
+    }
+    navigator.serviceWorker.addEventListener('message', onMessage)
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage)
+  }, [])
+
   const uid = wsCtx?.uid
   useEffect(() => {
     if (!uid || !prefs.enabled) return
@@ -150,4 +164,24 @@ export function useCallReminders() {
     const id = setInterval(check, CHECK_EVERY_MS)
     return () => clearInterval(id)
   }, [uid, prefs.enabled, calls])
+}
+
+/** Avisos con Pyxis cerrado en este navegador (spec 21 fase 2). */
+export function usePushReminders() {
+  const { wsCtx } = useUserProfile()
+  const uid = wsCtx?.uid
+  const queryClient = useQueryClient()
+  const key = ['push-status', uid]
+  const status = useQuery<PushStatus>({
+    queryKey: key,
+    queryFn: () => getPushStatus(db!, uid!),
+    enabled: !!uid && !!db,
+    staleTime: 5 * 60_000,
+  })
+  const toggle = useMutation({
+    meta: { errorMessage: 'No se pudieron cambiar los avisos con Pyxis cerrado' },
+    mutationFn: (on: boolean) => (on ? enablePush(db!, uid!) : disablePush(db!, uid!)),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
+  })
+  return { status: status.data ?? 'unsupported', setEnabled: toggle.mutate, isPending: toggle.isPending }
 }

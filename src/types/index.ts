@@ -302,6 +302,8 @@ export interface Call {
   /** Ausente en llamadas viejas: equivale a `scheduled`. */
   kind?: CallKind
   channel?: 'WhatsApp' | 'Llamada' | 'Email'
+  /** Avisos ya enviados por Web Push (`reminderKey`); lo escribe el Worker (spec 21 fase 2). */
+  push_sent?: string[]
   owner_uid: string
   subteam_id: string | null
   created_at: Timestamp
