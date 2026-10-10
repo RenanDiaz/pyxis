@@ -1,6 +1,6 @@
 # 21 — Avisos de llamadas (5 minutos antes y a la hora)
 
-**Prioridad:** 🟠 Alta (pedido de producción) · **Estado:** fase 1 en implementación · **Tamaño:** M · **Relacionado:** [08](08-agenda.md), [19](19-leads-agenda.md), [20](20-notificaciones-vencidas.md), [17](17-migracion-cloudflare.md)/[18](18-links-de-pago-stripe.md) (fase 2)
+**Prioridad:** 🟠 Alta (pedido de producción) · **Estado:** fase 1 implementada · fase 2 propuesta · **Tamaño:** M · **Relacionado:** [08](08-agenda.md), [19](19-leads-agenda.md), [20](20-notificaciones-vencidas.md), [17](17-migracion-cloudflare.md)/[18](18-links-de-pago-stripe.md) (fase 2)
 
 ## Problema
 Isabel pide que Pyxis le **avise 5 minutos antes** de cada llamada agendada y
@@ -16,6 +16,35 @@ llamada" de Inicio solo informan si alguien las mira.
 - **Con sonido**, con un interruptor para apagarlo.
 - **Fase 2 (después, si hace falta):** Web Push con Pyxis cerrado o en el
   celular. Ver "Fase 2".
+
+## Implementación fase 1 (2026-10-10)
+- **Lógica pura:** `src/lib/callReminders.ts` (`dueReminders`, `reminderKey`,
+  `reminderWindow`), con tests. Pasada la hora de la llamada, el aviso de 5
+  minutos ya no sale aunque el de la hora se haya mostrado en otra pestaña o
+  antes de recargar (bug encontrado en la prueba en navegador).
+- **Datos:** `getReminderCalls`: llamadas propias pendientes en
+  `[ahora − 10 min, ahora + 60 min]`, refrescadas cada minuto y al volver a la
+  pestaña.
+- **Hook:** `useCallReminders`, montado con `<CallReminders />` en
+  `AppLayout`. Revisa cada 15 s y cada vez que llegan datos nuevos.
+  - **Toast** abajo a la derecha (arriba tapaba la campana), con ✕, "Llamar" y
+    "Ver". "Es la hora" queda hasta cerrarlo; "en 5 minutos" se va solo al
+    minuto.
+  - **Notificación del sistema** solo con la pestaña oculta y el permiso dado.
+  - **Sonido** de dos tonos con WebAudio.
+- **Preferencias y avisos ya mostrados:** `src/lib/reminderPrefs.ts`, en
+  `localStorage` por usuario. Sincroniza entre pestañas con
+  `useSyncExternalStore` y el evento `storage`.
+- **Campana:**
+  - Switches "Avisarme 5 min antes y a la hora" y "Con sonido".
+  - Botón "Permitir avisos con Pyxis en segundo plano" mientras el permiso no
+    se decidió.
+  - Si el navegador lo bloqueó, una explicación de cómo habilitarlo.
+- **Verificado en navegador:**
+  - Salieron los 2 avisos con su notificación del sistema; la llamada de otro
+    agente no avisó.
+  - Tras recargar no se repitieron.
+  - Apagar los avisos deshabilita el switch del sonido.
 
 ## Requisitos — fase 1
 1. **Cuándo:** para cada llamada `pendiente` propia (a cliente o a lead) hay
@@ -72,9 +101,9 @@ llamada" de Inicio solo informan si alguien las mira.
   `worker/auth.ts`.
 
 ## Criterios de aceptación — fase 1
-- [ ] Una llamada propia a las 10:00 avisa a las 9:55 ("En 5 minutos") y a las 10:00 ("Es la hora"), con toast y sonido.
-- [ ] Con la pestaña oculta y el permiso dado, sale la notificación del sistema y al hacer clic abre el cliente.
-- [ ] Con dos pestañas abiertas, cada aviso sale una sola vez.
-- [ ] Si la llamada se marca completada o se reagenda antes, el aviso viejo no sale; la reagendada avisa a su nueva hora.
-- [ ] Una llamada de otro agente no avisa, aunque el owner la vea en la Agenda.
-- [ ] Con los avisos apagados no sale nada; con el sonido apagado, sale sin sonido.
+- [x] Una llamada propia a las 10:00 avisa a las 9:55 ("En 5 minutos") y a las 10:00 ("Es la hora"), con toast y sonido.
+- [x] Con la pestaña oculta y el permiso dado, sale la notificación del sistema y al hacer clic abre el cliente.
+- [x] Con dos pestañas abiertas, cada aviso sale una sola vez.
+- [x] Si la llamada se marca completada o se reagenda antes, el aviso viejo no sale; la reagendada avisa a su nueva hora.
+- [x] Una llamada de otro agente no avisa, aunque el owner la vea en la Agenda.
+- [x] Con los avisos apagados no sale nada; con el sonido apagado, sale sin sonido.

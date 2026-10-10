@@ -9,6 +9,8 @@ import { useClients } from '@/hooks/useClients'
 import { getCallDisplayName, isLeadCall } from '@/lib/leads'
 import { BELL_WINDOW_DAYS, selectBellCalls } from '@/lib/bellCalls'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { useReminderPrefs } from '@/hooks/useCallReminders'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { Call, CallOutcome, Client } from '@/types'
 
@@ -101,6 +103,19 @@ export default function NotificationCenter() {
   const upcomingCalls = selectBellCalls(upcomingRaw ?? [], clientsById, BELL_MAX)
   const totalCount = overdueCalls.length + upcomingCalls.length
 
+  const [reminderPrefs, setReminderPrefs] = useReminderPrefs()
+  const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(() =>
+    'Notification' in window ? Notification.permission : 'unsupported'
+  )
+
+  // Activar los avisos pide el permiso del navegador en ese momento (spec 21).
+  const handleRemindersChange = async (enabled: boolean) => {
+    setReminderPrefs({ ...reminderPrefs, enabled })
+    if (enabled && permission === 'default') {
+      setPermission(await Notification.requestPermission())
+    }
+  }
+
   const updateCall = useUpdateCall()
   const [resolvingId, setResolvingId] = useState<string | null>(null)
 
@@ -188,6 +203,41 @@ export default function NotificationCenter() {
           {olderOverdue > 0 && (
             <p className="px-4 pb-3 text-xs text-muted-foreground">
               Y {olderOverdue} vencida(s) de hace más de {BELL_WINDOW_DAYS} días: están en la Agenda → Pendientes.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2 border-t px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor="reminders-enabled" className="text-xs">
+              Avisarme 5 min antes y a la hora
+            </label>
+            <Switch
+              id="reminders-enabled"
+              checked={reminderPrefs.enabled}
+              onCheckedChange={handleRemindersChange}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor="reminders-sound" className="text-xs">
+              Con sonido
+            </label>
+            <Switch
+              id="reminders-sound"
+              checked={reminderPrefs.sound}
+              disabled={!reminderPrefs.enabled}
+              onCheckedChange={(sound) => setReminderPrefs({ ...reminderPrefs, sound })}
+            />
+          </div>
+          {reminderPrefs.enabled && permission === 'default' && (
+            <Button variant="outline" size="sm" className="h-7 w-full text-xs" onClick={() => handleRemindersChange(true)}>
+              Permitir avisos con Pyxis en segundo plano
+            </Button>
+          )}
+          {reminderPrefs.enabled && permission === 'denied' && (
+            <p className="text-[11px] text-muted-foreground">
+              El navegador bloqueó las notificaciones: los avisos salen dentro de Pyxis. Para verlos con Pyxis en
+              segundo plano, permítelas en la configuración del sitio (candado junto a la dirección).
             </p>
           )}
         </div>
