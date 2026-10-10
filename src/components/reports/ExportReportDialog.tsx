@@ -21,6 +21,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { DEFAULT_TAX_RATE, type ExpenseConfig } from '@/lib/generateSalesReport'
 import {
   DEFAULT_REGISTERED_AGENT_COST,
+  type CancelledSale,
   type MissingCost,
   type ProjectedSale,
   type StripeFeeMode,
@@ -100,6 +101,8 @@ interface ExportReportDialogProps {
   missingCost: MissingCost[]
   /** Ventas con saldo pendiente: su CHARGE incluye un monto proyectado. */
   projected: ProjectedSale[]
+  /** Ventas canceladas: cuentan lo cobrado menos lo reembolsado. */
+  cancelled: CancelledSale[]
   isExporting: boolean
   onExport: (settings: ExportSettings) => void
 }
@@ -111,6 +114,7 @@ export default function ExportReportDialog({
   accountCount,
   missingCost,
   projected,
+  cancelled,
   isExporting,
   onExport,
 }: ExportReportDialogProps) {
@@ -198,6 +202,24 @@ export default function ExportReportDialog({
               ))}
             </ul>
             <p className="mt-1 text-xs">Se corrige en el proceso del cliente («Costo estatal»).</p>
+          </div>
+        )}
+
+        {cancelled.length > 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+            <p className="font-medium">
+              {cancelled.length === 1
+                ? '1 venta cancelada: cuenta lo cobrado menos lo reembolsado.'
+                : `${cancelled.length} ventas canceladas: cuentan lo cobrado menos lo reembolsado.`}
+            </p>
+            <ul className="mt-1 list-disc pl-5">
+              {cancelled.map((c, i) => (
+                <li key={i}>
+                  {c.label}: ${formatMoney(c.charge)}
+                  {c.refundMissing ? ' (reembolso sin capturar: se toma como $0)' : ''}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

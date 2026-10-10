@@ -122,6 +122,24 @@ export default function ProcessCard({
     if (await updateProcess({ state_cost: num }, 'Costo estatal actualizado')) setStateCost(null)
   }
 
+  // Reembolso (solo cancelados): cuánto se le devolvió al cliente (spec 04, P3).
+  const isCancelled = process.stage === 'cancelado'
+  const [refund, setRefund] = useState<string | null>(null)
+  const currentRefund = refund ?? (typeof process.refunded_amount === 'number' ? String(process.refunded_amount) : '')
+
+  const saveRefund = async () => {
+    if (refund === null) return
+    const trimmed = refund.trim()
+    const num = trimmed === '' ? undefined : parseFloat(trimmed)
+    // Inválido o sin cambios: se descarta el borrador.
+    if ((num !== undefined && (isNaN(num) || num < 0)) || num === process.refunded_amount) {
+      setRefund(null)
+      return
+    }
+    const message = num === undefined ? 'Reembolso quitado' : 'Reembolso actualizado'
+    if (await updateProcess({ refunded_amount: num }, message)) setRefund(null)
+  }
+
   const [notes, setNotes] = useState<string | null>(null)
   const currentNotes = notes ?? process.notes ?? ''
 
@@ -260,6 +278,28 @@ export default function ProcessCard({
                     : 'del catálogo'}
           </span>
         </div>
+        {isCancelled && (
+          <div className="flex items-center gap-2 pt-1">
+            <Label htmlFor={`refund-${process.id}`} className="text-xs font-normal text-muted-foreground">
+              Reembolsado ($)
+            </Label>
+            <Input
+              id={`refund-${process.id}`}
+              type="number"
+              min={0}
+              step="0.01"
+              className="h-8 w-[110px]"
+              value={currentRefund}
+              placeholder="—"
+              onChange={(e) => setRefund(e.target.value)}
+              onBlur={saveRefund}
+              title="Cuánto se le devolvió al cliente: el reporte de ventas cuenta lo cobrado menos esto"
+            />
+            <span className="text-xs text-muted-foreground">
+              {typeof process.refunded_amount === 'number' ? 'capturado' : 'sin capturar (pon 0 si no se devolvió nada)'}
+            </span>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {isRegistration && (

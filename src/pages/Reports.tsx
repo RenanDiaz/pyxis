@@ -207,6 +207,7 @@ export default function Reports() {
         accountCount={preview.accountCount}
         missingCost={preview.missingCost}
         projected={preview.projected}
+        cancelled={preview.cancelled}
         isExporting={isExporting}
         onExport={handleExport}
       />

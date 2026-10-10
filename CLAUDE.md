@@ -170,6 +170,7 @@ interface ClientProcess {
   notes?: string
   sold_at?: string           // fecha de venta (yyyy-MM-dd): mes en que la cuenta el reporte
   state_cost?: number        // costo estatal capturado (STATE FEE del reporte); manda sobre el catálogo
+  refunded_amount?: number   // solo `cancelado`: cuánto se devolvió (el reporte cuenta cobrado − esto)
   created_at: Timestamp
 }
 ```

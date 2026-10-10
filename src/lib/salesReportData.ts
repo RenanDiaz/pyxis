@@ -15,6 +15,9 @@
  *    importa es que aparezcan todas las ventas). Sin total, lo cobrado. El saldo
  *    pendiente es un monto PROYECTADO: se advierte en el diálogo de exportación,
  *    no en el Excel.
+ *  - Cancelados (P3): un proceso `cancelado` con pagos cuenta lo COBRADO menos lo
+ *    reembolsado (`refunded_amount`), sin proyectar saldo; si se devolvió todo,
+ *    no aparece. El state fee se resta igual (se asume ya pagado).
  *  - `stateFee` = costo estatal del proceso (`getProcessStateCost`, P8): el
  *    capturado en el proceso, o el del catálogo (fijo, o del estado del PROCESO:
  *    registro, annual report, dissolution, amendment). Si no se conoce va en 0 y
@@ -92,6 +95,8 @@ interface MonthSale {
   charge: number
   /** Parte de `charge` que falta cobrar: monto proyectado. */
   pending: number
+  /** Proceso cancelado: `charge` es lo cobrado menos lo reembolsado. */
+  cancelled: boolean
 }
 
 /**
@@ -112,14 +117,19 @@ function monthSalesOf(clients: Client[], monthKey: string): MonthSale[] {
         .map((x) => x.payment)
       if (payments.length === 0) continue
       const paid = toCents(sumMoney(payments.map((p) => p.amount)))
-      const charge = Math.max(toCents(process.total), paid)
+      const cancelled = process.stage === 'cancelado'
+      // Cancelado: lo cobrado menos lo devuelto, sin saldo por cobrar (P3).
+      const refunded = cancelled ? Math.min(Math.max(toCents(process.refunded_amount), 0), paid) : 0
+      const charge = cancelled ? paid - refunded : Math.max(toCents(process.total), paid)
+      if (charge <= 0) continue
       sales.push({
         client,
         process,
         saleDate,
         payments,
         charge: fromCents(charge),
-        pending: fromCents(charge - paid),
+        pending: cancelled ? 0 : fromCents(charge - paid),
+        cancelled,
       })
     }
   }
@@ -150,10 +160,14 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
     const { client, process } = sale
     // El recargo aplica a lo pagado con Stripe, y al saldo si el primer pago
     // fue con Stripe. Se suma a CHARGE y se resta como STRIPE FEE.
-    const stripeBase = sumMoney([
-      ...sale.payments.filter((p) => p.method === 'stripe').map((p) => p.amount),
-      projectsStripe(sale) ? sale.pending : 0,
-    ])
+    // Nunca más que CHARGE: en un cancelado, lo reembolsado no lleva recargo.
+    const stripeBase = Math.min(
+      sumMoney([
+        ...sale.payments.filter((p) => p.method === 'stripe').map((p) => p.amount),
+        projectsStripe(sale) ? sale.pending : 0,
+      ]),
+      sale.charge,
+    )
     const surcharge = stripeSurcharge(stripeBase, stripeFeeMode)
 
     return {
@@ -185,6 +199,15 @@ export interface MissingCost {
   reason: MissingCostReason
 }
 
+/** Venta cancelada que sigue en el reporte (no se devolvió todo). */
+export interface CancelledSale {
+  label: string
+  /** Lo que queda: cobrado menos reembolsado. */
+  charge: number
+  /** No se capturó cuánto se devolvió: se tomó como 0. */
+  refundMissing: boolean
+}
+
 /** Venta con saldo pendiente: su CHARGE incluye un monto proyectado. */
 export interface ProjectedSale {
   label: string
@@ -206,6 +229,8 @@ export interface ReportPreview {
   /** Ventas del mes sin costo estatal conocido: su STATE FEE sale en 0. */
   missingCost: MissingCost[]
   projected: ProjectedSale[]
+  /** Ventas canceladas: cuentan lo cobrado menos lo reembolsado (P3). */
+  cancelled: CancelledSale[]
 }
 
 export function previewReport(
@@ -227,5 +252,12 @@ export function previewReport(
     projected: sales
       .filter((s) => s.pending > 0)
       .map((s) => ({ label: saleLabel(s), pending: s.pending, stripe: projectsStripe(s) })),
+    cancelled: sales
+      .filter((s) => s.cancelled)
+      .map((s) => ({
+        label: saleLabel(s),
+        charge: s.charge,
+        refundMissing: typeof s.process.refunded_amount !== 'number',
+      })),
   }
 }
