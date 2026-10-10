@@ -492,6 +492,24 @@ export async function getOverdueCalls(
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Call))
 }
 
+/**
+ * Llamadas pendientes PROPIAS en una ventana (avisos, spec 21). Filtra por
+ * `owner_uid` también para owner/supervisor: el aviso es de quien llama.
+ */
+export async function getReminderCalls(ctx: WorkspaceCtx, from: Date, to: Date): Promise<Call[]> {
+  if (!isFirebaseConfigured || !db) return []
+  const q = query(
+    wsCol(ctx.workspaceId, 'calls'),
+    where('owner_uid', '==', ctx.uid),
+    where('outcome', '==', 'pendiente'),
+    where('scheduled_at', '>=', Timestamp.fromDate(from)),
+    where('scheduled_at', '<=', Timestamp.fromDate(to)),
+    orderBy('scheduled_at', 'asc')
+  )
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Call))
+}
+
 /** Cuántas vencidas quedan antes de `before` (fuera de la ventana de la campana). */
 export async function countOverdueBefore(ctx: WorkspaceCtx, before: Date): Promise<number> {
   if (!isFirebaseConfigured || !db) return 0
