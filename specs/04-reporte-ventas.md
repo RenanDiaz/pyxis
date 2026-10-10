@@ -18,7 +18,7 @@ las referencias citan solo hoja + tipo + estado.
 | ✔ 1 | `stateFee` = `state.state_fee` (fee de **registro**) para **todos** los procesos. Si el proceso no tiene estado, cae a `client.state`. | TAX y NET mal calculados para todo lo que no es registro. |
 | ✔ 1b | Los campos `annual_report.fee`, `dissolution.fee` y `amendments.fee` de `states.json` son **precios de venta** (`pricing: { mode: 'state' }` en `processes.ts`), **no costos estatales**. Ej.: NY dissolution 290 / amendment 290 en el doc vs. 90 de state fee en el Excel; CA annual report 969. | El requisito original ("annual report → fee de annual report del estado") restaría el precio como costo y dejaría NET ≈ 0. **No existe hoy en el doc del estado un costo estatal para esos procesos.** |
 | ✔ 1c | El `state_fee` de registro del doc no coincide con el que se resta en el Excel en varios estados (Sept/Ago/Jul): DE 260 vs 140, MD 195.70 vs 247, CA 30/70/110 vs 75, GA 110 vs 100, IL 153.38 vs 155.88, MN 155 vs 160, VA 100 vs 102.40, MA 520 vs 525, AL 236 vs 245, ID 104 vs 101, TN 307 vs 308.25. Coinciden: FL, NY, NJ, IN, CT, CO, OH, WA, NV, TX, MI, OR, AZ. | NET de registro difiere del manual. Ver P4. |
-| ✔ 2 | `company` cae a `client.llc_name` | 2º registro sin nombre se reporta como la 1ª compañía (ver 03-R7). |
+| ✔ 2 ✅ | `company` cae a `client.llc_name` | 2º registro sin nombre se reporta como la 1ª compañía (ver 03-R7). |
 | 3 ✅ | Procesos `cancelado` con pagos se cuentan igual | Ventas infladas si hubo reembolso (P3). El Excel no trae casos. |
 | 4 | Clientes legacy sin `processes` (si no se migró) no aparecen | Ventas faltantes. Confirmar si queda alguno en producción. |
 | 5 | Comentario en `generateSalesReport.ts` dice "en blanco" pero escribe 0 | Confusión al mantener. |
@@ -241,7 +241,15 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
   recalcula el status del cliente como registrar o borrar. El diálogo avisa que hay que
   regenerar el recibo si ya se entregó.
 
-**Pendiente:** #2 (company) y #4 (legacy). Fuera del reporte, un
+- #2: **compañía de cada servicio**. Un proceso que no es registro se vincula a un
+  registro del cliente (`company_id`) o lleva otra compañía escrita a mano (`llc_name`);
+  si el cliente tiene una sola compañía se usa esa (automática). Lo resuelve
+  `getProcessCompanyName` para todos los tipos, y lo usan el reporte, el recibo, la
+  cotización y el estado de cuenta (ya no `client.llc_name` a ciegas). Selector
+  «Compañía» en `ProcessCard`; con varias compañías sin elegir, el reporte pone el nombre
+  del cliente y el diálogo lo advierte.
+
+**Pendiente:** #4 (legacy). Fuera del reporte, un
 proceso cancelado sigue sumando su saldo en el estado de cuenta, la cotización y el
 status del cliente (spec aparte). Costos por confirmar,
 que hoy quedan vacíos (STATE FEE 0 + advertencia) o con un valor base tomado del texto

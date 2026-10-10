@@ -33,12 +33,18 @@ import {
 } from '@/lib/processUtils'
 import {
   COMPANY_KEYS,
+  getClientCompanies,
   getProcessCompanyName,
+  hasUnassignedCompany,
   inheritsClientCompany,
   type CompanyKey,
 } from '@/lib/companyUtils'
 import type { Client, ClientProcess, ProcessStage, StateInfo, Workspace } from '@/types'
 import { UPPERCASE_INPUT_CLASS } from '@/lib/clientUtils'
+
+/** Valores especiales del selector de compañía de un servicio. */
+const AUTO_COMPANY = '__auto'
+const OTHER_COMPANY = '__other'
 
 const STAGE_ORDER: ProcessStage[] = ['pendiente', 'en_proceso', 'completado', 'cancelado']
 
@@ -140,6 +146,54 @@ export default function ProcessCard({
     if (await updateProcess({ refunded_amount: num }, message)) setRefund(null)
   }
 
+  // Compañía de un servicio que no es registro (spec 04, #2): un registro del
+  // cliente, otra escrita a mano, o automática (la única que tenga el cliente).
+  const allCompanies = isRegistration ? [] : getClientCompanies(client)
+  // Las elegibles son los registros; la legacy del cliente (sin id) solo aplica en automático.
+  const companies = allCompanies.filter((c) => c.id)
+  const autoCompany = allCompanies.length === 1 ? allCompanies[0].name : ''
+  const linkedCompany = companies.find((c) => c.id === process.company_id)
+  const companyChoice = linkedCompany
+    ? linkedCompany.id!
+    : (process.llc_name || '').trim()
+      ? OTHER_COMPANY
+      : AUTO_COMPANY
+  const [pickingOther, setPickingOther] = useState(false)
+  const [otherCompany, setOtherCompany] = useState<string | null>(null)
+  const currentOtherCompany = otherCompany ?? process.llc_name ?? ''
+  const companyName = getProcessCompanyName(client, process)
+  const unassigned = hasUnassignedCompany(client, process)
+
+  const chooseCompany = async (value: string) => {
+    if (value === OTHER_COMPANY) {
+      setPickingOther(true)
+      return
+    }
+    setPickingOther(false)
+    setOtherCompany(null)
+    const patch: ProcessPatch =
+      value === AUTO_COMPANY
+        ? { company_id: undefined, llc_name: undefined }
+        : { company_id: value, llc_name: undefined }
+    await updateProcess(patch, 'Compañía actualizada')
+  }
+
+  const saveOtherCompany = async () => {
+    if (otherCompany === null) return
+    const name = otherCompany.trim().toUpperCase()
+    if (name === (process.llc_name ?? '')) {
+      setOtherCompany(null)
+      return
+    }
+    const patch: ProcessPatch = name
+      ? { company_id: undefined, llc_name: name }
+      : { company_id: undefined, llc_name: undefined }
+    if (await updateProcess(patch, 'Compañía actualizada')) {
+      setOtherCompany(null)
+      if (!name) setPickingOther(false)
+    }
+  }
+
   const [notes, setNotes] = useState<string | null>(null)
   const currentNotes = notes ?? process.notes ?? ''
 
@@ -181,10 +235,14 @@ export default function ProcessCard({
               {getProcessLabel(process)}
               {process.state ? ` — ${process.state}` : ''}
             </CardTitle>
-            {isRegistration && (
+            {isRegistration ? (
               <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                {getProcessCompanyName(client, process) || 'Compañía sin nombre'}
+                {companyName || 'Compañía sin nombre'}
               </p>
+            ) : (
+              companyName && (
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">{companyName}</p>
+              )
             )}
           </div>
           <div className="flex shrink-0 items-center gap-1">
@@ -298,6 +356,45 @@ export default function ProcessCard({
             <span className="text-xs text-muted-foreground">
               {typeof process.refunded_amount === 'number' ? 'capturado' : 'sin capturar (pon 0 si no se devolvió nada)'}
             </span>
+          </div>
+        )}
+        {!isRegistration && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Label htmlFor={`company-${process.id}`} className="text-xs font-normal text-muted-foreground">
+              Compañía
+            </Label>
+            <Select value={pickingOther ? OTHER_COMPANY : companyChoice} onValueChange={chooseCompany}>
+              <SelectTrigger id={`company-${process.id}`} className="h-8 w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={AUTO_COMPANY}>
+                  {autoCompany ? `Automática: ${autoCompany}` : 'Sin asignar'}
+                </SelectItem>
+                {companies.map((c) => (
+                  <SelectItem key={c.id} value={c.id!}>
+                    {c.name || 'Registro sin nombre'}
+                  </SelectItem>
+                ))}
+                <SelectItem value={OTHER_COMPANY}>Otra compañía…</SelectItem>
+              </SelectContent>
+            </Select>
+            {(pickingOther || companyChoice === OTHER_COMPANY) && (
+              <Input
+                aria-label="Nombre de la otra compañía"
+                className={`h-8 w-[220px] ${UPPERCASE_INPUT_CLASS}`}
+                value={currentOtherCompany}
+                placeholder="Ej: SUNRISE SERVICES LLC"
+                onChange={(e) => setOtherCompany(e.target.value)}
+                onBlur={saveOtherCompany}
+                autoFocus={pickingOther && !process.llc_name}
+              />
+            )}
+            {unassigned && (
+              <span className="text-xs text-amber-700 dark:text-amber-400">
+                El cliente tiene varias compañías: elige una
+              </span>
+            )}
           </div>
         )}
       </CardHeader>

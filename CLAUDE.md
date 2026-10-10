@@ -171,6 +171,7 @@ interface ClientProcess {
   sold_at?: string           // fecha de venta (yyyy-MM-dd): mes en que la cuenta el reporte
   state_cost?: number        // costo estatal capturado (STATE FEE del reporte); manda sobre el catálogo
   refunded_amount?: number   // solo `cancelado`: cuánto se devolvió (el reporte cuenta cobrado − esto)
+  company_id?: string        // solo NO registro: id del registro (compañía) al que pertenece el servicio
   created_at: Timestamp
 }
 ```
@@ -237,6 +238,12 @@ compañía se vería repetida en cada registro del cliente y el .docx saldría
 duplicado. Helpers: `getProcessCompany`, `getProcessCompanyName`,
 `inheritsClientCompany`, `getRegistrationProcesses`,
 `backfillFirstRegistrationCompany`.
+
+Los **demás servicios** (EIN, amendment…) pertenecen a una compañía del cliente:
+el registro vinculado (`company_id`), otra escrita a mano (`llc_name`) o, si el
+cliente tiene una sola, esa. `getProcessCompanyName` resuelve todos los tipos
+(reporte, recibo, cotización, estado de cuenta); `hasUnassignedCompany` marca
+los servicios de clientes con varias compañías sin una elegida.
 
 Al agregar un registro cuando ya existe otro (`ClientDetail` y `ClientForm`) se
 llama `backfillFirstRegistrationCompany`: baja los datos del cliente al primer

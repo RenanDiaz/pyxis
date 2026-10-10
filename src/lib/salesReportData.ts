@@ -46,7 +46,7 @@ import {
   parsePaymentDate,
 } from '@/lib/processUtils'
 import { getClientDisplayName } from '@/lib/clientUtils'
-import { getProcessCompanyName } from '@/lib/companyUtils'
+import { getProcessCompanyName, hasUnassignedCompany } from '@/lib/companyUtils'
 import type { ExpenseConfig, ReportAccount, ReportInput } from '@/lib/generateSalesReport'
 import { fromCents, sumMoney, toCents } from '@/lib/money'
 
@@ -172,14 +172,9 @@ export function buildReportInput(params: BuildReportParams): ReportInput {
 
     return {
       date: sale.saleDate,
-      // Cada registro de LLC es una compañía distinta: se reporta la del
-      // proceso, no la del cliente.
-      // Un registro sin nombre propio no toma `client.llc_name` (sería la
-      // compañía de otro registro); los demás procesos sí son de esa compañía.
-      company:
-        (process.type === 'registration'
-          ? getProcessCompanyName(client, process)
-          : client.llc_name?.trim()) || getClientDisplayName(client),
+      // La compañía de ESE proceso (spec 04, #2): la del registro, o la vinculada
+      // a un servicio. Sin compañía (o varias sin elegir), el nombre del cliente.
+      company: getProcessCompanyName(client, process) || getClientDisplayName(client),
       purchase: getProcessLabel(process),
       state: process.state ?? '',
       charge: sumMoney([sale.charge, surcharge]),
@@ -231,6 +226,8 @@ export interface ReportPreview {
   projected: ProjectedSale[]
   /** Ventas canceladas: cuentan lo cobrado menos lo reembolsado (P3). */
   cancelled: CancelledSale[]
+  /** Servicios de clientes con varias compañías sin una elegida: sale el nombre del cliente (#2). */
+  unassignedCompany: string[]
 }
 
 export function previewReport(
@@ -252,6 +249,7 @@ export function previewReport(
     projected: sales
       .filter((s) => s.pending > 0)
       .map((s) => ({ label: saleLabel(s), pending: s.pending, stripe: projectsStripe(s) })),
+    unassignedCompany: sales.filter((s) => hasUnassignedCompany(s.client, s.process)).map(saleLabel),
     cancelled: sales
       .filter((s) => s.cancelled)
       .map((s) => ({

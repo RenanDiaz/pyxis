@@ -74,6 +74,19 @@ describe('reporte de ventas — datos', () => {
   })
 })
 
+describe('reporte de ventas — compañía de cada venta (#2)', () => {
+  it('un servicio sale con su compañía, no con client.llc_name; sin elegir, el cliente y se advierte', () => {
+    const c = client({ llc_name: 'ALFA LLC' }, [
+      proc({ id: 'a', state: 'NY', llc_name: 'ALFA LLC', payments: [pay(300, '2026-10-01')] }),
+      proc({ id: 'b', state: 'TX', llc_name: 'BETA LLC', payments: [pay(300, '2026-10-02')] }),
+      proc({ id: 'e', type: 'ein', company_id: 'b', payments: [pay(100, '2026-10-03')] }),
+      proc({ id: 'o', type: 'boi', payments: [pay(100, '2026-10-04')] }),
+    ])
+    assert.deepEqual(build([c]).accounts.map((a) => a.company), ['ALFA LLC', 'BETA LLC', 'BETA LLC', 'ANA PÉREZ'])
+    assert.deepEqual(previewReport([c], '2026-10').unassignedCompany, ['ANA PÉREZ — BOI'])
+  })
+})
+
 describe('reporte de ventas — cancelados (P3)', () => {
   it('cuenta lo cobrado menos lo reembolsado, sin proyectar saldo; el state fee se resta igual', () => {
     const c = client({}, [

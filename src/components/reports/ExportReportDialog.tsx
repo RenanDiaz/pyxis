@@ -103,6 +103,8 @@ interface ExportReportDialogProps {
   projected: ProjectedSale[]
   /** Ventas canceladas: cuentan lo cobrado menos lo reembolsado. */
   cancelled: CancelledSale[]
+  /** Servicios sin compañía elegida (el cliente tiene varias). */
+  unassignedCompany: string[]
   isExporting: boolean
   onExport: (settings: ExportSettings) => void
 }
@@ -115,6 +117,7 @@ export default function ExportReportDialog({
   missingCost,
   projected,
   cancelled,
+  unassignedCompany,
   isExporting,
   onExport,
 }: ExportReportDialogProps) {
@@ -202,6 +205,22 @@ export default function ExportReportDialog({
               ))}
             </ul>
             <p className="mt-1 text-xs">Se corrige en el proceso del cliente («Costo estatal»).</p>
+          </div>
+        )}
+
+        {unassignedCompany.length > 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+            <p className="font-medium">
+              {unassignedCompany.length === 1
+                ? '1 venta sin compañía: el cliente tiene varias y no se eligió ninguna.'
+                : `${unassignedCompany.length} ventas sin compañía: el cliente tiene varias y no se eligió ninguna.`}
+            </p>
+            <ul className="mt-1 list-disc pl-5">
+              {unassignedCompany.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+            <p className="mt-1 text-xs">Sale el nombre del cliente. Se corrige en el proceso («Compañía»).</p>
           </div>
         )}
 
