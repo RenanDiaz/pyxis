@@ -52,6 +52,9 @@
 7. **`.dev.vars.example`:** vacío por ahora. El spec 18 agrega los secretos. `.dev.vars` va a `.gitignore`.
 8. **Docs:** `CLAUDE.md` y `README.md`: Deploy → Cloudflare Workers, con un enlace a este runbook.
 9. **`vercel.json`:** **no se borra en este PR**. Se borra en un PR de limpieza cuando termine el periodo de redirect (paso 8 del runbook).
+   Mientras el proyecto de Vercel está pausado, lleva `"git": { "deploymentEnabled": false }`:
+   Vercel no intenta desplegar cada push (antes marcaba todos los PRs con «Deployment was
+   blocked»). No afecta el redirect del corte, que se despliega con la CLI (`vercel --prod`).
 
 ## Runbook manual
 Marcar cada paso al hacerlo. Lo que dice *verificar* depende de la consola de Cloudflare o Stripe al momento de hacerlo, porque las pantallas cambian.
@@ -95,6 +98,7 @@ Hacerlo fuera de horario de llamadas.
   - **Los borradores de formularios del dominio viejo no se pasan al nuevo.** Están en `localStorage`. Antes del corte, que terminen o guarden lo que tengan a medias.
 - [ ] Hacer los checks finales en `mipyxis.com`.
 - [ ] **Vercel:** deploy de un `vercel.json` que solo haga redirect 308 de `/(.*)` → `https://mipyxis.com/$1`.
+  - Los deploys por git están apagados (`git.deploymentEnabled: false`): hacerlo con `vercel --prod` desde la CLI.
   - Las pestañas viejas no se enteran por el aviso de versión: el `fetch` a `/version.json` redirige a otro origen y falla por CORS. Por eso hace falta el aviso del punto anterior.
 
 ### Paso 6 — Monitoreo (primera semana)
