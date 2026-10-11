@@ -98,7 +98,17 @@ corriendo**:
   ejecutando aplicaciones en segundo plano al cerrar Google Chrome".
 - **Android:** llega con Chrome cerrado.
 - **iPhone:** solo con Pyxis instalado como app (iOS 16.4+, "Agregar a
-  inicio"). No se probó.
+  inicio"). iOS exige un manifest con `display: standalone`
+  (`public/manifest.webmanifest`, enlazado en `index.html`). No se probó.
+  Para probarlo:
+  1. Si Pyxis ya estaba en la pantalla de inicio, borrarlo: iOS guarda el
+     manifest y el ícono del momento en que se agregó.
+  2. En Safari, abrir `mipyxis.com` → Compartir → "Agregar a inicio" y abrir
+     Pyxis desde el ícono (sin barra de Safari = instalado como app).
+  3. Iniciar sesión, abrir la campana y activar "También con Pyxis cerrado";
+     aceptar el permiso de notificaciones que pide iOS.
+  4. Agendar una llamada a 6 minutos, cerrar Pyxis desde el selector de apps y
+     esperar el aviso de "en 5 minutos".
 
 Si Chrome está cerrado del todo, el aviso se descarta: "en 5 minutos" vive 5
 minutos en el servicio de push y "es la hora", 10. Así no llegan avisos viejos
