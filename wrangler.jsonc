@@ -15,8 +15,11 @@
     "not_found_handling": "single-page-application",
     // /assets/* pasa por el Worker porque el fallback SPA también le respondería
     // index.html a un chunk que ya no existe; el Worker lo convierte en 404 (spec 14).
-    "run_worker_first": ["/api/*", "/assets/*"]
+    // /__/auth/* y /__/firebase/* van al proxy de Firebase Auth (worker/authProxy.ts).
+    "run_worker_first": ["/api/*", "/assets/*", "/__/auth/*", "/__/firebase/*"]
   },
+  // Destino del proxy de Firebase Auth. Las `vars` no se heredan: staging las repite.
+  "vars": { "FIREBASE_AUTH_HOST": "pyxis-crm.firebaseapp.com" },
   // Sus `paths` resuelven `@/…` → src/, para que el Worker pueda importar
   // módulos puros de src/lib (spec 18).
   "tsconfig": "./tsconfig.worker.json",
@@ -35,6 +38,7 @@
       "name": "pyxis-staging",
       "routes": [{ "pattern": "staging.mipyxis.com", "custom_domain": true }],
       "preview_urls": false,
+      "vars": { "FIREBASE_AUTH_HOST": "pyxis-crm.firebaseapp.com" },
       // Staging lee el mismo Firebase que producción: con su propio cron, cada
       // aviso saldría dos veces.
       "triggers": { "crons": [] }
