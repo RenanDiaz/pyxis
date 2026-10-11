@@ -32,12 +32,13 @@ para gestionar prospectos.
 - Secretos del Worker: Cloudflare → Variables & Secrets; en local `.dev.vars`
   (ver `.dev.vars.example`). Las `VITE_*` son variables **de build**.
 - Login con Google en el mismo dominio: el Worker hace proxy de `/__/auth/*` y
-  `/__/firebase/*` a `FIREBASE_AUTH_HOST` (`worker/authProxy.ts`). Requiere
-  `VITE_FIREBASE_AUTH_DOMAIN` = dominio del entorno (`mipyxis.com` /
-  `staging.mipyxis.com`) y `https://<dominio>/__/auth/handler` en los redirect
-  URIs del OAuth client (Google Cloud → Credentials). Firebase solo sirve esas
-  rutas si el proyecto tiene Hosting desplegado: `firebase-hosting/` es un sitio
-  placeholder (`npx firebase-tools deploy --only hosting`).
+  `/__/firebase/*` a `FIREBASE_AUTH_HOST` (`worker/authProxy.ts`) y la app usa el
+  host de la página como `authDomain` en mipyxis.com/www/staging
+  (`src/lib/authDomain.ts`); en local usa `VITE_FIREBASE_AUTH_DOMAIN`. Cada host
+  necesita `https://<host>/__/auth/handler` en los redirect URIs del OAuth client
+  (Google Cloud → Credentials). Firebase solo sirve esas rutas si el proyecto
+  tiene Hosting desplegado: `firebase-hosting/` es un sitio placeholder
+  (`npx firebase-tools deploy --only hosting`).
 - Runbook de infraestructura y corte desde Vercel: `specs/17-migracion-cloudflare.md`.
 - Cron cada minuto (solo producción; staging lo apaga): avisos de llamadas por Web
   Push (spec 21 fase 2, runbook en el spec). Piezas reutilizables del Worker:
