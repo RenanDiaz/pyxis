@@ -79,6 +79,18 @@ body {
 
 /* Tailwind v4 dejó los botones con cursor por defecto. Va en `base` para que
    las utilidades (`cursor-not-allowed`, etc.) sigan ganando. */
+/* Tailwind v4 pinta los bordes con `currentColor`: sin esto, `border` sale
+   casi blanco en modo oscuro y casi negro en claro. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border);
+  }
+}
+
 @layer base {
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
