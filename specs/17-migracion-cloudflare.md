@@ -68,7 +68,9 @@ Marcar cada paso al hacerlo. Lo que dice *verificar* depende de la consola de Cl
 ### Paso 1 — Conectar el repo (Workers Builds)
 - [ ] **Workers & Pages → Create → Import a repository:** `RenanDiaz/pyxis`, rama de producción `main`.
 - [ ] **Build command:** `npm run build`. **Deploy command:** `npx wrangler deploy`.
-- [ ] **Non-production branch deploy command:** `npx wrangler deploy --env staging`. *(Verificar que el token de Builds tenga permiso sobre el Worker `pyxis-staging`. Si no, crear ese Worker conectado al mismo repo, con su propio comando).*
+- [ ] ~~**Non-production branch deploy command:** `npx wrangler deploy --env staging`.~~ No se usa: con `--env staging` el Worker resultante (`pyxis-staging`) no es el conectado. En `pyxis`, los builds de ramas no-producción quedan apagados.
+- [x] **Staging como Worker propio:** `pyxis-staging` conectado al mismo repo. Build `npm run build`; deploy `npx wrangler deploy --env staging` en la rama de producción (`main`) **y** en las demás ramas (builds de ramas no-producción activados con ese mismo comando, no `versions upload`). Mismas build variables que `pyxis`.
+  - Staging usa el Firebase de producción: cualquier rama subida queda publicada contra datos reales. El último push gana.
 - [ ] **Build variables** (Settings → Build → Variables): las 6 `VITE_FIREBASE_*`.
   - ⚠️ Son variables **de build**, no de runtime. Si se ponen en "Variables & Secrets", el bundle sale sin Firebase y la app muestra la pantalla de "no configurado".
   - Copiarlas de Vercel → Settings → Environment Variables.
