@@ -346,7 +346,7 @@ export default function Schedule() {
                     <div>
                       <Label htmlFor="lead-state">Estado (opcional)</Label>
                       <Select value={leadState || '_none'} onValueChange={(v) => setLeadState(v === '_none' ? '' : v)}>
-                        <SelectTrigger id="lead-state" className="mt-1.5">
+                        <SelectTrigger id="lead-state" className="mt-1.5 w-full">
                           <SelectValue placeholder="Sin estado" />
                         </SelectTrigger>
                         <SelectContent>
@@ -387,7 +387,7 @@ export default function Schedule() {
                     <div>
                       <Label htmlFor="lead-assignee">Asignar a</Label>
                       <Select value={assignee || wsCtx?.uid || ''} onValueChange={setAssignee}>
-                        <SelectTrigger id="lead-assignee" className="mt-1.5">
+                        <SelectTrigger id="lead-assignee" className="mt-1.5 w-full">
                           <SelectValue placeholder="Elige un agente" />
                         </SelectTrigger>
                         <SelectContent>
@@ -406,7 +406,7 @@ export default function Schedule() {
               <div>
                 <Label htmlFor="new-call-client">Cliente</Label>
                 <Select value={newCallClientId} onValueChange={setNewCallClientId}>
-                  <SelectTrigger id="new-call-client" className="mt-1.5">
+                  <SelectTrigger id="new-call-client" className="mt-1.5 w-full">
                     <SelectValue placeholder="Selecciona un cliente" />
                   </SelectTrigger>
                   <SelectContent>

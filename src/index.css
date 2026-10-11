@@ -91,6 +91,22 @@ body {
   }
 }
 
+/* iOS Safari dibuja fecha/hora con un control nativo de ancho mínimo propio:
+   en una grilla de 2 columnas se salía de su celda y se encimaba con la otra.
+   Sin la apariencia nativa respeta el ancho del input. */
+@layer base {
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+  }
+  ::-webkit-date-and-time-value {
+    text-align: left;
+  }
+}
+
 @layer base {
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
