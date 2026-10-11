@@ -35,7 +35,9 @@ para gestionar prospectos.
   `/__/firebase/*` a `FIREBASE_AUTH_HOST` (`worker/authProxy.ts`). Requiere
   `VITE_FIREBASE_AUTH_DOMAIN` = dominio del entorno (`mipyxis.com` /
   `staging.mipyxis.com`) y `https://<dominio>/__/auth/handler` en los redirect
-  URIs del OAuth client (Google Cloud → Credentials).
+  URIs del OAuth client (Google Cloud → Credentials). Firebase solo sirve esas
+  rutas si el proyecto tiene Hosting desplegado: `firebase-hosting/` es un sitio
+  placeholder (`npx firebase-tools deploy --only hosting`).
 - Runbook de infraestructura y corte desde Vercel: `specs/17-migracion-cloudflare.md`.
 - Cron cada minuto (solo producción; staging lo apaga): avisos de llamadas por Web
   Push (spec 21 fase 2, runbook en el spec). Piezas reutilizables del Worker:
