@@ -82,7 +82,7 @@ export default function Clients() {
         <div className="relative flex-1 min-w-0 sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nombre, teléfono, LLC o estado..."
+            placeholder="Nombre, teléfono, LLC o estado…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -174,7 +174,7 @@ export default function Clients() {
               // Tarjeta con "stretched link": el nombre es el link y su ::after
               // cubre la tarjeta; las acciones van encima (z-10). Antes eran
               // <a> dentro de <Link>: HTML inválido y acciones sin foco (spec 13).
-              <div key={client.id} className="group relative">
+              <div key={client.id} className="group relative min-w-0">
                 <Card className={`transition-all hover:shadow-md hover:border-primary/30 group-has-[[data-card-link]:focus-visible]:ring-2 group-has-[[data-card-link]:focus-visible]:ring-ring ${client.archived ? 'opacity-60' : ''}`}>
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
@@ -267,9 +267,9 @@ export default function Clients() {
                             </span>
                           )}
                           {showAgent && (
-                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                              <UserCircle className="h-3 w-3" />
-                              {agentsMap.get(client.owner_uid)?.display_name || 'Desconocido'}
+                            <span className="inline-flex min-w-0 max-w-full items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                              <UserCircle className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{agentsMap.get(client.owner_uid)?.display_name || 'Desconocido'}</span>
                             </span>
                           )}
                         </div>

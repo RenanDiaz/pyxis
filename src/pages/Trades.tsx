@@ -46,9 +46,11 @@ export default function Trades() {
 
       <div className="flex flex-col gap-4">
         <Tabs value={category} onValueChange={setCategory}>
-          <TabsList className="w-full sm:w-auto flex-wrap h-auto">
+          {/* Una sola línea con scroll horizontal: con wrap, las categorías que no
+              caben se salían del fondo (altura fija) y tapaban el buscador. */}
+          <TabsList className="w-full max-w-full justify-start overflow-x-auto [scrollbar-width:none] sm:w-auto [&::-webkit-scrollbar]:hidden">
             {CATEGORIES.map((cat) => (
-              <TabsTrigger key={cat.value} value={cat.value} className="text-xs sm:text-sm">
+              <TabsTrigger key={cat.value} value={cat.value} className="flex-none text-xs sm:text-sm">
                 {cat.label}
               </TabsTrigger>
             ))}
