@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AlertTriangle, FileText } from 'lucide-react'
 import { toast } from 'sonner'
+import { track } from '@/lib/analytics'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -84,6 +85,7 @@ export default function QuoteDialog({ client, workspace, states, onOpenChange, o
       // Carga diferida: jsPDF solo se necesita al generar.
       const { downloadQuotePdf } = await import('@/lib/quotePdf')
       await downloadQuotePdf(quote, workspace)
+      track('quote_generated')
       toast.success(`Cotización ${quote.number} generada`)
       onOpenChange(false)
     } catch (err) {

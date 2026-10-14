@@ -13,6 +13,7 @@ import { useUserProfile } from '@/hooks/useUserProfile'
 import { db } from '@/lib/firebase'
 import { deleteClientCascade } from '@/lib/workspaceAdmin'
 import { deleteFileFromStorage } from '@/lib/adminStorage'
+import { track } from '@/lib/analytics'
 import { findPhoneMatches, type PhoneMatches } from '@/lib/phoneIndex'
 
 interface ClientFilters {
@@ -63,7 +64,8 @@ export function useUpdateClient() {
     meta: { errorMessage: 'No se pudo guardar el cliente' },
     mutationFn: ({ id, data, trigger }: { id: string; data: Partial<Client>; trigger?: StatusTrigger }) =>
       updateClient(workspaceId!, id, data, trigger),
-    onSuccess: () => {
+    onSuccess: (transition) => {
+      if (transition) track('client_status_changed', transition)
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
   })
@@ -77,7 +79,8 @@ export function useClientMutation() {
     meta: { errorMessage: 'No se pudo guardar el cambio' },
     mutationFn: ({ clientId, mutation }: { clientId: string; mutation: ClientMutation }) =>
       mutateClient(workspaceId!, clientId, mutation),
-    onSuccess: () => {
+    onSuccess: ({ transition }) => {
+      if (transition) track('client_status_changed', transition)
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
   })

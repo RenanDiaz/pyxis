@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react'
+import { useSettledSearch } from '@/hooks/useSettledSearch'
+import { track } from '@/lib/analytics'
 import { useGlossary } from '@/hooks/useGlossary'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -35,6 +37,8 @@ export default function Glossary() {
     }
     return result
   }, [terms, search, category])
+
+  useSettledSearch(search, () => track('search_used', { scope: 'glossary' }))
 
   if (isLoading) {
     return <p className="text-muted-foreground">Cargando glosario...</p>

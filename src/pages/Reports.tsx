@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { format, subMonths } from 'date-fns'
 import { toast } from 'sonner'
 import { FileSpreadsheet, Users } from 'lucide-react'
+import { track } from '@/lib/analytics'
 import { useClients } from '@/hooks/useClients'
 import { useStates } from '@/hooks/useStates'
 import { useUserProfile } from '@/hooks/useUserProfile'
@@ -108,6 +109,7 @@ export default function Reports() {
       // Carga diferida: ExcelJS es pesado y solo se necesita al exportar.
       const { downloadSalesReport } = await import('@/lib/generateSalesReport')
       await downloadSalesReport(input)
+      track('report_exported')
       toast.success('Reporte generado', {
         description: `${input.accounts.length} cuenta(s) exportada(s) para ${monthLabelEs}.`,
       })

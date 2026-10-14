@@ -40,6 +40,13 @@ para gestionar prospectos.
   tiene Hosting desplegado: `firebase-hosting/` es un sitio placeholder
   (`npx firebase-tools deploy --only hosting`).
 - Runbook de infraestructura y corte desde Vercel: `specs/17-migracion-cloudflare.md`.
+- Analítica de uso (spec 24): PostHog a través de `/ingest/*` (`worker/analyticsProxy.ts`,
+  que quita cookies e IP). Solo en `mipyxis.com`, con `VITE_ANALYTICS_ENABLED=true` y
+  `VITE_POSTHOG_KEY` de build. Todo pasa por `src/lib/analytics.ts` (`track()` tipado
+  con un catálogo cerrado de eventos). **Nunca enviar PII** (nombres, teléfonos,
+  emails, LLC, notas, textos de búsqueda, montos, ids de cliente en URLs): un evento
+  nuevo exige actualizar `AnalyticsEvents` y la tabla del spec. Reporte de negocio sin
+  tracking: `npx tsx scripts/usage-report.ts [--month=yyyy-MM] [--csv]`.
 - Cron cada minuto (solo producción; staging lo apaga): avisos de llamadas por Web
   Push (spec 21 fase 2, runbook en el spec). Piezas reutilizables del Worker:
   `worker/firestore.ts` (REST), `worker/googleAuth.ts` (service account) y

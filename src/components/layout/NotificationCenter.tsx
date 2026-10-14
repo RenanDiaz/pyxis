@@ -4,6 +4,7 @@ import { Bell, Phone, PhoneOff, Clock } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
+import { track } from '@/lib/analytics'
 import { useOlderOverdueCount, useOverdueCalls, useUpcomingCalls, useUpdateCall } from '@/hooks/useCalls'
 import { useClients } from '@/hooks/useClients'
 import { getCallDisplayName, isLeadCall } from '@/lib/leads'
@@ -114,6 +115,7 @@ export default function NotificationCenter() {
   // Activar los avisos pide el permiso del navegador en ese momento (spec 21).
   const handleRemindersChange = async (enabled: boolean) => {
     setReminderPrefs({ ...reminderPrefs, enabled })
+    if (enabled && !reminderPrefs.enabled) track('reminder_opt_in', { channel: 'bell' })
     // Apagar los avisos también los apaga con Pyxis cerrado (fase 2).
     if (!enabled && push.status === 'on') push.setEnabled(false)
     if (enabled && permission === 'default') {
@@ -134,6 +136,7 @@ export default function NotificationCenter() {
     setResolvingId(call.id)
     try {
       await updateCall.mutateAsync({ id: call.id, data: { outcome } })
+      track('call_completed', { outcome })
       if (outcome === 'reagendada') {
         // Abre el modal de la Agenda con el cliente o el lead precargado.
         setOpen(false)

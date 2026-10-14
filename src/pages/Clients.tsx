@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { useSettledSearch } from '@/hooks/useSettledSearch'
+import { track } from '@/lib/analytics'
 import { useClients } from '@/hooks/useClients'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { filterClientsBySearch } from '@/lib/clientSearch'
@@ -61,6 +63,7 @@ export default function Clients() {
   })
   // La búsqueda filtra en memoria la lista cacheada: escribir no lee Firestore.
   const debouncedSearch = useDebouncedValue(search)
+  useSettledSearch(search, () => track('search_used', { scope: 'clients' }))
   const clients = useMemo(
     () => (allClients ? filterClientsBySearch(allClients, debouncedSearch) : allClients),
     [allClients, debouncedSearch]

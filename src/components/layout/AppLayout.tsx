@@ -2,6 +2,7 @@ import { Suspense, useState } from 'react'
 import { Outlet, Navigate, useLocation } from 'react-router-dom'
 import RouteErrorBoundary from './RouteErrorBoundary'
 import PageLoader from './PageLoader'
+import Analytics from './Analytics'
 import CallReminders from './CallReminders'
 import Sidebar from './Sidebar'
 import Header from './Header'
@@ -28,6 +29,7 @@ export default function AppLayout() {
   return (
     <div className="flex min-h-dvh w-full">
       <CallReminders />
+      <Analytics />
       {/* Desktop sidebar */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-64 lg:flex-col border-r bg-sidebar text-sidebar-foreground">
         <Sidebar />

@@ -36,7 +36,7 @@ import type {
 import { normalizeClientFields } from '@/lib/clientUtils'
 import { runClientCreate, runClientMutation, runClientUpdate } from '@/lib/clientTransactions'
 import type { StatusTrigger } from '@/lib/statusUtils'
-import { initialStatusFields } from '@/lib/statusHistory'
+import { initialStatusFields, type StatusTransition } from '@/lib/statusHistory'
 import type { ClientChange, ClientMutation } from '@/lib/processMutations'
 import { UserFacingError } from '@/lib/errors'
 
@@ -393,10 +393,10 @@ export async function updateClient(
   id: string,
   data: Partial<Omit<Client, 'id' | 'created_at'>>,
   trigger?: StatusTrigger,
-): Promise<void> {
+): Promise<StatusTransition | null> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   // Con `status` o `trigger`, el cambio queda en el historial (statusHistory.ts).
-  await runClientUpdate(db, workspaceId, id, data, { trigger, by: currentUid() })
+  return runClientUpdate(db, workspaceId, id, data, { trigger, by: currentUid() })
 }
 
 /** Cambios a procesos y pagos: transaccionales (ver `processMutations.ts`). */
@@ -404,7 +404,7 @@ export async function mutateClient(
   workspaceId: string,
   id: string,
   mutation: ClientMutation,
-): Promise<ClientChange> {
+): Promise<ClientChange & { transition: StatusTransition | null }> {
   if (!isFirebaseConfigured || !db) throw new Error('Firebase no configurado')
   return runClientMutation(db, workspaceId, id, mutation, currentUid())
 }

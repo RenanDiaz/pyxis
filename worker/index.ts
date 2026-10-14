@@ -2,6 +2,7 @@
 // pasar por aquí; este código solo recibe /api/*, /assets/* y el handler de
 // Firebase Auth /__/* (`run_worker_first`) y el cron de los avisos de llamadas (spec 21 fase 2).
 
+import { isAnalyticsPath, proxyAnalytics } from './analyticsProxy'
 import { isFirebaseAuthPath, proxyFirebaseAuth } from './authProxy'
 import { FirestoreRest } from './firestore'
 import { getAccessToken } from './googleAuth'
@@ -82,6 +83,7 @@ export default {
     if (url.pathname.startsWith('/api/')) return handleApi(request, env, url)
     if (url.pathname.startsWith('/assets/')) return handleAsset(request, env)
     if (isFirebaseAuthPath(url.pathname)) return proxyFirebaseAuth(request, env.FIREBASE_AUTH_HOST)
+    if (isAnalyticsPath(url.pathname)) return proxyAnalytics(request)
     // Nunca un 404 propio fuera de /api: rompería los deep links de la SPA.
     return env.ASSETS.fetch(request)
   },

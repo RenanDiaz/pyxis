@@ -1,6 +1,6 @@
 # Spec 24 — Analítica de uso (qué se usa y qué no)
 
-**Estado:** propuesto · **Prioridad:** 🟡 Media · **Depende de:** 17 (Worker) · **Tamaño:** M
+**Estado:** ✅ código implementado · pendiente de activar (runbook al final) · **Prioridad:** 🟡 Media · **Depende de:** 17 (Worker) · **Tamaño:** M
 
 ## Problema
 No sabemos qué módulos y acciones usan los agentes ni cuáles se ignoran. Las
@@ -45,7 +45,7 @@ Tras cargar `WorkspaceContext`: `identify(uid, { role, workspace_id, subteam_id 
 |---|---|---|
 | `$pageview` | `route_pattern` (ej. `/clientes/:id`, **nunca** el id real) | listener de React Router en `AppLayout` |
 | `client_created` | `source` (`form` \| `lead_conversion`) | `ClientForm` tras guardar nuevo |
-| `client_status_changed` | `from`, `to` | punto único que cambia status |
+| `client_status_changed` | `from`, `to` | tras confirmarse en Firestore: `updateClient` y `mutateClient` devuelven la `transition` real (no se emite si el status no cambió ni dentro de la transacción) |
 | `process_added` | `type` (`ProcessType`), `has_state` | `AddProcessDialog` / `processMutations` |
 | `process_stage_changed` | `type`, `to` | selector de etapa |
 | `payment_added` | `type` del proceso | `PaymentSection` |
@@ -55,14 +55,17 @@ Tras cargar `WorkspaceContext`: `identify(uid, { role, workspace_id, subteam_id 
 | `docx_exported` | `scope` (`one` \| `all`) | `exportClientDoc` (llamador) |
 | `report_exported` | — | `Reports` |
 | `call_scheduled` | `kind` (`client` \| `lead`) | `Schedule` |
-| `call_completed` | `outcome` | donde se cierra la llamada |
+| `call_completed` | `outcome` | cuando el agente registra el resultado de una llamada (Agenda y centro de avisos); `outcome` distingue completada, no contestó y reagendada |
 | `state_viewed` | `abbreviation` | `StateDetail` (al montar) |
 | `state_search` | `has_results` | `States` (debounce 800 ms, **sin** el texto buscado) |
-| `trade_viewed` / `glossary_term_viewed` | `category` | `Trades` / `Glossary` (al abrir/voltear la tarjeta) |
 | `reminder_opt_in` | `channel` (`bell` \| `push`) | spec 21 |
-| `search_used` | `scope` (`clients`) | buscador de clientes, sin texto |
+| `search_used` | `scope` (`clients` \| `trades` \| `glossary`) | buscadores de Clientes, Oficios y Glosario, sin texto (`useSettledSearch`) |
 
 Cualquier evento nuevo exige actualizar esta tabla y el tipo `AnalyticsEvents`.
+
+**Nota de implementación:** Oficios y Glosario son tarjetas estáticas (no hay
+"abrir/voltear"), así que `trade_viewed` y `glossary_term_viewed` no existen; el
+uso de esos módulos se mide con `$pageview` y `search_used`.
 
 ### Proxy en el Worker
 - `/ingest/*` → `https://us.i.posthog.com/*` (y `/ingest/static/*` → `us-assets.i.posthog.com`).
@@ -74,8 +77,13 @@ Cualquier evento nuevo exige actualizar esta tabla y el tipo `AnalyticsEvents`.
 - `worker/` no importa el SDK de PostHog ni nada con DOM (regla de CLAUDE.md).
 
 ### Habilitado por entorno
+Un mismo build sirve producción y staging (Workers Builds tiene un único juego de
+variables de build, ver `authDomain.ts`), así que la variable por sí sola no
+distingue entornos. `analyticsEnabled()` exige las tres cosas:
+`VITE_ANALYTICS_ENABLED === 'true'`, `VITE_POSTHOG_KEY` y que el host de la página
+sea `mipyxis.com` o `www.mipyxis.com`, además de no tener Do Not Track.
 - Producción (`mipyxis.com`): activo.
-- Staging y local: no inicializa el SDK (la variable de build no está definida).
+- Staging (`staging.mipyxis.com`), `workers.dev` y local: no se importa ni el SDK.
 - Variables de build: `VITE_ANALYTICS_ENABLED`, `VITE_POSTHOG_KEY`
   (clave pública del proyecto; las `VITE_*` son de build, no secretos).
   `api_host: '/ingest'`, `ui_host: 'https://us.posthog.com'`.
@@ -116,6 +124,17 @@ al ser solo lectura) que lee Firestore y escribe un CSV/Markdown por
 workspace y mes: clientes creados, procesos por `type`, pagos y recibos, llamadas
 agendadas y completadas, leads convertidos. Datos de negocio agregados; no
 imprime nombres ni teléfonos.
+
+## Runbook de activación (manual)
+1. Crear el proyecto en PostHog Cloud (región US, ver pregunta 2) y copiar la
+   **Project API Key** (pública, `phc_…`).
+2. Cloudflare → Workers & Pages → `pyxis` → Settings → Build → Variables:
+   `VITE_ANALYTICS_ENABLED=true` y `VITE_POSTHOG_KEY=<clave>` (son variables de
+   **build**, no secretos de runtime). Sin ellas el código no hace nada.
+3. Resolver la pregunta abierta 1 (aviso a los usuarios) **antes** de este paso.
+4. Desplegar `main`; verificar en DevTools → Network que las requests van a
+   `mipyxis.com/ingest/*` y que ningún payload trae PII ni ids en las URLs.
+5. Crear el dashboard (6 paneles de arriba) y anotar el enlace aquí.
 
 ## Criterios de aceptación
 - [ ] En producción, navegar entre módulos genera `$pageview` con `route_pattern`; ninguna URL con ids reales llega a PostHog.

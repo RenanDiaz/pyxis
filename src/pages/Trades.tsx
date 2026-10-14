@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react'
+import { useSettledSearch } from '@/hooks/useSettledSearch'
+import { track } from '@/lib/analytics'
 import { useTrades } from '@/hooks/useTrades'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -35,6 +37,8 @@ export default function Trades() {
     }
     return result
   }, [trades, search, category])
+
+  useSettledSearch(search, () => track('search_used', { scope: 'trades' }))
 
   if (isLoading) {
     return <p className="text-muted-foreground">Cargando oficios...</p>

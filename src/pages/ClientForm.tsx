@@ -7,6 +7,7 @@ import { useUserProfile } from '@/hooks/useUserProfile'
 import { useAssignableMembers } from '@/hooks/useWorkspace'
 import { useFormDraft } from '@/hooks/useFormDraft'
 import { useAuth } from '@/contexts/AuthContext'
+import { track } from '@/lib/analytics'
 import { draftKey, readDraft } from '@/lib/formDraft'
 import clientFormConfig from '@/data/client_form.json'
 import {
@@ -508,6 +509,8 @@ function ClientForm({
           assignTo,
         })
         draft.clear()
+        track('client_created', { source: fromLead ? 'lead_conversion' : 'form' })
+        for (const p of processes) track('process_added', { type: p.type, has_state: !!p.state })
         if (fromLead && wsCtx && db) {
           // Las llamadas del lead pasan al cliente nuevo (spec 19).
           try {

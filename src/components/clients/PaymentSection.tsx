@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { track } from '@/lib/analytics'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -80,6 +81,7 @@ export default function PaymentSection({
     try {
       const { generatePaymentReceipt } = await import('@/lib/receiptUtils')
       await generatePaymentReceipt({ client, process, payment, workspace })
+      track('receipt_generated', { type: process.type })
     } catch {
       toast.error('Error al generar el recibo')
     } finally {
@@ -175,7 +177,10 @@ export default function PaymentSection({
       ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
     }
     const ok = await onMutate(clientMutations.addPayment(process.id, input), 'Pago registrado')
-    if (ok) resetPaymentForm()
+    if (ok) {
+      track('payment_added', { type: process.type })
+      resetPaymentForm()
+    }
   }
 
   const handleRegisterPayment = async () => {
