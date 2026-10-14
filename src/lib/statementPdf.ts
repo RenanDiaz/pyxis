@@ -63,6 +63,13 @@ export async function downloadStatementPdf(statement: AccountStatement, workspac
     doc.setFontSize(12)
     doc.setTextColor(...text)
     doc.text(line.label, margin, y)
+    if (line.cancelled) {
+      const labelW = doc.getTextWidth(line.label)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.setTextColor(...muted)
+      doc.text('(cancelado)', margin + labelW + 6, y)
+    }
     y += 14
     if (line.detail) {
       doc.setFont('helvetica', 'normal')
@@ -73,13 +80,19 @@ export async function downloadStatementPdf(statement: AccountStatement, workspac
     }
     y += 4
 
-    // Total / Pagado / Saldo
-    const colW = contentW / 3
-    const cells: Array<[string, string, boolean]> = [
-      ['Total acordado', fmtCurrency(line.total), false],
-      ['Pagado', fmtCurrency(line.paid), false],
-      [line.balance < 0 ? 'Saldo a favor' : 'Saldo', fmtCurrency(Math.abs(line.balance)), line.balance > 0],
-    ]
+    // Total / Pagado / Saldo. Un cancelado no debe nada: pagado, reembolsado y saldo 0.
+    const cells: Array<[string, string, boolean]> = line.cancelled
+      ? [
+          ['Pagado', fmtCurrency(line.paid), false],
+          ...(line.refunded > 0 ? [['Reembolsado', fmtCurrency(line.refunded), false] as [string, string, boolean]] : []),
+          ['Saldo', fmtCurrency(0), false],
+        ]
+      : [
+          ['Total acordado', fmtCurrency(line.total), false],
+          ['Pagado', fmtCurrency(line.paid), false],
+          [line.balance < 0 ? 'Saldo a favor' : 'Saldo', fmtCurrency(Math.abs(line.balance)), line.balance > 0],
+        ]
+    const colW = contentW / cells.length
     doc.setFillColor(...panel)
     doc.setDrawColor(...border)
     doc.roundedRect(margin, y, contentW, 40, 4, 4, 'FD')

@@ -1,6 +1,6 @@
 # 23 — Procesos cancelados siguen sumando saldo (bug)
 
-**Prioridad:** 🟠 Alta (dinero que ve el cliente) · **Estado:** propuesto · **Tamaño:** S · **Relacionado:** [04](04-reporte-ventas.md) (P3, reembolsos), [15](15-cotizacion.md), [16](16-estado-de-cuenta.md), [03](03-integridad-cliente-pagos.md)
+**Prioridad:** 🟠 Alta (dinero que ve el cliente) · **Estado:** implementado (2026-10-14) · **Tamaño:** S · **Relacionado:** [04](04-reporte-ventas.md) (P3, reembolsos), [15](15-cotizacion.md), [16](16-estado-de-cuenta.md), [03](03-integridad-cliente-pagos.md)
 
 ## Problema
 Un proceso con etapa `cancelado` se sigue tratando como deuda viva en todo lo
@@ -87,28 +87,42 @@ queda con lo **cobrado neto** = pagado − reembolsado.
    todos los casos de los criterios. `sales-report.test.ts` debe pasar **sin cambios**.
 
 ## Criterios de aceptación
-- [ ] Registro de $579 pagado + EIN de $150 cancelado sin pagos: saldo del cliente $0, barra al 100 %.
-- [ ] En ese cliente, marcar el EIN como `cancelado` pasa el status de `en_proceso` a `cerrado`.
-- [ ] Volver el EIN a `pendiente` regresa el status a `en_proceso` y el saldo a $150.
-- [ ] Un cliente `deuda_pendiente` o `perdido` no cambia de status al cancelar.
-- [ ] Cancelado con $300 pagados y `refunded_amount` 200: saldo 0, cobrado neto $100 en el total del cliente.
-- [ ] Cancelado con `refunded_amount` mayor que lo pagado: se toma como lo pagado (nunca negativo).
-- [ ] Cancelar todos los procesos sin pagos no cambia el status.
-- [ ] Estado de cuenta: el cancelado no viene marcado; sin pagos está deshabilitado; con pagos, al incluirlo sale "(cancelado)", su reembolso y saldo $0.00, y no suma al SALDO PENDIENTE.
-- [ ] Un proceso cancelado no muestra "Registrar pago"; sus pagos se pueden editar o borrar.
-- [ ] Inicio → "Deudas pendientes" no muestra el saldo de procesos cancelados.
-- [ ] El reporte de ventas da exactamente lo mismo que antes (`sales-report.test.ts` sin cambios).
-- [ ] La cotización sigue sin marcar cancelados por defecto y permite marcarlos.
+- [x] Registro de $579 pagado + EIN de $150 cancelado sin pagos: saldo del cliente $0, barra al 100 %.
+- [x] En ese cliente, marcar el EIN como `cancelado` pasa el status de `en_proceso` a `cerrado`.
+- [x] Volver el EIN a `pendiente` regresa el status a `en_proceso` y el saldo a $150.
+- [x] Un cliente `deuda_pendiente` o `perdido` no cambia de status al cancelar.
+- [x] Cancelado con $300 pagados y `refunded_amount` 200: saldo 0, cobrado neto $100 en el total del cliente.
+- [x] Cancelado con `refunded_amount` mayor que lo pagado: se toma como lo pagado (nunca negativo).
+- [x] Cancelar todos los procesos sin pagos no cambia el status.
+- [x] Estado de cuenta: el cancelado no viene marcado; sin pagos está deshabilitado; con pagos, al incluirlo sale "(cancelado)", su reembolso y saldo $0.00, y no suma al SALDO PENDIENTE.
+- [x] Un proceso cancelado no muestra "Registrar pago"; sus pagos se pueden editar o borrar.
+- [x] Inicio → "Deudas pendientes" no muestra el saldo de procesos cancelados.
+- [x] El reporte de ventas da exactamente lo mismo que antes (`sales-report.test.ts` sin cambios).
+- [x] La cotización sigue sin marcar cancelados por defecto y permite marcarlos.
 
-## Preguntas abiertas
+## Implementación (2026-10-14)
+- `getProcessAccount` en `processUtils.ts`. `getProcessBalance`,
+  `getClientPaymentSummary` y `summarize()` (status) pasan por él.
+- `updateProcess` recalcula el status con `total`, `stage` o `refunded_amount`.
+- `accountStatement.ts`: `statementDisabledReason`, `defaultStatementSelection` y
+  `summarizeStatement`, que comparten el diálogo y el PDF. `StatementLine` trae
+  `cancelled` y `refunded`. En un cancelado, `total` es lo cobrado neto y `paid`
+  el pagado bruto; el resumen usa montos efectivos.
+- `PaymentSection`: badge "Cancelado", sin "Registrar pago" y sin el aviso de
+  "supera el saldo" al editar un pago de un cancelado.
+- Tests en `money-processes.test.ts` y `account-statement.test.ts`;
+  `sales-report.test.ts` sin cambios.
+- P1–P3 se resolvieron con la recomendación.
+
+## Preguntas abiertas (resueltas)
 - **P1:** Cancelado con pagos y `refunded_amount` sin capturar: ¿se asume que no se
   devolvió nada (cobrado neto = pagado) o se avisa en el detalle?
-  *Recomendación:* asumir 0, como el reporte. El detalle ya dice "sin capturar
+  **Resuelta:** asumir 0, como el reporte. El detalle ya dice "sin capturar
   (pon 0 si no se devolvió nada)".
 - **P2:** Clientes que hoy están `en_proceso` solo por un cancelado no se cierran
   hasta su próximo cambio de saldo. ¿Hace falta un script que los recalcule?
-  *Recomendación:* no. Que pidan a los agentes revisar sus clientes con procesos
+  **Resuelta:** no. Que pidan a los agentes revisar sus clientes con procesos
   cancelados; si salen muchos, un script `--dry-run` que los liste.
 - **P3:** ¿Bloquear pagos nuevos en un cancelado es demasiado estricto (p. ej. una
-  penalidad por cancelar)? *Recomendación:* sí bloquear. Si se cobra una
+  penalidad por cancelar)? **Resuelta:** sí bloquear. Si se cobra una
   penalidad, se agrega un proceso `custom` para que tenga su propio precio y recibo.

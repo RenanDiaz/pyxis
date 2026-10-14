@@ -4,12 +4,17 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { Client, Workspace } from '@/types'
-import { getProcessBalance, getProcessLabel, getProcessPaid } from '@/lib/processUtils'
+import { getProcessAccount, getProcessLabel } from '@/lib/processUtils'
 import { getProcessCompanyName } from '@/lib/companyUtils'
 import { formatMoney } from '@/lib/format'
-import { fromCents, sumMoney, toCents } from '@/lib/money'
 import { describeError } from '@/lib/errors'
-import { buildAccountStatement, canStateAccount, hasPendingBalance } from '@/lib/accountStatement'
+import {
+  buildAccountStatement,
+  canStateAccount,
+  defaultStatementSelection,
+  statementDisabledReason,
+  summarizeStatement,
+} from '@/lib/accountStatement'
 
 interface StatementDialogProps {
   client: Client
@@ -20,17 +25,13 @@ interface StatementDialogProps {
 /** Estado de cuenta de uno o varios procesos (spec 16). Se monta solo abierto. */
 export default function StatementDialog({ client, workspace, onOpenChange }: StatementDialogProps) {
   const processes = useMemo(() => client.processes ?? [], [client.processes])
-  const [selected, setSelected] = useState<Set<string>>(() => {
-    const pending = processes.filter(hasPendingBalance)
-    // Si nada debe, se marcan todos los que tienen total (estado "al día").
-    return new Set((pending.length ? pending : processes.filter(canStateAccount)).map((p) => p.id))
-  })
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(defaultStatementSelection(processes).map((p) => p.id)),
+  )
   const [generating, setGenerating] = useState(false)
 
   const chosen = processes.filter((p) => selected.has(p.id) && canStateAccount(p))
-  const total = sumMoney(chosen.map((p) => p.total))
-  const paid = sumMoney(chosen.map(getProcessPaid))
-  const balance = fromCents(toCents(total) - toCents(paid))
+  const { total, paid, balance } = summarizeStatement(chosen)
 
   const toggle = (id: string, on: boolean) =>
     setSelected((prev) => {
@@ -69,9 +70,11 @@ export default function StatementDialog({ client, workspace, onOpenChange }: Sta
           <div className="space-y-4">
             <div className="space-y-2">
               {processes.map((p) => {
-                const enabled = canStateAccount(p)
+                const disabledReason = statementDisabledReason(p)
+                const enabled = disabledReason === null
                 const company = getProcessCompanyName(client, p)
-                const pBalance = enabled ? getProcessBalance(p) : 0
+                const cancelled = p.stage === 'cancelado'
+                const pBalance = enabled ? getProcessAccount(p).balance : 0
                 return (
                   <label
                     key={p.id}
@@ -90,17 +93,22 @@ export default function StatementDialog({ client, workspace, onOpenChange }: Sta
                       <span className="font-medium">
                         {getProcessLabel(p)}
                         {p.state ? ` — ${p.state}` : ''}
+                        {cancelled && <span className="font-normal text-muted-foreground"> (cancelado)</span>}
                       </span>
                       {company && <span className="block text-xs text-muted-foreground">{company}</span>}
-                      {!enabled && (
-                        <span className="block text-xs text-muted-foreground">
-                          Sin total acordado: defínelo en el proceso para incluirlo
-                        </span>
+                      {disabledReason && (
+                        <span className="block text-xs text-muted-foreground">{disabledReason}</span>
                       )}
                     </span>
                     {enabled && (
                       <span className={`shrink-0 text-right text-xs ${pBalance > 0 ? 'font-semibold text-orange-600' : 'text-muted-foreground'}`}>
-                        {pBalance > 0 ? `Debe $${formatMoney(pBalance)}` : pBalance < 0 ? 'Saldo a favor' : 'Pagado'}
+                        {cancelled
+                          ? 'No debe'
+                          : pBalance > 0
+                            ? `Debe $${formatMoney(pBalance)}`
+                            : pBalance < 0
+                              ? 'Saldo a favor'
+                              : 'Pagado'}
                       </span>
                     )}
                   </label>

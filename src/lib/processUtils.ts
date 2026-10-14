@@ -108,9 +108,43 @@ export function getProcessPaid(process: ClientProcess): number {
   return sumMoney((process.payments ?? []).map((p) => p.amount))
 }
 
-/** Saldo del proceso redondeado a centavos (negativo si se pagó de más). */
+export interface ProcessAccount {
+  /** Total efectivo: el acordado, o lo cobrado neto si está cancelado. */
+  total: number
+  /** Pagado efectivo: lo pagado, menos lo reembolsado si está cancelado. */
+  paid: number
+  /** Solo cancelados: lo devuelto, acotado a lo pagado (0 si no se capturó). */
+  refunded: number
+  /** Lo que falta pagar (negativo: saldo a favor). Un cancelado no debe nada. */
+  balance: number
+  cancelled: boolean
+}
+
+/**
+ * Cuentas del proceso para saldos y status (spec 23). Un proceso `cancelado` no
+ * debe nada: total y pagado son lo cobrado neto (pagado − reembolsado), igual
+ * que en el reporte de ventas, y su saldo es 0.
+ */
+export function getProcessAccount(process: ClientProcess): ProcessAccount {
+  const paid = toCents(getProcessPaid(process))
+  if (process.stage === 'cancelado') {
+    const refunded = Math.min(Math.max(toCents(process.refunded_amount), 0), paid)
+    const net = fromCents(paid - refunded)
+    return { total: net, paid: net, refunded: fromCents(refunded), balance: 0, cancelled: true }
+  }
+  const total = toCents(process.total)
+  return {
+    total: fromCents(total),
+    paid: fromCents(paid),
+    refunded: 0,
+    balance: fromCents(total - paid),
+    cancelled: false,
+  }
+}
+
+/** Saldo del proceso redondeado a centavos (negativo si se pagó de más; 0 si está cancelado). */
 export function getProcessBalance(process: ClientProcess): number {
-  return fromCents(toCents(process.total) - toCents(getProcessPaid(process)))
+  return getProcessAccount(process).balance
 }
 
 // ── Fechas de pago ──
@@ -223,13 +257,15 @@ export interface ClientPaymentSummary {
 }
 
 /**
- * Resume total/pagado/saldo del cliente sumando sus procesos. Si no tiene
+ * Resume total/pagado/saldo del cliente sumando sus procesos (cancelados con
+ * sus montos efectivos, ver `getProcessAccount`). Si no tiene
  * `processes`, cae al modelo legacy (`payment_total` / `payments`).
  */
 export function getClientPaymentSummary(client: Client): ClientPaymentSummary {
   if (client.processes?.length) {
-    const total = sumMoney(client.processes.map((p) => p.total))
-    const paid = sumMoney(client.processes.map(getProcessPaid))
+    const accounts = client.processes.map(getProcessAccount)
+    const total = sumMoney(accounts.map((a) => a.total))
+    const paid = sumMoney(accounts.map((a) => a.paid))
     return { total, paid, balance: fromCents(toCents(total) - toCents(paid)), hasAny: true }
   }
   const total = client.payment_total ?? 0

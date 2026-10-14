@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { DollarSign, Plus, CircleCheck, CircleAlert, Clock, FileDown } from 'lucide-react'
+import { Ban, DollarSign, Plus, CircleCheck, CircleAlert, Clock, FileDown } from 'lucide-react'
 import type { Client, ClientProcess, Payment, PaymentMethod, Workspace } from '@/types'
 import { getProcessBalance, getProcessPaid, parsePaymentDateParts, paymentInputToISO } from '@/lib/processUtils'
 import {
@@ -104,9 +104,13 @@ export default function PaymentSection({
   const total = process.total ?? 0
   const amountPaid = getProcessPaid(process)
   const balance = getProcessBalance(process)
+  // Un cancelado no debe nada ni recibe pagos nuevos (spec 23); los que tiene
+  // se pueden corregir o borrar.
+  const cancelled = process.stage === 'cancelado'
   const isPaidOff = total > 0 && balance <= 0
 
   const getPaymentStatus = () => {
+    if (cancelled) return 'cancelado'
     if (total === 0) return amountPaid > 0 ? 'anticipo' : 'sin_precio'
     if (amountPaid === 0) return 'pendiente'
     if (balance <= 0) return 'pagado'
@@ -143,6 +147,7 @@ export default function PaymentSection({
     const available = roundMoney(balance + editing.amount)
     if (
       total > 0 &&
+      !cancelled &&
       toCents(amount) > toCents(available) &&
       !confirm(
         `El monto ($${formatMoney(amount)}) supera el saldo pendiente ($${formatMoney(available)}). ¿Guardarlo de todos modos?`,
@@ -232,7 +237,7 @@ export default function PaymentSection({
         <div>
           <p className="text-xs text-muted-foreground">Saldo</p>
           <p className={`text-lg font-bold ${balance > 0 ? 'text-orange-600' : 'text-muted-foreground'}`}>
-            {total > 0 ? `$${formatMoney(balance)}` : '—'}
+            {total > 0 || cancelled ? `$${formatMoney(balance)}` : '—'}
           </p>
         </div>
       </div>
@@ -251,7 +256,7 @@ export default function PaymentSection({
           {total > 0 ? 'Editar total' : 'Definir total'}
         </Button>
         {/* Sin total definido también se puede cobrar (anticipo). */}
-        {!isPaidOff && (
+        {!isPaidOff && !cancelled && (
           <Button
             size="sm"
             onClick={() => {
@@ -470,6 +475,12 @@ export default function PaymentSection({
 
 function PaymentStatusBadge({ status }: { status: string }) {
   switch (status) {
+    case 'cancelado':
+      return (
+        <Badge variant="secondary" className="bg-muted text-muted-foreground">
+          <Ban className="mr-1 h-3 w-3" /> Cancelado
+        </Badge>
+      )
     case 'pagado':
       return (
         <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
