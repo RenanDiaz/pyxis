@@ -1,6 +1,6 @@
 import type { Client, ClientProcess, ClientStatus, Payment } from '@/types'
 import { backfillFirstRegistrationCompany } from '@/lib/companyUtils'
-import { getProcessPaid, parsePaymentDate } from '@/lib/processUtils'
+import { getProcessAccount, parsePaymentDate } from '@/lib/processUtils'
 import { fromCents, roundMoney, sumMoney, toCents } from '@/lib/money'
 import { inferStatus } from '@/lib/statusUtils'
 import { UserFacingError } from '@/lib/errors'
@@ -160,8 +160,9 @@ export function patchProcess(
 // ── Status del cliente según saldos ──
 
 function summarize(processes: ClientProcess[]) {
-  const total = toCents(sumMoney(processes.map((p) => p.total)))
-  const paid = toCents(sumMoney(processes.map(getProcessPaid)))
+  const accounts = processes.map(getProcessAccount)
+  const total = toCents(sumMoney(accounts.map((a) => a.total)))
+  const paid = toCents(sumMoney(accounts.map((a) => a.paid)))
   return { total, paid, balance: total - paid, paidOff: total > 0 && paid >= total }
 }
 
@@ -208,12 +209,16 @@ export const clientMutations = {
     (client) =>
       balanceChange(client, updatePaymentIn(client.processes ?? [], processId, key, patch)),
 
-  /** Cambiar el total recalcula el status; etapa, notas o compañía no. */
+  /**
+   * Lo que mueve saldos recalcula el status: el total, la etapa (cancelar o
+   * reactivar, spec 23) y el reembolso. Notas o compañía no.
+   */
   updateProcess:
     (processId: string, patch: ProcessPatch): ClientMutation =>
     (client) => {
       const after = patchProcess(client.processes ?? [], processId, patch)
-      return 'total' in patch ? balanceChange(client, after) : { processes: after }
+      const movesBalance = 'total' in patch || 'stage' in patch || 'refunded_amount' in patch
+      return movesBalance ? balanceChange(client, after) : { processes: after }
     },
 
   /**

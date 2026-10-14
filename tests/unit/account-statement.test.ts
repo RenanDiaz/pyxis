@@ -2,7 +2,14 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { Timestamp } from 'firebase/firestore'
 import type { Client, ClientProcess } from '@/types'
-import { buildAccountStatement, canStateAccount, hasPendingBalance, statementNumber } from '@/lib/accountStatement'
+import {
+  buildAccountStatement,
+  canStateAccount,
+  defaultStatementSelection,
+  hasPendingBalance,
+  statementDisabledReason,
+  statementNumber,
+} from '@/lib/accountStatement'
 
 const now = Timestamp.fromMillis(Date.UTC(2026, 9, 1))
 const proc = (over: Partial<ClientProcess>): ClientProcess => ({
@@ -46,5 +53,40 @@ describe('estado de cuenta', () => {
   it('sobrepago: saldo negativo (a favor)', () => {
     const p = proc({ total: 100, payments: [pay(120, '2026-10-01')] })
     assert.equal(buildAccountStatement(client([p]), [p]).balance, -20)
+  })
+})
+
+describe('estado de cuenta con procesos cancelados (spec 23)', () => {
+  const reg = proc({ id: 'r', type: 'registration', state: 'FL', total: 579, payments: [pay(579, '2026-10-01T12:00:00.000Z', 1)] })
+
+  it('un cancelado sin pagos no se puede incluir', () => {
+    const ein = proc({ id: 'e', total: 150, stage: 'cancelado' })
+    assert.equal(canStateAccount(ein), false)
+    assert.equal(statementDisabledReason(ein), 'Cancelado sin pagos')
+    assert.equal(hasPendingBalance(ein), false)
+  })
+
+  it('un cancelado no viene marcado, ni siquiera en un estado "al día"', () => {
+    const ein = proc({ id: 'e', total: 150, stage: 'cancelado', payments: [pay(50, '2026-10-02T12:00:00.000Z', 1)] })
+    assert.deepEqual(defaultStatementSelection([reg, ein]).map((p) => p.id), ['r'])
+    const owing = proc({ id: 'o', total: 100 })
+    assert.deepEqual(defaultStatementSelection([reg, ein, owing]).map((p) => p.id), ['o'])
+  })
+
+  it('incluido a mano: pagado, reembolsado y saldo 0; no suma al saldo pendiente', () => {
+    const ein = proc({
+      id: 'e', total: 150, stage: 'cancelado', refunded_amount: 20,
+      payments: [pay(50, '2026-10-02T12:00:00.000Z', 1)],
+    })
+    const owing = proc({ id: 'o', total: 100 })
+    const s = buildAccountStatement(client([ein, owing]), [ein, owing], new Date(2026, 9, 9))
+    assert.deepEqual(
+      s.lines.map((l) => [l.cancelled, l.total, l.paid, l.refunded, l.balance]),
+      [[true, 30, 50, 20, 0], [false, 100, 0, 0, 100]],
+    )
+    assert.equal(s.lines[0].payments.length, 1)
+    assert.equal(s.total, 130)
+    assert.equal(s.paid, 30)
+    assert.equal(s.balance, 100)
   })
 })

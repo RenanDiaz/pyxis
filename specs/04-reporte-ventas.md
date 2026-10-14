@@ -249,10 +249,9 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
   «Compañía» en `ProcessCard`; con varias compañías sin elegir, el reporte pone el nombre
   del cliente y el diálogo lo advierte.
 
-**Pendiente:** nada del reporte. Fuera del reporte, un
-proceso cancelado sigue sumando su saldo en el estado de cuenta y el status del
-cliente ([spec 23](23-procesos-cancelados-saldo.md)). Costos por confirmar,
-que hoy quedan vacíos (STATE FEE 0 + advertencia) o con un valor base tomado del texto
+**Pendiente:** nada del reporte. Los saldos de procesos cancelados fuera del
+reporte se corrigieron en el [spec 23](23-procesos-cancelados-saldo.md).
+Costos por confirmar, que hoy quedan vacíos (STATE FEE 0 + advertencia) o con un valor base tomado del texto
 de la tabla:
 - Annual report vacío: **CA** (la tabla solo trae el SOI de $20, y el annual report de
   Pyxis se vende a 969: ¿incluye los $800 de franchise tax?), **AL** (mín. 100, máx.

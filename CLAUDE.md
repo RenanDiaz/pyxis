@@ -222,7 +222,9 @@ Los `fields` (solo para procesos `state`) definen qué datos del estado se
 muestran en el card informativo. Helpers en `src/lib/processUtils.ts`:
 `getFieldValue` (dot notation), `getSuggestedPrice`, `getProcessLabel`,
 `getProcessPaid`, `getClientPayments`, `getClientPaymentSummary` (agregados con
-fallback a legacy).
+fallback a legacy). Saldos y status pasan por `getProcessAccount`: un proceso
+`cancelado` no debe nada (total y pagado = cobrado − `refunded_amount`, saldo 0;
+spec 23). `getProcessPaid` sigue siendo el pagado bruto (reporte, recibos).
 
 ## 3. Formulario de cliente (`ClientForm.tsx`)
 Sección "Procesos contratados" donde se agregan/quitan procesos

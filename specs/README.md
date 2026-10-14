@@ -37,7 +37,7 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 | 20 | [Notificaciones vencidas que nunca se borran (bug)](20-notificaciones-vencidas.md) | 🟠 Alta · ✅ | 08, 19 | S |
 | 21 | [Avisos de llamadas (5 min antes y a la hora)](21-avisos-de-llamadas.md) | 🟠 Alta · ✅ fases 1 y 2 (setup pendiente) | 08; fase 2: 17 | M |
 | 22 | [Cerrar la creación de workspaces](22-creacion-workspaces.md) | 🟠 Alta | — | S |
-| 23 | [Procesos cancelados siguen sumando saldo (bug)](23-procesos-cancelados-saldo.md) | 🟠 Alta | — (04 P3) | S |
+| 23 | [Procesos cancelados siguen sumando saldo (bug)](23-procesos-cancelados-saldo.md) | 🟠 Alta · ✅ | — (04 P3) | S |
 | — | [Borradores de formularios](form-drafts.md) | ✅ Implementado | — | — |
 
 **Por qué este orden:** 01+02 cierran un hueco que permite tomar control de

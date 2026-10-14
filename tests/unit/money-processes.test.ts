@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { Timestamp } from 'firebase/firestore'
 import type { Client, ClientProcess, Payment } from '@/types'
 import { roundMoney, sumMoney } from '@/lib/money'
-import { getClientPaymentSummary, getProcessBalance } from '@/lib/processUtils'
+import { getClientPaymentSummary, getProcessAccount, getProcessBalance } from '@/lib/processUtils'
 import {
   addPaymentTo,
   clientMutations,
@@ -167,5 +167,55 @@ describe('status según saldos', () => {
     const p = proc({ llc_name: 'ACME LLC' })
     const after = clientMutations.updateProcess('p1', { llc_name: undefined })(client([p])).processes[0]
     assert.equal('llc_name' in after, false)
+  })
+})
+
+describe('procesos cancelados (spec 23)', () => {
+  const reg = (over: Partial<ClientProcess> = {}) =>
+    proc({ id: 'r', total: 579, payments: [pay(579, '2026-10-01', { id: 'a', receipt_number: 1 })], ...over })
+  const ein = (over: Partial<ClientProcess> = {}) => proc({ id: 'e', type: 'ein', total: 150, ...over })
+
+  it('un cancelado sin pagos no suma saldo al cliente', () => {
+    const summary = getClientPaymentSummary(client([reg(), ein({ stage: 'cancelado' })]))
+    assert.deepEqual(summary, { total: 579, paid: 579, balance: 0, hasAny: true })
+    assert.equal(getProcessBalance(ein({ stage: 'cancelado' })), 0)
+  })
+
+  it('cuenta lo cobrado neto: pagado menos reembolsado', () => {
+    const p = ein({ stage: 'cancelado', total: 400, refunded_amount: 200, payments: [pay(300, '2026-10-01')] })
+    assert.deepEqual(getProcessAccount(p), { total: 100, paid: 100, refunded: 200, balance: 0, cancelled: true })
+  })
+
+  it('reembolso mayor que lo pagado se acota; sin capturar es 0', () => {
+    const over = ein({ stage: 'cancelado', refunded_amount: 500, payments: [pay(300, '2026-10-01')] })
+    assert.deepEqual(getProcessAccount(over), { total: 0, paid: 0, refunded: 300, balance: 0, cancelled: true })
+    const missing = ein({ stage: 'cancelado', payments: [pay(300, '2026-10-01')] })
+    assert.equal(getProcessAccount(missing).total, 300)
+  })
+
+  it('cancelar lo único que se debía cierra al cliente; reactivarlo lo reabre', () => {
+    const c = client([reg(), ein()])
+    const cancel = clientMutations.updateProcess('e', { stage: 'cancelado' })(c)
+    assert.equal(cancel.status, 'cerrado')
+    const reopened = clientMutations.updateProcess('e', { stage: 'pendiente' })(
+      client(cancel.processes, 'cerrado'),
+    )
+    assert.equal(reopened.status, 'en_proceso')
+    assert.equal(getClientPaymentSummary(client(reopened.processes)).balance, 150)
+  })
+
+  it('perdido o deuda_pendiente no cambian al cancelar', () => {
+    for (const status of ['perdido', 'deuda_pendiente'] as const) {
+      const change = clientMutations.updateProcess('e', { stage: 'cancelado' })(client([reg(), ein()], status))
+      assert.equal(change.status, undefined)
+    }
+  })
+
+  it('cancelar todo sin cobrar nada no cambia el status', () => {
+    const c = client([ein({ id: 'e' }), ein({ id: 'e2' })])
+    const first = clientMutations.updateProcess('e', { stage: 'cancelado' })(c)
+    assert.equal(first.status, undefined)
+    const second = clientMutations.updateProcess('e2', { stage: 'cancelado' })(client(first.processes))
+    assert.equal(second.status, undefined)
   })
 })
