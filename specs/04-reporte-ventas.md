@@ -250,8 +250,8 @@ columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
   del cliente y el diálogo lo advierte.
 
 **Pendiente:** nada del reporte. Fuera del reporte, un
-proceso cancelado sigue sumando su saldo en el estado de cuenta, la cotización y el
-status del cliente (spec aparte). Costos por confirmar,
+proceso cancelado sigue sumando su saldo en el estado de cuenta y el status del
+cliente ([spec 23](23-procesos-cancelados-saldo.md)). Costos por confirmar,
 que hoy quedan vacíos (STATE FEE 0 + advertencia) o con un valor base tomado del texto
 de la tabla:
 - Annual report vacío: **CA** (la tabla solo trae el SOI de $20, y el annual report de
