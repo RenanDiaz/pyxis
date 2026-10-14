@@ -27,6 +27,12 @@ export function initialStatusFields(
   }
 }
 
+/** Cambio de status ya confirmado en Firestore (para analítica, spec 24). */
+export interface StatusTransition {
+  from: ClientStatus
+  to: ClientStatus
+}
+
 /**
  * Campos a escribir cuando el cliente pasa a `to`, o `null` si no cambia.
  * Debe aplicarse sobre el documento actual (dentro de una transacción).

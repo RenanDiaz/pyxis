@@ -5,6 +5,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { AlertTriangle, Clock, Phone, Plus, UserPlus } from 'lucide-react'
+import { track } from '@/lib/analytics'
 import { useCalls, useCreateCall, useUpdateCall } from '@/hooks/useCalls'
 import { useClients, usePhoneMatches } from '@/hooks/useClients'
 import { useStates } from '@/hooks/useStates'
@@ -261,6 +262,7 @@ export default function Schedule() {
         },
         assignTo: member ? { owner_uid: member.uid, subteam_id: member.subteam_id } : undefined,
       })
+      track('call_scheduled', { kind: isLead ? 'lead' : 'client' })
       toast.success('Llamada agendada')
       handleDialogChange(false)
       resetNewCall()
@@ -272,6 +274,7 @@ export default function Schedule() {
   const handleOutcomeChange = async (call: Call, outcome: CallOutcome) => {
     try {
       await updateCallMutation.mutateAsync({ id: call.id, data: { outcome } })
+      track('call_completed', { outcome })
       toast.success('Llamada actualizada')
       // Reagendar a un lead: abrir el modal con sus datos (spec 19).
       if (outcome === 'reagendada' && isLeadCall(call)) openForLead(call.lead)

@@ -2,7 +2,7 @@ import { collection, doc, runTransaction, Timestamp, updateDoc, writeBatch, type
 import type { Client } from '@/types'
 import type { ClientChange, ClientMutation } from '@/lib/processMutations'
 import { normalizeClientFields } from '@/lib/clientUtils'
-import { statusChangeFields } from '@/lib/statusHistory'
+import { statusChangeFields, type StatusTransition } from '@/lib/statusHistory'
 import { inferStatus, type StatusTrigger } from '@/lib/statusUtils'
 import { UserFacingError } from '@/lib/errors'
 import { clientPhoneDigits, writePhoneIndex } from '@/lib/phoneIndex'
@@ -26,7 +26,7 @@ export async function runClientMutation(
   clientId: string,
   mutation: ClientMutation,
   by: string | null = null,
-): Promise<ClientChange> {
+): Promise<ClientChange & { transition: StatusTransition | null }> {
   return runTransaction(fs, async (tx) => {
     const ref = clientRef(fs, workspaceId, clientId)
     const snap = await tx.get(ref)
@@ -39,7 +39,10 @@ export async function runClientMutation(
       ...statusFields,
       updated_at: Timestamp.now(),
     })
-    return status ? { ...change, status } : change
+    // `transition` solo si el status cambió de verdad; se devuelve de la última
+    // ejecución de la transacción (Firestore la reintenta ante conflictos).
+    const transition = status && statusFields ? { from: client.status, to: status } : null
+    return status ? { ...change, status, transition } : { ...change, transition }
   })
 }
 
@@ -65,16 +68,16 @@ export async function runClientUpdate(
   clientId: string,
   data: Partial<Omit<Client, 'id' | 'created_at'>>,
   { trigger, by = null }: ClientUpdateOptions = {},
-): Promise<void> {
+): Promise<StatusTransition | null> {
   const ref = clientRef(fs, workspaceId, clientId)
   const { status, ...rest } = data
   const fields: Record<string, unknown> = { ...normalizeClientFields(rest), updated_at: Timestamp.now() }
   const touchesPhones = 'phone' in rest || 'phones' in rest
   if (!status && !trigger && !touchesPhones) {
     await updateDoc(ref, fields)
-    return
+    return null
   }
-  await runTransaction(fs, async (tx) => {
+  return runTransaction(fs, async (tx) => {
     const snap = await tx.get(ref)
     if (!snap.exists()) throw new UserFacingError('Cliente no encontrado')
     const current = snap.data() as Client
@@ -88,6 +91,7 @@ export async function runClientUpdate(
       writePhoneIndex(tx, fs, workspaceId, clientId, before, after)
     }
     tx.update(ref, { ...fields, ...statusFields })
+    return to && statusFields ? { from: current.status, to } : null
   })
 }
 

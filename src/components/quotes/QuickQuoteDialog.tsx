@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { FileText, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
+import { track } from '@/lib/analytics'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -85,6 +86,7 @@ export default function QuickQuoteDialog({ state, workspace, onOpenChange }: Qui
       })
       const { downloadQuotePdf } = await import('@/lib/quotePdf')
       await downloadQuotePdf(quote, workspace)
+      track('quote_generated')
       toast.success(`Cotización ${quote.number} generada`)
       onOpenChange(false)
     } catch (err) {

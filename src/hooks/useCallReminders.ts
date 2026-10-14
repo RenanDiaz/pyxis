@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { track } from '@/lib/analytics'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useClients } from '@/hooks/useClients'
 import { getReminderCalls } from '@/lib/firestore'
@@ -181,6 +182,9 @@ export function usePushReminders() {
   const toggle = useMutation({
     meta: { errorMessage: 'No se pudieron cambiar los avisos con Pyxis cerrado' },
     mutationFn: (on: boolean) => (on ? enablePush(db!, uid!) : disablePush(db!, uid!)),
+    onSuccess: (_result, on) => {
+      if (on) track('reminder_opt_in', { channel: 'push' })
+    },
     onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
   })
   return { status: status.data ?? 'unsupported', setEnabled: toggle.mutate, isPending: toggle.isPending }

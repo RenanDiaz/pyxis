@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { track } from '@/lib/analytics'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -221,6 +222,7 @@ export default function ProcessCard({
     try {
       const { exportRegistrationDoc } = await import('@/lib/exportClientDoc')
       await exportRegistrationDoc(client, process)
+      track('docx_exported', { scope: 'one' })
     } catch {
       toast.error('No se pudo generar el documento')
     }
@@ -274,7 +276,11 @@ export default function ProcessCard({
           <span className="text-xs text-muted-foreground">Etapa</span>
           <Select
             value={process.stage}
-            onValueChange={(v) => updateProcess({ stage: v as ProcessStage }, 'Etapa actualizada')}
+            onValueChange={async (v) => {
+              if (await updateProcess({ stage: v as ProcessStage }, 'Etapa actualizada')) {
+                track('process_stage_changed', { type: process.type, to: v as ProcessStage })
+              }
+            }}
           >
             <SelectTrigger className="h-8 w-[160px]">
               <SelectValue />

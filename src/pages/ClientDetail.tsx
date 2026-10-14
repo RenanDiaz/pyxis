@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
+import { track } from '@/lib/analytics'
 import { useClient, useUpdateClient, useDeleteClient, useClientMutation } from '@/hooks/useClients'
 import { useCalls, useCreateCall } from '@/hooks/useCalls'
 import { useStates } from '@/hooks/useStates'
@@ -333,7 +334,9 @@ export default function ClientDetail() {
   }
 
   const handleAddProcess = async (process: ClientProcess) => {
-    await runMutation(clientMutations.addProcess(process), 'Proceso agregado')
+    if (await runMutation(clientMutations.addProcess(process), 'Proceso agregado')) {
+      track('process_added', { type: process.type, has_state: !!process.state })
+    }
   }
 
   const handleRemoveProcess = async (processId: string) => {
@@ -345,6 +348,7 @@ export default function ClientDetail() {
     try {
       const { exportClientDoc } = await import('@/lib/exportClientDoc')
       const count = await exportClientDoc(client)
+      track('docx_exported', { scope: 'all' })
       if (count > 1) {
         toast.success(`${count} documentos generados, uno por compañía`)
       }
@@ -357,6 +361,7 @@ export default function ClientDetail() {
     try {
       const { exportRegistrationDoc } = await import('@/lib/exportClientDoc')
       await exportRegistrationDoc(client, process)
+      track('docx_exported', { scope: 'one' })
     } catch {
       toast.error('No se pudo generar el documento')
     }

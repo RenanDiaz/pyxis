@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { FileText } from 'lucide-react'
 import { toast } from 'sonner'
+import { track } from '@/lib/analytics'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { Client, Workspace } from '@/types'
@@ -48,6 +49,7 @@ export default function StatementDialog({ client, workspace, onOpenChange }: Sta
       const statement = buildAccountStatement(client, chosen)
       const { downloadStatementPdf } = await import('@/lib/statementPdf')
       await downloadStatementPdf(statement, workspace)
+      track('statement_generated')
       toast.success(`Estado de cuenta ${statement.number} generado`)
       onOpenChange(false)
     } catch (err) {

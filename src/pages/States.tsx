@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useSettledSearch } from '@/hooks/useSettledSearch'
+import { track } from '@/lib/analytics'
 import { useStates } from '@/hooks/useStates'
 import { formatPrice, formatDays } from '@/lib/format'
 import { getStateTimezone, getTimezoneLabel } from '@/lib/timezones'
@@ -51,6 +53,10 @@ export default function States() {
     if (!states) return []
     return filterStates(states, search)
   }, [states, search])
+
+  useSettledSearch(search, (term) => {
+    track('state_search', { has_results: states ? filterStates(states, term).length > 0 : false })
+  })
 
   if (isLoading) {
     return <p className="text-muted-foreground">Cargando estados...</p>

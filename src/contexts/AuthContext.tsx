@@ -13,6 +13,7 @@ import {
 import { auth, db, isFirebaseConfigured } from '@/lib/firebase'
 import { disablePush } from '@/lib/pushSubscription'
 import { getUserProfile, createUserProfile } from '@/lib/firestore'
+import { resetAnalytics } from '@/lib/analytics'
 import { clearUserDrafts, pruneExpiredDrafts } from '@/lib/formDraft'
 
 interface AuthContextType {
@@ -116,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Tampoco deben seguir llegando sus avisos de llamadas a este navegador
     // (spec 21 fase 2). Si falla, no impide cerrar sesión.
     if (user && db) await disablePush(db, user.uid).catch(() => {})
+    resetAnalytics()
     queryClient.clear()
     if (!isFirebaseConfigured || !auth) {
       setUser(null)

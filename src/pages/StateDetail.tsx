@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
+import { track } from '@/lib/analytics'
 import { useIsGlobalAdmin, useStateByAbbreviation, useStates } from '@/hooks/useStates'
 import { formatPrice, formatDays, formatYesNo } from '@/lib/format'
 import { getStateTimezone, getTimezoneLabel, isMultiZoneState } from '@/lib/timezones'
@@ -35,6 +36,12 @@ export default function StateDetail() {
   const { workspace } = useUserProfile()
   const [quoteOpen, setQuoteOpen] = useState(false)
   const canEdit = isFirebaseConfigured && !!isAdmin
+
+  // Spec 24: qué estados se consultan (la abreviatura, nunca datos del cliente).
+  const viewedAbbreviation = state?.abbreviation
+  useEffect(() => {
+    if (viewedAbbreviation) track('state_viewed', { abbreviation: viewedAbbreviation })
+  }, [viewedAbbreviation])
 
   if (isLoading) {
     return <p className="text-muted-foreground">Cargando...</p>
