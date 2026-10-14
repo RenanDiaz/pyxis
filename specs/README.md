@@ -38,6 +38,7 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 | 21 | [Avisos de llamadas (5 min antes y a la hora)](21-avisos-de-llamadas.md) | 🟠 Alta · ✅ fases 1 y 2 (setup pendiente) | 08; fase 2: 17 | M |
 | 22 | [Cerrar la creación de workspaces](22-creacion-workspaces.md) | 🟠 Alta | — | S |
 | 23 | [Procesos cancelados siguen sumando saldo (bug)](23-procesos-cancelados-saldo.md) | 🟠 Alta · ✅ | — (04 P3) | S |
+| 24 | [Analítica de uso (qué se usa y qué no)](24-analytics-uso.md) | 🟡 Media | 17 | M |
 | — | [Borradores de formularios](form-drafts.md) | ✅ Implementado | — | — |
 
 **Por qué este orden:** 01+02 cierran un hueco que permite tomar control de
