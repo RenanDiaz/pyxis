@@ -26,6 +26,13 @@ function field(label: string, value?: string, tabbed?: boolean): Paragraph {
   })
 }
 
+function clientFullName(client: Client): string {
+  return [client.first_name, client.middle_name, client.last_name]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ")
+}
+
 function partnerSection(partners: Client["partners"]): Paragraph[] {
   if (!partners || partners.length === 0) return []
 
@@ -87,17 +94,7 @@ function buildDoc(client: Client, company: CompanyInfo): Document {
           new Paragraph({ spacing: { after: 100 }, children: [] }),
           field("- NOMBRE DE LA LLC", company.llc_name),
           field("- ESTADO", company.state),
-          new Paragraph({
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 40 },
-            children: [
-              new TextRun({ text: "- NOMBRES Y APELLIDOS DEL CLIENTE:", bold: true, font: FONT, size: FONT_SIZE }),
-            ],
-          }),
-          new Paragraph({ spacing: { after: 40 }, children: [] }),
-          field("● PRIMER NOMBRE", client.first_name, true),
-          field("● SEGUNDO NOMBRE", client.middle_name, true),
-          field("● APELLIDOS", client.last_name, true),
+          field("- NOMBRE COMPLETO DEL CLIENTE", clientFullName(client)),
           field("- SSN O ITIN", client.ssn_itin),
           field("- NÚMERO TELEFÓNICO", getPrimaryPhoneNumber(client)),
           field("- CORREO ELECTRÓNICO", client.email?.toLowerCase()),
