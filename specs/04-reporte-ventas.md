@@ -147,6 +147,30 @@ Las 10 cuentas capturadas en Pyxis quedan a **23.53** del manual: solo diferenci
 precio capturado y de state fee de registro (P4: se corrige editando el estado en
 Estados). Ya no hay diferencias de fórmula, de mes ni de formato.
 
+## Comparación octubre 2026: app vs. manual
+Primer mes con todo capturado en Pyxis. Las **13 cuentas** están en ambos, mismo
+state fee en todas, RA = 0 en todas. NET: **app 3,419.54**, manual **3,418.93** →
+la app queda **0.61** por encima. TOTAL PAY 1,012.93 vs 1,012.84; WHAT I TOOK HOME
+1,901.64 vs 1,901.12.
+
+| Causa | CHARGE | En NET |
+|-------|-------:|-------:|
+| Precio capturado ±1: VA (app 550 / manual 549), WI (580 / 579), Statement CA (199 / 200) | +1.00 | +0.61 |
+| Stripe NY (La Chapina): la app pone 4 % de 659 = 26.36; el manual, **52.72 (8 %, o el 4 % dos veces)** | −26.36 | 0 |
+| Stripe NY (JFH): Pyxis tiene 339 pagados con Stripe → 13.56; el manual, 0 | +13.56 | 0 |
+| Stripe MS (Titan): Pyxis tiene 499 pagados con Stripe → 19.96; el manual, 0 | +19.96 | 0 |
+| **Total** | **+8.16** | **+0.61** |
+
+- Las diferencias de Stripe no mueven NET (el recargo suma a CHARGE y resta como
+  STRIPE FEE). Queda por confirmar con Isabel el 8 % de La Chapina y si JFH y Titan
+  pagaron con Stripe (si no, el método de pago está mal capturado en Pyxis).
+- Los ±1 son de captura: se corrigen en el total del proceso en Pyxis.
+- Fechas: la fecha de venta de Pyxis cae 0–2 días antes que la del manual en 9 de
+  13 cuentas; ninguna cambia de mes, así que no afecta al reporte.
+- Cosméticos sin impacto: el manual no tiene OWES/FORMA DE PAGO en la app (P6), la
+  app omite la fila de bonus cuando no se captura (el manual pone 0), y un nombre de
+  LLC en Pyxis trae un emoji («JFH & E BUILD, LLC ✅»), que es de captura.
+
 ## Objetivo
 Que el reporte generado coincida con el Excel manual vigente (Ago–Sept 2026) en
 columnas, fórmulas y costos, con diferencias solo por las decisiones de abajo.
