@@ -167,7 +167,7 @@ la app queda **0.61** por encima. TOTAL PAY 1,012.93 vs 1,012.84; WHAT I TOOK HO
 - Los ±1 son de captura: se corrigen en el total del proceso en Pyxis.
 - Fechas: la fecha de venta de Pyxis cae 0–2 días antes que la del manual en 9 de
   13 cuentas; ninguna cambia de mes, así que no afecta al reporte.
-- Cosméticos sin impacto: el manual no tiene OWES/FORMA DE PAGO en la app (P6), la
+- Cosméticos sin impacto: la app no lleva las columnas OWES/FORMA DE PAGO del manual (P6), la
   app omite la fila de bonus cuando no se captura (el manual pone 0), y un nombre de
   LLC en Pyxis trae un emoji («JFH & E BUILD, LLC ✅»), que es de captura.
 
