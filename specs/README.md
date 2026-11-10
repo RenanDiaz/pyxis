@@ -39,6 +39,7 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 | 22 | [Cerrar la creación de workspaces](22-creacion-workspaces.md) | 🟠 Alta | — | S |
 | 23 | [Procesos cancelados siguen sumando saldo (bug)](23-procesos-cancelados-saldo.md) | 🟠 Alta · ✅ | — (04 P3) | S |
 | 24 | [Analítica de uso (qué se usa y qué no)](24-analytics-uso.md) | 🟡 Media · ✅ código, activar con el runbook | 17 | M |
+| 25 | [Precios de registro terminados en 9](25-precios-terminados-en-9.md) | 🟡 Media | — (04, comparación de octubre) | S |
 | — | [Borradores de formularios](form-drafts.md) | ✅ Implementado | — | — |
 
 **Por qué este orden:** 01+02 cierran un hueco que permite tomar control de
