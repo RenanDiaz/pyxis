@@ -39,6 +39,11 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 | 22 | [Cerrar la creación de workspaces](22-creacion-workspaces.md) | 🟠 Alta | — | S |
 | 23 | [Procesos cancelados siguen sumando saldo (bug)](23-procesos-cancelados-saldo.md) | 🟠 Alta · ✅ | — (04 P3) | S |
 | 24 | [Analítica de uso (qué se usa y qué no)](24-analytics-uso.md) | 🟡 Media · ✅ código, activar con el runbook | 17 | M |
+| 25 | [Consistencia visual (base del rediseño)](25-consistencia-visual.md) | 🟠 Alta | — | M |
+| 26 | [Navegación por intención y barra inferior en móvil](26-navegacion.md) | 🟠 Alta | 25 | S/M |
+| 27 | [Búsqueda global (Ctrl/⌘+K)](27-busqueda-global.md) | 🔴 Alta | 25 | M |
+| 28 | [Clientes como lista de trabajo](28-clientes-lista-de-trabajo.md) | 🟠 Alta | 25 | L (2 fases) |
+| 29 | [Ficha del estado en panel lateral](29-ficha-estado-panel.md) | 🟡 Media | 25 | M |
 | — | [Borradores de formularios](form-drafts.md) | ✅ Implementado | — | — |
 
 **Por qué este orden:** 01+02 cierran un hueco que permite tomar control de
@@ -46,6 +51,11 @@ cualquier workspace y leer SSN de clientes ajenos; se deben hacer juntos porque
 el flujo actual de invitaciones *solo funciona gracias al hueco*. 03 y 04
 afectan dinero (pagos que se pierden, TAX/NET mal calculados). 05 es base para
 08 y 11.
+
+**Rediseño (25–29):** mejoras de UX sin overhaul, propuestas el 2026-11-10. El
+25 va primero (tokens y componentes base que usan los demás); 26 y 27 se pueden
+hacer en paralelo; 28 y 29 son independientes entre sí. Antes de 26 y 28
+conviene revisar la analítica del spec 24 (uso por módulo y por dispositivo).
 
 ## Convenciones
 - Archivo: `NN-tema.md` (kebab-case, español).
