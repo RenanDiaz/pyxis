@@ -1,6 +1,6 @@
 # 27 — Búsqueda global (Ctrl/⌘+K)
 
-**Prioridad:** 🔴 Alta (mayor impacto en llamada) · **Estado:** pendiente · **Tamaño:** M · **Depende de:** [25](25-consistencia-visual.md) · **Relacionado:** [24](24-analytics-uso.md), [26](26-navegacion.md), [29](29-ficha-estado-panel.md)
+**Prioridad:** 🔴 Alta (mayor impacto en llamada; confirmado por la analítica) · **Estado:** pendiente · **Tamaño:** M · **Depende de:** [25](25-consistencia-visual.md) · **Relacionado:** [24](24-analytics-uso.md), [26](26-navegacion.md), [29](29-ficha-estado-panel.md)
 
 ## Problema
 Durante una llamada el agente necesita llegar en segundos a un cliente, a un
@@ -8,6 +8,17 @@ estado o a la traducción de un término. Hoy cada cosa se busca dentro de su
 módulo: hay que navegar al módulo, encontrar su buscador y escribir. No existe
 ningún atajo de teclado en la app y el `Header` está vacío salvo campana, tema
 y avatar.
+
+## Datos de uso
+Según la analítica del 2026-11-10 (30 días, 1 agente y 1 owner activos; ver `README.md`): `state_search` es el evento más
+frecuente de toda la app (**159**, contra 15 búsquedas de clientes), con 94
+fichas abiertas de **40 estados distintos**. El agente va y viene entre Estados
+y Clientes todo el día. Oficios y Glosario no se buscaron ni se abrieron.
+Móvil es el 3 % de las vistas.
+
+Consecuencias: los estados van primero en los resultados, la versión de
+escritorio con teclado es la que importa, y Oficios/Glosario quedan como
+fuentes secundarias (ver pregunta 4).
 
 ## Objetivo
 Un solo buscador, disponible desde cualquier pantalla, que encuentre clientes,
@@ -37,12 +48,14 @@ estados, oficios y términos del glosario, y ejecute las acciones más comunes.
 
    | Grupo | Fuente | Fila muestra | Al elegir |
    |---|---|---|---|
-   | Clientes | `useClients()` + `filterClientsBySearch` | nombre, LLC, teléfono, `StatusBadge` | `/clientes/:id` |
    | Estados | `useStates()` + `filterStates` | nombre, abreviatura, precio, hora local | `/estados/:abbreviation` |
+   | Clientes | `useClients()` + `filterClientsBySearch` | nombre, LLC, teléfono, `StatusBadge` | `/clientes/:id` |
    | Oficios | `useTrades()` | nombre EN → ES, categoría | ver req. 6 |
    | Glosario | `useGlossary()` | término, traducción, definición (1 línea) | ver req. 6 |
    | Acciones | lista fija | etiqueta + ícono | ejecuta |
 
+   Una abreviatura exacta de estado ("tx", "FL") es siempre el primer
+   resultado y queda seleccionada: `⌘K`, `tx`, `Enter` abre Texas.
 5. **Acciones** (con texto vacío se muestran estas y los "recientes"):
    Nuevo cliente (`/clientes/nuevo`), Agendar llamada (`/agenda` con el modal
    abierto), Ir a Inicio / Clientes / Agenda / Estados / Reportes.
@@ -93,7 +106,7 @@ búsqueda dentro de notas; atajos adicionales (`g c`, `n`…).
 ## Criterios de aceptación
 - [ ] `Ctrl/⌘+K` abre el buscador desde cualquier página de `AppLayout`; `Esc` lo cierra y devuelve el foco.
 - [ ] Escribir un teléfono parcial, un nombre sin acentos o el nombre de una LLC encuentra al cliente.
-- [ ] Escribir "tex" o "TX" muestra Texas; `Enter` abre `/estados/TX`.
+- [ ] Escribir "tex" o "TX" muestra Texas como primer resultado; `Enter` abre `/estados/TX`.
 - [ ] Escribir un oficio en español muestra su nombre en inglés sin salir de la pantalla actual.
 - [ ] Un `agent` no encuentra clientes de otro agente.
 - [ ] Con el texto vacío aparecen las acciones y los recientes.
@@ -113,5 +126,9 @@ búsqueda dentro de notas; atajos adicionales (`g c`, `n`…).
 2. **Archivados:** recomiendo excluirlos en v1 (requieren una segunda query,
    `useClients({ archived: true })`). Alternativa: incluirlos en un grupo aparte
    "Archivados" que se carga solo al abrir el buscador.
-3. **Leads de la Agenda (spec 19):** quedan fuera. ¿Hace falta encontrarlos por
+4. **Oficios y Glosario:** tuvieron 0 uso en 30 días. Recomiendo incluirlos
+   igual (el costo es bajo y es la forma de saber si no se usan por inútiles o
+   por estar escondidos), pero si hay que recortar alcance, son lo primero que sale.
+3. **Leads de la Agenda (spec 19):** las 7 llamadas agendadas del periodo fueron
+   todas a leads, así que este caso es real. ¿Hace falta encontrarlos por
    teléfono desde aquí cuando el lead devuelve la llamada?

@@ -40,10 +40,10 @@ verificaron leyendo el código; los demás vienen de una revisión automática y
 | 23 | [Procesos cancelados siguen sumando saldo (bug)](23-procesos-cancelados-saldo.md) | 🟠 Alta · ✅ | — (04 P3) | S |
 | 24 | [Analítica de uso (qué se usa y qué no)](24-analytics-uso.md) | 🟡 Media · ✅ código, activar con el runbook | 17 | M |
 | 25 | [Consistencia visual (base del rediseño)](25-consistencia-visual.md) | 🟠 Alta | — | M |
-| 26 | [Navegación por intención y barra inferior en móvil](26-navegacion.md) | 🟠 Alta | 25 | S/M |
+| 26 | [Navegación por intención y barra inferior en móvil](26-navegacion.md) | 🟡 Media (fase 2 en espera) | 25 | S + M |
 | 27 | [Búsqueda global (Ctrl/⌘+K)](27-busqueda-global.md) | 🔴 Alta | 25 | M |
-| 28 | [Clientes como lista de trabajo](28-clientes-lista-de-trabajo.md) | 🟠 Alta | 25 | L (2 fases) |
-| 29 | [Ficha del estado en panel lateral](29-ficha-estado-panel.md) | 🟡 Media | 25 | M |
+| 28 | [Clientes como lista de trabajo](28-clientes-lista-de-trabajo.md) | 🟡 Media (fase 2 en espera) | 25 | M + L |
+| 29 | [Ficha del estado en panel lateral](29-ficha-estado-panel.md) | 🔴 Alta | 25 | M |
 | — | [Borradores de formularios](form-drafts.md) | ✅ Implementado | — | — |
 
 **Por qué este orden:** 01+02 cierran un hueco que permite tomar control de
@@ -52,10 +52,25 @@ el flujo actual de invitaciones *solo funciona gracias al hueco*. 03 y 04
 afectan dinero (pagos que se pierden, TAX/NET mal calculados). 05 es base para
 08 y 11.
 
-**Rediseño (25–29):** mejoras de UX sin overhaul, propuestas el 2026-11-10. El
-25 va primero (tokens y componentes base que usan los demás); 26 y 27 se pueden
-hacer en paralelo; 28 y 29 son independientes entre sí. Antes de 26 y 28
-conviene revisar la analítica del spec 24 (uso por módulo y por dispositivo).
+**Rediseño (25–29):** mejoras de UX sin overhaul, propuestas el 2026-11-10.
+Orden recomendado: **25 → 27 → 29 → 28 (fase 1) → 26 (fase 1)**. El 25 da los
+tokens y componentes base; 27 y 29 atacan el flujo dominante (consultar estados
+mientras se trabaja un cliente). Las fases 2 de 26 y 28 quedan en espera.
+
+**Datos que respaldan ese orden** (PostHog, 30 días al 2026-11-10; 1 agente y
+1 owner activos, así que describen el flujo de una persona, no una tendencia):
+
+| Módulo | Vistas | Nota |
+|---|---|---|
+| Estados (lista + ficha) | 115 + 94 | 159 búsquedas, 40 estados distintos |
+| Clientes (lista + detalle) | 81 + 63 | 15 búsquedas, 9 altas, 5 ediciones |
+| Agenda | 7 | 7 llamadas agendadas, todas a leads |
+| Inicio | 6 | 3 del agente |
+| Reportes | 3 | 2 exportaciones |
+| Oficios, Glosario | 0 | sin vistas ni búsquedas |
+
+Móvil: 12 de 385 vistas (3 %). Sin uso en el periodo: cotización, estado de
+cuenta y opt-in de avisos de llamadas.
 
 ## Convenciones
 - Archivo: `NN-tema.md` (kebab-case, español).

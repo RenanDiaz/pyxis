@@ -1,12 +1,19 @@
 # 29 — Ficha del estado en panel lateral (sin salir del cliente)
 
-**Prioridad:** 🟡 Media · **Estado:** pendiente · **Tamaño:** M · **Depende de:** [25](25-consistencia-visual.md) · **Relacionado:** [24](24-analytics-uso.md), [27](27-busqueda-global.md)
+**Prioridad:** 🔴 Alta (confirmado por la analítica) · **Estado:** pendiente · **Tamaño:** M · **Depende de:** [25](25-consistencia-visual.md) · **Relacionado:** [24](24-analytics-uso.md), [27](27-busqueda-global.md)
 
 ## Problema
 La ficha del estado es la referencia más consultada en llamada, pero solo
 existe como página (`/estados/:abbreviation`). Si el agente está en el detalle
 de un cliente, o a mitad del formulario, y necesita el precio del annual report
 o el link de name check, tiene que navegar fuera y volver.
+
+## Datos de uso
+Según la analítica del 2026-11-10 (30 días, 1 agente y 1 owner activos; ver `README.md`): Estados es el módulo más usado
+(115 vistas de la lista, 94 fichas de 40 estados distintos, 159 búsquedas) y el
+segundo es Clientes (81 y 63). Ese ir y venir entre los dos módulos es
+exactamente lo que este spec elimina. Los más consultados: TX, FL, CA (9 c/u) y
+WY (8); el resto es cola larga, así que no sirve optimizar para unos pocos estados.
 
 ## Diagnóstico (verificado en el código, 2026-11-10)
 - `StateDetail.tsx` (331 líneas) mezcla página y contenido: cabecera con reloj

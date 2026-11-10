@@ -1,6 +1,6 @@
 # 26 — Navegación por intención y barra inferior en móvil
 
-**Prioridad:** 🟠 Alta · **Estado:** pendiente · **Tamaño:** S/M · **Depende de:** [25](25-consistencia-visual.md) (tokens, `<h1>`) · **Relacionado:** [27](27-busqueda-global.md)
+**Prioridad:** 🟡 Media (fase 1) · 🟢 Baja (fase 2, en espera) · **Estado:** pendiente · **Tamaño:** S + M · **Depende de:** [25](25-consistencia-visual.md) (tokens, `<h1>`) · **Relacionado:** [27](27-busqueda-global.md)
 
 ## Problema
 El sidebar lista siete ítems planos en este orden: Inicio, Estados, Oficios,
@@ -19,17 +19,31 @@ de Clientes a Agenda cuesta dos toques y abrir un panel.
 - Elementos fijos abajo que pueden chocar con una barra inferior:
   `UpdateBanner` (`fixed bottom-4`) y los toasts de `sonner`.
 
-## Requisitos
+## Datos de uso
+Según la analítica del 2026-11-10 (30 días, 1 agente y 1 owner activos; ver `README.md`):
+- **Estados es el módulo más usado**, por encima de Clientes: 115 vistas de la
+  lista y 94 de fichas, contra 81 y 63 de Clientes. No es "referencia": es trabajo diario.
+- **Oficios y Glosario: 0 vistas y 0 búsquedas.**
+- **Inicio: 3 vistas del agente.** Agenda: 7.
+- **Móvil: 12 vistas de 385 (3 %)**, la mitad del owner.
+
+Consecuencias: Estados sube al grupo principal, Oficios y Glosario bajan, y la
+barra inferior en móvil pasa a fase 2 en espera (hoy no la usaría nadie).
+
+## Fase 1 — Requisitos
 1. **Grupos del sidebar** (mismas rutas, solo cambia orden y agrupación):
 
    | Grupo | Ítems | Visible para |
    |---|---|---|
-   | (sin título) | Inicio, Clientes, Agenda | todos |
-   | Referencia | Estados, Oficios, Glosario | todos |
+   | (sin título) | Inicio, Estados, Clientes, Agenda | todos |
+   | Referencia | Oficios, Glosario | todos |
    | Gestión | Reportes | todos |
    | Gestión | Miembros, Subequipos, Configuración | `owner` |
 
    El grupo "Workspace" desaparece como título; sus ítems van bajo "Gestión".
+## Fase 2 — Barra inferior en móvil (en espera)
+No implementar hasta que el uso móvil lo justifique (ver pregunta 1).
+
 2. **Barra inferior en móvil** (`< lg`), componente `BottomNav` en
    `components/layout/`:
    - 5 destinos: Inicio, Clientes, Agenda, Estados, **Más**.
@@ -57,7 +71,12 @@ Cambiar rutas, fusionar Oficios y Glosario en una sola página (ver pregunta 2),
 sidebar colapsable en desktop, breadcrumbs.
 
 ## Criterios de aceptación
+### Fase 1
 - [ ] El sidebar muestra los grupos y el orden de la tabla; un `agent` no ve Miembros, Subequipos ni Configuración.
+- [ ] En móvil el menú hamburguesa sigue funcionando como hoy, con los grupos nuevos.
+- [ ] `npm run build`, `npm run lint` y `npm test` pasan.
+
+### Fase 2
 - [ ] En 375 px hay barra inferior con 5 destinos y no hay botón hamburguesa.
 - [ ] Desde Clientes se llega a Agenda con un solo toque.
 - [ ] En `/clientes/abc` el destino activo es Clientes; en `/glosario` es Más.
@@ -71,11 +90,11 @@ sidebar colapsable en desktop, breadcrumbs.
 - [ ] `npm run build`, `npm run lint` y `npm test` pasan.
 
 ## Preguntas abiertas
-1. **Cuarto destino de la barra:** recomiendo Estados (es "la más importante"
-   según `CLAUDE.md`). Confirmar con `$pageview` por `route_pattern` en móvil
-   (spec 24): si Estados casi no se abre desde el teléfono, ese lugar es de Reportes.
-2. **Oficios y Glosario:** si la analítica muestra uso marginal, ¿se fusionan en
-   una sola página "Referencia" con pestañas? Recomiendo decidirlo después de
-   tener el spec 27 en producción: la búsqueda global puede volverlos casi
-   innecesarios como destino de navegación.
+1. **¿Cuándo se activa la fase 2?** Recomiendo: cuando móvil supere ~15 % de las
+   vistas de agentes en 30 días, o cuando un workspace nuevo trabaje desde el
+   teléfono. El cuarto destino ya está resuelto por los datos: Estados.
+2. **Oficios y Glosario (0 vistas en 30 días):** ¿el agente no los necesita o no
+   sabe que existen? Preguntarle antes de decidir. Recomiendo no quitarlos
+   todavía: el spec 27 los expone en el buscador sin costo de navegación; si
+   tras 60 días con el 27 siguen en cero, se retiran del sidebar.
 3. **Reportes para `agent`:** hoy lo ven todos los roles. ¿Se mantiene?
