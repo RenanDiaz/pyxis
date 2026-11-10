@@ -162,9 +162,15 @@ la app queda **0.61** por encima. TOTAL PAY 1,012.93 vs 1,012.84; WHAT I TOOK HO
 | **Total** | **+8.16** | **+0.61** |
 
 - Las diferencias de Stripe no mueven NET (el recargo suma a CHARGE y resta como
-  STRIPE FEE). Queda por confirmar con Isabel el 8 % de La Chapina y si JFH y Titan
-  pagaron con Stripe (si no, el método de pago está mal capturado en Pyxis).
-- Los ±1 son de captura: se corrigen en el total del proceso en Pyxis.
+  STRIPE FEE). **Resuelto con Isabel (2026-11-10):** el 8 % de La Chapina fue un
+  error del manual, y JFH y Titan sí pagaron con Stripe. Pyxis está bien en los tres.
+- Los ±1 son de captura. **Regla de negocio (2026-11-10): los precios terminan en 9**
+  ($1 menos que el número redondo, técnica de ventas). Por eso el Statement CA va a
+  **199** (Pyxis bien, manual mal) y VA y WI van a **549** y **579** (manual bien;
+  se corrigen en el total del proceso en Pyxis). El catálogo de estados ya cumple la
+  regla en `sale_price` (VA 549, WI 579): los 550/580 se escribieron a mano.
+- Con eso, la única diferencia real de octubre es de captura, y el reporte de Pyxis
+  sustituye al manual desde noviembre.
 - Fechas: la fecha de venta de Pyxis cae 0–2 días antes que la del manual en 9 de
   13 cuentas; ninguna cambia de mes, así que no afecta al reporte.
 - Cosméticos sin impacto: la app no lleva las columnas OWES/FORMA DE PAGO del manual (P6), la
